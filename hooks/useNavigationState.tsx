@@ -1,4 +1,4 @@
-import { Location, LocationManager } from "@maplibre/maplibre-react-native";
+import { GeolocationPosition, LocationManager } from "@maplibre/maplibre-react-native";
 import { create } from "zustand";
 
 const SPEED_THRESHOLD = 0.25; // m/s = 0.5 knots
@@ -9,7 +9,7 @@ export enum NavigationState {
   Underway
 }
 
-interface State extends Partial<Location> {
+interface State extends Partial<GeolocationPosition> {
   state: NavigationState;
 }
 

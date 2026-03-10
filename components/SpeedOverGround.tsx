@@ -5,7 +5,7 @@ import { usePreferredUnits } from "../hooks/usePreferredUnits";
 export default function SpeedOverGround() {
   const units = usePreferredUnits();
   const nav = useNavigationState();
-  const { value, plural } = units.toSpeed(nav.coords?.speed)
+  const { value, plural } = units.toSpeed(nav.coords?.speed ?? undefined)
 
   return (
     <View style={[style.container, { opacity: nav.state === NavigationState.Underway ? 1 : 0 }]}>

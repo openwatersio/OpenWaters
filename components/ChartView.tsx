@@ -1,7 +1,7 @@
 import { useCameraState } from "@/hooks/useCameraState";
 import { useViewOptions } from "@/hooks/useViewOptions";
 import mapStyles from "@/styles";
-import { Camera, MapView, UserLocation } from "@maplibre/maplibre-react-native";
+import { Camera, Map, UserLocation } from "@maplibre/maplibre-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CurrentLocationButton from "./CurrentLocationButton";
 import SpeedOverGround from "./SpeedOverGround";
@@ -14,29 +14,28 @@ export default function ChartView() {
   const mapStyle = mapStyles.find(style => style.id === viewOptions.mapStyleId)?.style || mapStyles[0].style;
 
   return <>
-    <MapView
+    <Map
       style={{ flex: 1 }}
       mapStyle={mapStyle}
-      rotateEnabled={false}
-      pitchEnabled={false}
-      attributionEnabled={false}
-      localizeLabels={true}
-      onRegionDidChange={(e) => cameraState.didChange(e.properties)}
+      touchRotate={false}
+      touchPitch={false}
+      attribution={false}
+      onRegionDidChange={(e) => cameraState.didChange(e.nativeEvent)}
     >
       <Camera
-        followUserLocation={cameraState.followUserLocation}
-        zoomLevel={cameraState.zoomLevel}
+        trackUserLocation={cameraState.followUserLocation ? "default" : undefined}
+        zoom={cameraState.zoom}
         bounds={cameraState.bounds}
-        animationMode="easeTo"
-        animationDuration={1000}
-        heading={0}
+        easing="ease"
+        duration={1000}
+        bearing={0}
         pitch={0}
-        onUserTrackingModeChange={(e) => {
-          cameraState.set({ followUserLocation: e.nativeEvent.payload.followUserLocation });
+        onTrackUserLocationChange={(e) => {
+          cameraState.set({ followUserLocation: e.nativeEvent.trackUserLocation !== null });
         }}
       />
-      <UserLocation renderMode="native" />
-    </MapView >
+      <UserLocation />
+    </Map>
     <SafeAreaView style={{ position: "absolute", top: 0, right: 20, zIndex: 1 }}>
       <ZoomAndScale />
     </SafeAreaView>

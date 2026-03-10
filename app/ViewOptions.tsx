@@ -19,18 +19,14 @@ export default function ViewOptions() {
       <VStack alignment="leading">
         <List>
           <Section title="Charts">
-
             {
-              mapStyles.map(({ id, name, style }) => {
-                const isSelected = viewOptions.mapStyleId === id;
-                const image = isSelected ? 'checkmark.circle.fill' : 'circle';
-                const color = undefined;
+              mapStyles.map(({ id, name }) => {
+                const image = viewOptions.mapStyleId === id ? 'checkmark.circle.fill' : 'circle';
                 return (
                   <Button
                     variant="plain"
                     key={id}
                     systemImage={image}
-                    color={color}
                     onPress={() => viewOptions.set({ mapStyleId: id })}
                   >
                     {name}

@@ -1,21 +1,16 @@
 import googleEarth from "@/styles/google-earth.json";
 import openseamap from "@/styles/openseamap.json";
+import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 
 export default [
   {
-    id: "openmarinecharts-world",
-    name: "OpenMarineCharts World",
-    style:
-      "https://tileserver-i6tr.onrender.com/styles/openmarinecharts-world/style.json",
-  },
-  {
     id: "openseamap",
     name: "OpenSeaMap",
-    style: openseamap
+    style: openseamap as unknown as StyleSpecification,
   },
   {
     id: "google-earth",
     name: "Google Earth",
-    style: googleEarth,
-  }
+    style: googleEarth as unknown as StyleSpecification,
+  },
 ];
