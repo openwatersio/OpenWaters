@@ -82,7 +82,7 @@ jobs:
           NODE_OPTIONS: --max_old_space_size=4096
 
       - name: 📦 Upload APKs
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: android-apks
           path: |
