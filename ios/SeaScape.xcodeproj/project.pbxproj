@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		7E749C832F619A1A00E10606 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = F189BE1998DC334166A9A35D /* MapLibre */; };
 		9ABC9420AEA48826E800510B /* libPods-SeaScape.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F310303A6A14F7B3FB04E478 /* libPods-SeaScape.a */; };
 		AB6556FD800710F490AC9C98 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E7981E806592B538E748103 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
@@ -22,7 +23,7 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = SeaScape/Info.plist; sourceTree = "<group>"; };
 		3E7981E806592B538E748103 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-SeaScape/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		4071B6A3B6BE4E29172B6BBA /* Pods-SeaScape.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SeaScape.debug.xcconfig"; path = "Target Support Files/Pods-SeaScape/Pods-SeaScape.debug.xcconfig"; sourceTree = "<group>"; };
-		7D0CA25A3D2D12CB80EF04A2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = SeaScape/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		7D0CA25A3D2D12CB80EF04A2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = SeaScape/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = SeaScape/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		C0720E059C675C8C3A02A67C /* Pods-SeaScape.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SeaScape.release.xcconfig"; path = "Target Support Files/Pods-SeaScape/Pods-SeaScape.release.xcconfig"; sourceTree = "<group>"; };
@@ -37,6 +38,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7E749C832F619A1A00E10606 /* MapLibre in Frameworks */,
 				9ABC9420AEA48826E800510B /* libPods-SeaScape.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -50,7 +52,6 @@
 				4071B6A3B6BE4E29172B6BBA /* Pods-SeaScape.debug.xcconfig */,
 				C0720E059C675C8C3A02A67C /* Pods-SeaScape.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -402,7 +403,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.SeaScape;
+				PRODUCT_BUNDLE_IDENTIFIER = io.openwaters.seascape;
 				PRODUCT_NAME = SeaScape;
 				SWIFT_OBJC_BRIDGING_HEADER = "SeaScape/SeaScape-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -434,7 +435,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.SeaScape;
+				PRODUCT_BUNDLE_IDENTIFIER = io.openwaters.seascape;
 				PRODUCT_NAME = SeaScape;
 				SWIFT_OBJC_BRIDGING_HEADER = "SeaScape/SeaScape-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
