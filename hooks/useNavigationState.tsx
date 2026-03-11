@@ -28,7 +28,7 @@ export const useNavigationState = create<State & Actions>()((set) => {
 
     if (!location.coords?.speed || location.coords?.speed <= 0) {
       setMoored();
-    } else if (location.coords.speed > SPEED_THRESHOLD) {
+    } else if (location?.coords?.speed && location?.coords?.speed > SPEED_THRESHOLD) {
       set({ state: NavigationState.Underway });
       clearTimeout(setMooredTimeout);
       setMooredTimeout = setTimeout(setMoored, MOORED_TIMEOUT);
