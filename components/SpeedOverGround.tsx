@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { NavigationState, useNavigationState } from "../hooks/useNavigationState";
 import { usePreferredUnits } from "../hooks/usePreferredUnits";
+import OverlayView from "./ui/OverlayView";
 
 export default function SpeedOverGround() {
   const units = usePreferredUnits();
@@ -8,26 +9,18 @@ export default function SpeedOverGround() {
   const { value, plural } = units.toSpeed(nav.coords?.speed ?? undefined)
 
   return (
-    <View style={[style.container, { opacity: nav.state === NavigationState.Underway ? 1 : 0 }]}>
+    <OverlayView style={[style.container, { opacity: nav.state === NavigationState.Underway ? 1 : 0 }]}>
       <Text style={style.label}>SOG</Text>
       <Text style={style.value}>{value ?? "--"}</Text>
       <Text style={style.units}>{plural}</Text>
-    </View>
+    </OverlayView>
   )
 }
 
 const style = StyleSheet.create({
   container: {
-    backgroundColor: "rgba(255,255,255,1)",
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
     padding: 10,
-    borderRadius: 10,
+    borderRadius: 20,
     width: 100,
   },
   label: {
