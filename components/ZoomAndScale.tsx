@@ -1,6 +1,6 @@
 import { useCameraState } from "@/hooks/useCameraState";
-import { StyleSheet, View } from "react-native";
-import OverlayButton from './ui/OverlayButton';
+import { Pressable, StyleSheet, View } from "react-native";
+import { IconSymbol } from './ui/IconSymbol';
 import OverlayView from './ui/OverlayView';
 
 export default function ZoomAndScale() {
@@ -8,9 +8,13 @@ export default function ZoomAndScale() {
 
   return (
     <OverlayView style={styles.group}>
-      <OverlayButton onPress={() => camera.zoomIn()} icon="zoom-in" glass={false} />
+      <Pressable onPress={() => camera.zoomIn()} style={styles.button}>
+        <IconSymbol name="zoom-in" />
+      </Pressable>
       <View style={styles.divider} />
-      <OverlayButton onPress={() => camera.zoomOut()} icon="zoom-out" glass={false} />
+      <Pressable onPress={() => camera.zoomOut()} style={styles.button}>
+        <IconSymbol name="zoom-out" />
+      </Pressable>
     </OverlayView>
   );
 }
@@ -19,6 +23,9 @@ const styles = StyleSheet.create({
   group: {
     borderRadius: 100,
     overflow: 'hidden',
+  },
+  button: {
+    padding: 12,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
