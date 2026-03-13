@@ -1,25 +1,39 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import React from 'react';
 import ZoomAndScale from '@/components/ZoomAndScale';
-import { useCameraState } from '@/hooks/useCameraState';
+import { CameraRefContext } from '@/hooks/useCameraRef';
+import { useMapView } from '@/hooks/useMapView';
 
-const initialState = useCameraState.getState();
+const mockZoomTo = jest.fn();
+const mockCameraRef = { current: { zoomTo: mockZoomTo } };
+
+const initialMapViewState = useMapView.getState();
 
 beforeEach(() => {
-  useCameraState.setState(initialState, true);
+  useMapView.setState(initialMapViewState, true);
+  mockZoomTo.mockClear();
 });
 
+function renderWithCamera(ui: React.ReactElement) {
+  return render(
+    <CameraRefContext.Provider value={mockCameraRef as any}>
+      {ui}
+    </CameraRefContext.Provider>
+  );
+}
+
 describe('ZoomAndScale', () => {
-  it('calls zoomIn when the + button is pressed', () => {
-    useCameraState.setState({ zoom: 10 });
-    render(<ZoomAndScale />);
+  it('calls zoomTo with zoom+1 when the + button is pressed', () => {
+    useMapView.setState({ zoom: 10 });
+    renderWithCamera(<ZoomAndScale />);
     fireEvent.press(screen.getByTestId('symbol-plus').parent!);
-    expect(useCameraState.getState().zoom).toBe(11);
+    expect(mockZoomTo).toHaveBeenCalledWith(11, { duration: 300 });
   });
 
-  it('calls zoomOut when the - button is pressed', () => {
-    useCameraState.setState({ zoom: 10 });
-    render(<ZoomAndScale />);
+  it('calls zoomTo with zoom-1 when the - button is pressed', () => {
+    useMapView.setState({ zoom: 10 });
+    renderWithCamera(<ZoomAndScale />);
     fireEvent.press(screen.getByTestId('symbol-minus').parent!);
-    expect(useCameraState.getState().zoom).toBe(9);
+    expect(mockZoomTo).toHaveBeenCalledWith(9, { duration: 300 });
   });
 });

@@ -1,4 +1,5 @@
 import { useCameraState } from "@/hooks/useCameraState";
+import { useMapView } from "@/hooks/useMapView";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { IconSymbol } from "./ui/IconSymbol";
 import OverlayView from "./ui/OverlayView";
@@ -17,10 +18,11 @@ function CompassDial({ bearing }: { bearing: number }) {
 }
 
 export default function CurrentLocationButton() {
-  const { followUserLocation, orientationMode, bearing, cycleTrackingMode } =
+  const { followUserLocation, trackingMode, cycleTrackingMode } =
     useCameraState();
+  const bearing = useMapView((s) => s.bearing);
 
-  const isCourseUp = followUserLocation && orientationMode === "course";
+  const isCourseUp = followUserLocation && trackingMode === "course";
 
   return (
     <OverlayView style={styles.overlay}>

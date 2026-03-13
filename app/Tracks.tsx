@@ -3,9 +3,11 @@ import {
   formatDistance,
   formatDuration,
   trackDisplayName,
+  useLoadTracks,
   useTracks,
 } from "@/hooks/useTracks";
 import type { Track } from "@/lib/database";
+import { router } from "expo-router";
 import { useRef } from "react";
 import {
   Alert,
@@ -39,8 +41,9 @@ function SwipeActions({
 }
 
 export default function TrackList() {
-  const { tracks, selectedId, handleDelete, handleRename, handleExport, toggleSelected } =
+  const { tracks, selectedId, handleDelete, handleRename, handleExport, selectTrack } =
     useTracks();
+  useLoadTracks();
 
   function confirmDelete(track: Track, swipeableRef?: SwipeableMethods | null) {
     Alert.alert(
@@ -97,7 +100,7 @@ export default function TrackList() {
       >
         <TouchableOpacity
           style={[styles.row, isSelected && styles.rowSelected]}
-          onPress={() => toggleSelected(item.id)}
+          onPress={() => { selectTrack(item.id); router.dismiss(); }}
           onLongPress={() => showActionMenu(item)}
         >
           <View style={styles.rowContent}>

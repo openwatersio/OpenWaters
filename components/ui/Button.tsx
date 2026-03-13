@@ -8,7 +8,7 @@ const colors = {
 };
 
 export type ButtonProps = {
-  label: string;
+  label?: string;
   onPress?: () => void;
   role?: "default" | "cancel" | "destructive";
   systemImage?: IconSymbolProps["name"];
@@ -26,15 +26,16 @@ export default function Button({ label, onPress, systemImage, role, variant = "d
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
+        !label && styles.iconOnly,
         variant === "bordered" && { backgroundColor: tint },
         pressed && styles.pressed,
         containerStyle,
       ]}
     >
       {systemImage && <IconSymbol name={systemImage} size={18} color={foreground} />}
-      <Text style={[styles.label, { color: foreground }]}>
+      {label && <Text style={[styles.label, { color: foreground }]}>
         {label}
-      </Text>
+      </Text>}
     </Pressable>
   );
 }
@@ -48,6 +49,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
     gap: 8,
+  },
+  iconOnly: {
+    paddingHorizontal: 14,
   },
   pressed: {
     opacity: 0.7,

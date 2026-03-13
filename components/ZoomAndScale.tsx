@@ -1,18 +1,20 @@
-import { useCameraState } from "@/hooks/useCameraState";
+import { useCameraRef } from "@/hooks/useCameraRef";
+import { useMapView } from "@/hooks/useMapView";
 import { Pressable, StyleSheet, View } from "react-native";
 import { IconSymbol } from './ui/IconSymbol';
 import OverlayView from './ui/OverlayView';
 
 export default function ZoomAndScale() {
-  const camera = useCameraState();
+  const cameraRef = useCameraRef();
+  const zoom = useMapView((s) => s.zoom);
 
   return (
     <OverlayView style={styles.group}>
-      <Pressable onPress={() => camera.zoomIn()} style={styles.button}>
+      <Pressable onPress={() => cameraRef.current?.zoomTo(zoom + 1, { duration: 300 })} style={styles.button}>
         <IconSymbol name="zoom-in" />
       </Pressable>
       <View style={styles.divider} />
-      <Pressable onPress={() => camera.zoomOut()} style={styles.button}>
+      <Pressable onPress={() => cameraRef.current?.zoomTo(zoom - 1, { duration: 300 })} style={styles.button}>
         <IconSymbol name="zoom-out" />
       </Pressable>
     </OverlayView>

@@ -1,79 +1,67 @@
-import type { LngLat, LngLatBounds, ViewStateChangeEvent } from '@maplibre/maplibre-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { LngLat } from "@maplibre/maplibre-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-export type OrientationMode = "north" | "course";
-
 interface State {
-  followUserLocation: boolean
-  zoom?: number
-  center?: LngLat
-  bounds?: LngLatBounds
-  orientationMode: OrientationMode
-  bearing: number
+  followUserLocation: boolean;
+  trackingMode: undefined | "default" | "course";
+  lastCenter?: LngLat;
+  lastZoom?: number;
 }
 
 interface Actions {
-  setFollowUserLocation: (follow: boolean) => void
-  zoomIn(): void
-  zoomOut(): void
-  cycleTrackingMode(): void
-  set(newState: Partial<State>): void
-  didChange(payload: ViewStateChangeEvent): void
+  setFollowUserLocation: (follow: boolean) => void;
+  cycleTrackingMode(): void;
+  saveViewport(center: LngLat, zoom: number): void;
 }
 
 export const useCameraState = create<State & Actions>()(
   persist(
     (set) => ({
-      center: undefined,
-      bounds: undefined,
-      zoom: undefined,
       followUserLocation: true,
-      orientationMode: "north",
-      bearing: 0,
+      trackingMode: "default",
+      lastCenter: undefined,
+      lastZoom: undefined,
       setFollowUserLocation: (follow: boolean) => {
-        set(() => follow
-          ? { followUserLocation: true }
-          : { followUserLocation: false, orientationMode: "north" as OrientationMode, bearing: 0 }
-        )
-      },
-      zoomIn() {
-        set((state) => ({ zoom: (state.zoom ?? 0) + 1 }))
-      },
-      zoomOut() {
-        set((state) => ({ zoom: (state.zoom ?? 0) - 1 }))
+        if (follow) {
+          set((state) => ({
+            followUserLocation: true,
+            trackingMode: state.trackingMode ?? "default",
+          }));
+        } else {
+          set({ followUserLocation: false, trackingMode: undefined });
+        }
       },
       cycleTrackingMode() {
         set((state) => {
-          if (!state.followUserLocation) {
-            return { followUserLocation: true };
+          if (state.followUserLocation && state.trackingMode === "default") {
+            return { trackingMode: "course" };
           }
-          if (state.orientationMode === "north") {
-            return { orientationMode: "course" as OrientationMode };
-          }
-          return { orientationMode: "north" as OrientationMode, bearing: 0 };
+
+          return { followUserLocation: true, trackingMode: "default" };
         })
       },
-      didChange(e: ViewStateChangeEvent) {
-        if (e.userInteraction) {
-          set({
-            zoom: e.zoom,
-            center: e.center,
-            bounds: e.bounds,
-            bearing: e.bearing,
-          });
-        } else {
-          set({ bearing: e.bearing, bounds: e.bounds });
-        }
+      saveViewport(center: LngLat, zoom: number) {
+        set({ lastCenter: center, lastZoom: zoom });
       },
-      set(newState: Partial<State>) {
-        set((state) => ({ ...state, ...newState }))
-      }
     }),
     {
       name: "camera",
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
+      migrate(persisted: unknown, version: number) {
+        const state = persisted as Record<string, unknown>;
+        if (version < 2) {
+          return {
+            trackingMode: state.trackingMode,
+            followUserLocation: state.followUserLocation ?? true,
+            lastCenter: state.center,
+            lastZoom: state.zoom,
+          } as State & Actions;
+        }
+        return state as unknown as State & Actions;
+      },
     }
   )
 )

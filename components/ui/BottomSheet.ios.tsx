@@ -15,6 +15,7 @@ type BottomSheetProps = {
   onOpenChange: (open: boolean) => void;
   onExpandedChange?: (expanded: boolean) => void;
   compactHeight?: number;
+  dismissable?: boolean;
   children: React.ReactNode;
 };
 
@@ -28,7 +29,7 @@ function detentToHeight(detent: PresentationDetent): number {
   return 0;
 }
 
-export default function BottomSheet({ isOpen, onOpenChange, onExpandedChange, compactHeight, children }: BottomSheetProps) {
+export default function BottomSheet({ isOpen, onOpenChange, onExpandedChange, compactHeight, dismissable = false, children }: BottomSheetProps) {
   const setHeight = useBottomSheetStore((s) => s.setHeight);
   const [selectedDetent, setSelectedDetent] = useState<PresentationDetent>("medium");
 
@@ -65,6 +66,8 @@ export default function BottomSheet({ isOpen, onOpenChange, onExpandedChange, co
     onExpandedChange?.(!isCompact);
   }, [onExpandedChange]);
 
+  if (!isOpen) return null;
+
   return (
     <Host>
       <ExpoBottomSheet isPresented={isOpen} onIsPresentedChange={onOpenChange}>
@@ -80,7 +83,7 @@ export default function BottomSheet({ isOpen, onOpenChange, onExpandedChange, co
                 ? { type: "enabledUpThrough", detent: compactDetent }
                 : "enabled"
             ),
-            interactiveDismissDisabled(),
+            ...(!dismissable ? [interactiveDismissDisabled()] : []),
           ]}
         >
           <RNHostView>

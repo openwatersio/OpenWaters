@@ -8,106 +8,62 @@ beforeEach(() => {
 
 describe('useCameraState', () => {
   it('has correct initial state', () => {
-    const { followUserLocation, zoom, center, orientationMode, bearing } = useCameraState.getState();
+    const { followUserLocation, trackingMode, lastZoom, lastCenter } = useCameraState.getState();
     expect(followUserLocation).toBe(true);
-    expect(zoom).toBeUndefined();
-    expect(center).toBeUndefined();
-    expect(orientationMode).toBe("north");
-    expect(bearing).toBe(0);
+    expect(trackingMode).toBe("default");
+    expect(lastZoom).toBeUndefined();
+    expect(lastCenter).toBeUndefined();
   });
 
   describe('setFollowUserLocation', () => {
-    it('sets followUserLocation to false', () => {
+    it('sets followUserLocation to false and clears trackingMode', () => {
       useCameraState.getState().setFollowUserLocation(false);
       expect(useCameraState.getState().followUserLocation).toBe(false);
+      expect(useCameraState.getState().trackingMode).toBeUndefined();
     });
 
-    it('sets followUserLocation to true', () => {
-      useCameraState.setState({ followUserLocation: false });
+    it('sets followUserLocation to true and defaults trackingMode when undefined', () => {
+      useCameraState.setState({ followUserLocation: false, trackingMode: undefined });
       useCameraState.getState().setFollowUserLocation(true);
       expect(useCameraState.getState().followUserLocation).toBe(true);
+      expect(useCameraState.getState().trackingMode).toBe("default");
     });
 
-    it('resets orientation to north when follow is disabled', () => {
-      useCameraState.setState({ followUserLocation: true, orientationMode: "course", bearing: 45 });
-      useCameraState.getState().setFollowUserLocation(false);
-      expect(useCameraState.getState().followUserLocation).toBe(false);
-      expect(useCameraState.getState().orientationMode).toBe("north");
-      expect(useCameraState.getState().bearing).toBe(0);
-    });
-  });
-
-  describe('zoomIn', () => {
-    it('increments zoom from undefined (treats as 0)', () => {
-      useCameraState.getState().zoomIn();
-      expect(useCameraState.getState().zoom).toBe(1);
-    });
-
-    it('increments zoom from a known value', () => {
-      useCameraState.setState({ zoom: 10 });
-      useCameraState.getState().zoomIn();
-      expect(useCameraState.getState().zoom).toBe(11);
-    });
-  });
-
-  describe('zoomOut', () => {
-    it('decrements zoom from undefined (treats as 0)', () => {
-      useCameraState.getState().zoomOut();
-      expect(useCameraState.getState().zoom).toBe(-1);
-    });
-
-    it('decrements zoom from a known value', () => {
-      useCameraState.setState({ zoom: 10 });
-      useCameraState.getState().zoomOut();
-      expect(useCameraState.getState().zoom).toBe(9);
+    it('preserves existing trackingMode when enabling follow', () => {
+      useCameraState.setState({ followUserLocation: true, trackingMode: "course" });
+      useCameraState.getState().setFollowUserLocation(true);
+      expect(useCameraState.getState().trackingMode).toBe("course");
     });
   });
 
   describe('cycleTrackingMode', () => {
     it('enables follow when not following', () => {
-      useCameraState.setState({ followUserLocation: false, orientationMode: "north" });
+      useCameraState.setState({ followUserLocation: false, trackingMode: undefined });
       useCameraState.getState().cycleTrackingMode();
       expect(useCameraState.getState().followUserLocation).toBe(true);
-      expect(useCameraState.getState().orientationMode).toBe("north");
+      expect(useCameraState.getState().trackingMode).toBe("default");
     });
 
-    it('switches to course-up when following north-up', () => {
-      useCameraState.setState({ followUserLocation: true, orientationMode: "north" });
+    it('switches to course when following with default', () => {
+      useCameraState.setState({ followUserLocation: true, trackingMode: "default" });
       useCameraState.getState().cycleTrackingMode();
-      expect(useCameraState.getState().orientationMode).toBe("course");
+      expect(useCameraState.getState().trackingMode).toBe("course");
     });
 
-    it('switches to north-up and resets bearing when following course-up', () => {
-      useCameraState.setState({ followUserLocation: true, orientationMode: "course", bearing: 45 });
+    it('switches to default when following with course', () => {
+      useCameraState.setState({ followUserLocation: true, trackingMode: "course" });
       useCameraState.getState().cycleTrackingMode();
-      expect(useCameraState.getState().orientationMode).toBe("north");
-      expect(useCameraState.getState().bearing).toBe(0);
+      expect(useCameraState.getState().followUserLocation).toBe(true);
+      expect(useCameraState.getState().trackingMode).toBe("default");
     });
   });
 
-  describe('didChange', () => {
-    it('updates zoom, center, and bearing when userInteraction is true', () => {
-      const center = [-122.4, 37.8] as any;
-      useCameraState.getState().didChange({ userInteraction: true, zoom: 12, center, bearing: 90 } as any);
-      expect(useCameraState.getState().zoom).toBe(12);
-      expect(useCameraState.getState().center).toBe(center);
-      expect(useCameraState.getState().bearing).toBe(90);
-    });
-
-    it('only updates bearing when userInteraction is false', () => {
-      const center = [-122.4, 37.8] as any;
-      useCameraState.getState().didChange({ userInteraction: false, zoom: 12, center, bearing: 90 } as any);
-      expect(useCameraState.getState().zoom).toBeUndefined();
-      expect(useCameraState.getState().center).toBeUndefined();
-      expect(useCameraState.getState().bearing).toBe(90);
-    });
-  });
-
-  describe('set', () => {
-    it('merges partial state', () => {
-      useCameraState.getState().set({ zoom: 7 });
-      expect(useCameraState.getState().zoom).toBe(7);
-      expect(useCameraState.getState().followUserLocation).toBe(true);
+  describe('saveViewport', () => {
+    it('saves last center and zoom for persistence', () => {
+      const center = [-122.4, 37.8] as [number, number];
+      useCameraState.getState().saveViewport(center, 12);
+      expect(useCameraState.getState().lastCenter).toEqual(center);
+      expect(useCameraState.getState().lastZoom).toBe(12);
     });
   });
 });

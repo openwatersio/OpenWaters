@@ -1,5 +1,9 @@
+import { useBottomSheetStore } from "@/hooks/useBottomSheetOffset";
+import { useCameraRef } from "@/hooks/useCameraRef";
 import { useCameraState } from "@/hooks/useCameraState";
+import { useMapView } from "@/hooks/useMapView";
 import { useTrackRecording } from "@/hooks/useTrackRecording";
+import { useTracks } from "@/hooks/useTracks";
 import { addPointRecordedListener } from "@/lib/backgroundLocation";
 import { getTrackPoints } from "@/lib/database";
 import type { LngLatBounds } from "@maplibre/maplibre-react-native";
@@ -70,9 +74,18 @@ function clipToViewport(coords: Coord[], bounds: LngLatBounds): Coord[] {
 }
 
 export default function TrackOverlay() {
+  return (
+    <>
+      <ActiveTrackOverlay />
+      <SelectedTrackOverlay />
+    </>
+  );
+}
+
+function ActiveTrackOverlay() {
   const isRecording = useTrackRecording((s) => s.isRecording);
   const activeTrackId = useTrackRecording((s) => s.activeTrackId);
-  const bounds = useCameraState((s) => s.bounds);
+  const bounds = useMapView((s) => s.bounds);
 
   // All recorded coordinates for the active track
   const allCoordsRef = useRef<Coord[]>([]);
@@ -211,5 +224,75 @@ export default function TrackOverlay() {
         </Animated.GeoJSONSource>
       )}
     </>
+  );
+}
+
+const SELECTED_LINE_PAINT = {
+  "line-color": "#007AFF",
+  "line-width": 3,
+  "line-opacity": 0.8,
+};
+
+function computeBounds(coords: Coord[]): LngLatBounds | null {
+  if (coords.length === 0) return null;
+  let west = coords[0][0], east = coords[0][0];
+  let south = coords[0][1], north = coords[0][1];
+  for (const [lng, lat] of coords) {
+    if (lng < west) west = lng;
+    if (lng > east) east = lng;
+    if (lat < south) south = lat;
+    if (lat > north) north = lat;
+  }
+  return [west, south, east, north];
+}
+
+function SelectedTrackOverlay() {
+  const selectedId = useTracks((s) => s.selectedId);
+  const sheetHeight = useBottomSheetStore((s) => s.height);
+  const bounds = useMapView((s) => s.bounds);
+  const cameraRef = useCameraRef();
+  const [coords, setCoords] = useState<Coord[]>([]);
+
+  useEffect(() => {
+    if (!selectedId) {
+      setCoords([]);
+      return;
+    }
+    getTrackPoints(selectedId).then((points) => {
+      const c: Coord[] = points.map((p) => [p.longitude, p.latitude]);
+      setCoords(c);
+      const trackBounds = computeBounds(c);
+      if (trackBounds) {
+        useCameraState.getState().setFollowUserLocation(false);
+        cameraRef.current?.fitBounds(trackBounds, {
+          padding: { top: 60, right: 60, bottom: 60 + sheetHeight, left: 60 },
+          duration: 300,
+        });
+      }
+    });
+  }, [selectedId, sheetHeight, cameraRef]);
+
+  const trackData = useMemo(() => {
+    if (coords.length < 2) return null;
+    const visible = bounds ? clipToViewport(coords, bounds) : coords;
+    if (visible.length < 2) return null;
+    return JSON.stringify({
+      type: "Feature",
+      properties: {},
+      geometry: { type: "LineString", coordinates: visible },
+    });
+  }, [coords, bounds]);
+
+  if (!selectedId || !trackData) return null;
+
+  return (
+    <GeoJSONSource id="selected-track" data={trackData}>
+      <Layer
+        id="selected-track-line"
+        type="line"
+        paint={SELECTED_LINE_PAINT}
+        layout={LINE_LAYOUT}
+      />
+    </GeoJSONSource>
   );
 }

@@ -1,6 +1,7 @@
 import { getAllTracks, deleteTrack, renameTrack, type Track } from "@/lib/database";
 import { exportTrackAsGPX } from "@/lib/exportTrack";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
+import { create } from "zustand";
 
 export function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -33,53 +34,56 @@ export function trackDisplayName(track: Track): string {
   return track.name || formatDate(track.started_at);
 }
 
-export function useTracks() {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+interface TracksState {
+  tracks: Track[];
+  selectedId: number | null;
+  loadTracks: () => Promise<void>;
+  handleDelete: (trackId: number) => Promise<void>;
+  handleRename: (trackId: number, name: string) => Promise<void>;
+  handleExport: (trackId: number) => void;
+  selectTrack: (trackId: number) => void;
+  clearSelectedTrack: () => void;
+}
 
-  const loadTracks = useCallback(async () => {
+export const useTracks = create<TracksState>((set, get) => ({
+  tracks: [],
+  selectedId: null,
+
+  loadTracks: async () => {
     const result = await getAllTracks();
-    setTracks(result);
-  }, []);
+    set({ tracks: result });
+  },
 
+  handleDelete: async (trackId: number) => {
+    await deleteTrack(trackId);
+    set((s) => ({ selectedId: s.selectedId === trackId ? null : s.selectedId }));
+    await get().loadTracks();
+  },
+
+  handleRename: async (trackId: number, name: string) => {
+    if (name.trim()) {
+      await renameTrack(trackId, name.trim());
+      await get().loadTracks();
+    }
+  },
+
+  handleExport: (trackId: number) => {
+    exportTrackAsGPX(trackId);
+  },
+
+  selectTrack: (trackId: number) => {
+    set({ selectedId: trackId });
+  },
+
+  clearSelectedTrack: () => {
+    set({ selectedId: null });
+  },
+}));
+
+/** Hook to load tracks on mount */
+export function useLoadTracks() {
+  const loadTracks = useTracks((s) => s.loadTracks);
   useEffect(() => {
     loadTracks();
   }, [loadTracks]);
-
-  const handleDelete = useCallback(
-    async (trackId: number) => {
-      await deleteTrack(trackId);
-      setSelectedId((prev) => (prev === trackId ? null : prev));
-      await loadTracks();
-    },
-    [loadTracks],
-  );
-
-  const handleRename = useCallback(
-    async (trackId: number, name: string) => {
-      if (name.trim()) {
-        await renameTrack(trackId, name.trim());
-        await loadTracks();
-      }
-    },
-    [loadTracks],
-  );
-
-  const handleExport = useCallback((trackId: number) => {
-    exportTrackAsGPX(trackId);
-  }, []);
-
-  const toggleSelected = useCallback((trackId: number) => {
-    setSelectedId((prev) => (prev === trackId ? null : trackId));
-  }, []);
-
-  return {
-    tracks,
-    selectedId,
-    loadTracks,
-    handleDelete,
-    handleRename,
-    handleExport,
-    toggleSelected,
-  };
 }

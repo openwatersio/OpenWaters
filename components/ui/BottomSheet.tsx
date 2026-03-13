@@ -8,6 +8,7 @@ type BottomSheetProps = {
   onOpenChange: (open: boolean) => void;
   onExpandedChange?: (expanded: boolean) => void;
   compactHeight?: number;
+  dismissable?: boolean;
   children: React.ReactNode;
 };
 

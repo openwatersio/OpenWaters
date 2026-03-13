@@ -3,17 +3,17 @@ import BottomSheet from "@/components/ui/BottomSheet";
 import Button from "@/components/ui/Button";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
-import { useTrackRecording } from "@/hooks/useTrackRecording";
-import { getAllTimeSpeedStats, type SpeedStats } from "@/lib/database";
+import { useTrackRecording, type SpeedSample } from "@/hooks/useTrackRecording";
+import { useTracks } from "@/hooks/useTracks";
+import { getTrack, getTrackPoints, type Track } from "@/lib/database";
 import { exportTrackAsGPX } from "@/lib/exportTrack";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { type LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Alert, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 
-function formatDuration(startedAt: string | null): string {
+function formatElapsed(startedAt: string | null, endedAt?: string | null): string {
   if (!startedAt) return "00:00";
-  const seconds = Math.floor(
-    (Date.now() - new Date(startedAt).getTime()) / 1000,
-  );
+  const end = endedAt ? new Date(endedAt).getTime() : Date.now();
+  const seconds = Math.floor((end - new Date(startedAt).getTime()) / 1000);
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
@@ -27,84 +27,101 @@ function formatTime(iso: string | null): string {
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-function StatComparison({ label, current, allTime, unit }: {
-  label: string;
-  current: string;
-  allTime: string;
-  unit: string;
-}) {
-  return (
-    <View style={styles.comparisonRow}>
-      <Text style={styles.comparisonLabel}>{label}</Text>
-      <View style={styles.comparisonValues}>
-        <View style={styles.comparisonStat}>
-          <Text style={styles.comparisonValue}>
-            {current}
-            <Text style={styles.comparisonUnit}> {unit}</Text>
-          </Text>
-          <Text style={styles.comparisonCaption}>This track</Text>
-        </View>
-        <View style={styles.comparisonStat}>
-          <Text style={styles.comparisonValue}>
-            {allTime}
-            <Text style={styles.comparisonUnit}> {unit}</Text>
-          </Text>
-          <Text style={styles.comparisonCaption}>All time</Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
 export default function TrackSheet() {
-  const { isRecording, activeTrackId, startedAt, distance, maxSpeed, speedSamples, stop } = useTrackRecording();
+  const { isRecording, activeTrackId, startedAt, distance, speedSamples, stop } = useTrackRecording();
+  const selectedId = useTracks((s) => s.selectedId);
+  const clearSelectedTrack = useTracks((s) => s.clearSelectedTrack);
   const units = usePreferredUnits();
   const [, setTick] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [compactHeight, setCompactHeight] = useState(0);
-  const [allTimeStats, setAllTimeStats] = useState<SpeedStats | null>(null);
   const [chartWidth, setChartWidth] = useState(0);
 
+  // Selected track data (loaded from DB)
+  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
+  const [selectedSpeedSamples, setSelectedSpeedSamples] = useState<SpeedSample[]>([]);
+
+  const [dismissed, setDismissed] = useState(false);
+
+  // Reset dismissed state when recording or selection changes
+  useEffect(() => {
+    if (isRecording || selectedId !== null) {
+      setDismissed(false);
+    }
+  }, [isRecording, selectedId]);
+
+  const isOpen = (isRecording || selectedId !== null) && !dismissed;
+  const mode = isRecording ? "recording" : "selected";
+
+  // Load selected track data from DB
+  useEffect(() => {
+    if (!selectedId || isRecording) {
+      setSelectedTrack(null);
+      setSelectedSpeedSamples([]);
+      return;
+    }
+    getTrack(selectedId).then((track) => setSelectedTrack(track));
+    getTrackPoints(selectedId).then((points) => {
+      const samples: SpeedSample[] = points
+        .filter((p) => p.speed !== null)
+        .map((p) => ({ speed: p.speed!, timestamp: new Date(p.timestamp).getTime() }));
+      setSelectedSpeedSamples(samples);
+    });
+  }, [selectedId, isRecording]);
+
+  // Tick for live elapsed time
   useEffect(() => {
     if (!isRecording) return;
     const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, [isRecording]);
 
-  useEffect(() => {
-    if (isRecording) {
-      getAllTimeSpeedStats().then(setAllTimeStats);
-    }
-  }, [isRecording]);
-
   const onChartLayout = useCallback((e: LayoutChangeEvent) => {
     setChartWidth(e.nativeEvent.layout.width);
   }, []);
 
+  // Resolve values based on mode
+  const trackId = mode === "recording" ? activeTrackId : selectedId;
+  const trackStartedAt = mode === "recording" ? startedAt : selectedTrack?.started_at ?? null;
+  const trackEndedAt = mode === "recording" ? null : selectedTrack?.ended_at ?? null;
+  const trackDistance = mode === "recording" ? distance : selectedTrack?.distance ?? 0;
+  const trackSpeedSamples = mode === "recording" ? speedSamples : selectedSpeedSamples;
+
   const handleExport = useCallback(() => {
-    if (activeTrackId) exportTrackAsGPX(activeTrackId);
-  }, [activeTrackId]);
+    if (trackId) exportTrackAsGPX(trackId);
+  }, [trackId]);
 
-  const dist = units.toDistance(distance);
+  const confirmStop = useCallback(() => {
+    Alert.alert("Stop Tracking", "Would you like to stop tracking?", [
+      {
+        text: "Stop", style: "destructive", onPress: () => {
+          stop();
+          setDismissed(true);
+        }
+      },
+      { text: "Cancel", style: "cancel", onPress: () => setDismissed(false) },
+    ]);
+  }, [stop]);
 
-  const avgSpeed = useMemo(() => {
-    if (speedSamples.length === 0) return 0;
-    return speedSamples.reduce((sum, s) => sum + s.speed, 0) / speedSamples.length;
-  }, [speedSamples]);
+  const handleClose = useCallback((open: boolean) => {
+    if (open) return;
+    if (isRecording) {
+      confirmStop();
+    } else {
+      clearSelectedTrack();
+    }
+  }, [isRecording, clearSelectedTrack, confirmStop]);
 
-  const currentAvg = units.toSpeed(avgSpeed);
-  const currentMax = units.toSpeed(maxSpeed);
-  const allTimeAvg = units.toSpeed(allTimeStats?.avgSpeed ?? 0);
-  const allTimeMax = units.toSpeed(allTimeStats?.maxSpeed ?? 0);
+  const dist = units.toDistance(trackDistance);
 
   return (
-    <BottomSheet isOpen={isRecording} onOpenChange={() => { }} onExpandedChange={setExpanded} compactHeight={compactHeight}>
+    <BottomSheet isOpen={isOpen} onOpenChange={handleClose} onExpandedChange={setExpanded} compactHeight={compactHeight} dismissable>
       {/* Compact section — always visible */}
       <View style={styles.compact} onLayout={(e) => setCompactHeight(e.nativeEvent.layout.height)}>
-        <IconSymbol name="route" color="#e53e3e" />
+        <IconSymbol name="route" color={mode === "recording" ? "#e53e3e" : "#007AFF"} />
         <View style={styles.stat}>
           <Text style={styles.label} numberOfLines={1}>Time</Text>
-          <Text style={styles.value} numberOfLines={1}>{formatDuration(startedAt)}</Text>
+          <Text style={styles.value} numberOfLines={1}>{formatElapsed(trackStartedAt, trackEndedAt)}</Text>
         </View>
         <View style={styles.stat}>
           <Text style={styles.label} numberOfLines={1}>Distance</Text>
@@ -114,13 +131,14 @@ export default function TrackSheet() {
           </Text>
         </View>
         <View style={styles.stopButton}>
-          <Button
-            label="Stop"
-            onPress={stop}
-            role="destructive"
-            variant="bordered"
-            systemImage="stop"
-          />
+          {mode === "recording" && (
+            <Button
+              onPress={confirmStop}
+              role="destructive"
+              variant="bordered"
+              systemImage="stop"
+            />
+          )}
         </View>
       </View>
 
@@ -128,36 +146,23 @@ export default function TrackSheet() {
         <View style={styles.section} onLayout={onChartLayout}>
           {chartWidth > 0 && (
             <SpeedChart
-              samples={speedSamples}
+              samples={trackSpeedSamples}
               width={chartWidth}
             />
           )}
         </View>
 
         <View style={styles.section}>
-          <StatComparison
-            label="Average Speed"
-            current={currentAvg.value}
-            allTime={allTimeAvg.value}
-            unit={currentAvg.abbr}
-          />
-          <StatComparison
-            label="Max Speed"
-            current={currentMax.value}
-            allTime={allTimeMax.value}
-            unit={currentMax.abbr}
-          />
-        </View>
-
-        <View style={styles.section}>
           <View style={styles.timesRow}>
             <View style={styles.timeItem}>
               <Text style={styles.timeLabel}>Started</Text>
-              <Text style={styles.timeValue}>{formatTime(startedAt)}</Text>
+              <Text style={styles.timeValue}>{formatTime(trackStartedAt)}</Text>
             </View>
             <View style={styles.timeItem}>
-              <Text style={styles.timeLabel}>Elapsed</Text>
-              <Text style={styles.timeValue}>{formatDuration(startedAt)}</Text>
+              <Text style={styles.timeLabel}>{trackEndedAt ? "Ended" : "Elapsed"}</Text>
+              <Text style={styles.timeValue}>
+                {trackEndedAt ? formatTime(trackEndedAt) : formatElapsed(trackStartedAt)}
+              </Text>
             </View>
           </View>
         </View>
@@ -179,10 +184,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingBottom: 16,
     paddingTop: 16,
-    gap: 16,
+    gap: 20,
   },
   stat: {
     alignItems: "center",
@@ -218,44 +223,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 12,
-  },
-  comparisonRow: {
-    gap: 6,
-  },
-  comparisonLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    opacity: 0.6,
-  },
-  comparisonValues: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  comparisonStat: {
-    flex: 1,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    borderRadius: 12,
-    padding: 12,
-  },
-  comparisonValue: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#1a2b4a",
-    fontVariant: ["tabular-nums"],
-    letterSpacing: -0.8,
-  },
-  comparisonUnit: {
-    fontSize: 14,
-    fontWeight: "500",
-    opacity: 0.5,
-  },
-  comparisonCaption: {
-    fontSize: 11,
-    fontWeight: "500",
-    opacity: 0.5,
-    marginTop: 2,
   },
   timesRow: {
     flexDirection: "row",

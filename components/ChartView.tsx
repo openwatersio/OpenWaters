@@ -1,8 +1,13 @@
 import { useBottomSheetOffset } from "@/hooks/useBottomSheetOffset";
+import { CameraRefContext } from "@/hooks/useCameraRef";
 import { useCameraState } from "@/hooks/useCameraState";
+import { useMapView } from "@/hooks/useMapView";
 import { useViewOptions } from "@/hooks/useViewOptions";
 import mapStyles from "@/styles";
+import type { CameraRef } from "@maplibre/maplibre-react-native";
 import { Camera, Map, UserLocation } from "@maplibre/maplibre-react-native";
+import { useRef } from "react";
+import { View } from "react-native";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CurrentLocationButton from "./CurrentLocationButton";
@@ -13,19 +18,15 @@ import TrackSheet from "./TrackSheet";
 import ViewOptionsButton from "./ViewOptionsButton";
 import ZoomAndScale from "./ZoomAndScale";
 
-function trackingMode(follow: boolean, orientationMode: string) {
-  if (!follow) return undefined;
-  return orientationMode === "course" ? "course" : "default";
-}
-
 export default function ChartView() {
   const viewOptions = useViewOptions();
   const cameraState = useCameraState();
+  const mapView = useMapView();
   const bottomSheetOffset = useBottomSheetOffset();
   const mapStyle = mapStyles.find(style => style.id === viewOptions.mapStyleId)?.style || mapStyles[0].style;
-  const isNorth = cameraState.orientationMode === "north";
+  const cameraRef = useRef<CameraRef>(null);
 
-  return <>
+  return <CameraRefContext.Provider value={cameraRef}>
     <Map
       style={{ flex: 1 }}
       mapStyle={mapStyle}
@@ -34,20 +35,23 @@ export default function ChartView() {
       attribution={false}
       compass={false}
       compassPosition={{ top: -2000, right: -2000 }}
-      onRegionIsChanging={(e) => cameraState.set({ bearing: e.nativeEvent.bearing })}
-      onRegionDidChange={(e) => cameraState.didChange(e.nativeEvent)}
+      onRegionIsChanging={(e) => mapView.onRegionIsChanging(e.nativeEvent.bearing)}
+      onRegionDidChange={(e) => {
+        const { bearing, bounds, zoom, center } = e.nativeEvent;
+        mapView.onRegionDidChange(bearing, bounds, zoom);
+        cameraState.saveViewport(center, zoom);
+      }}
+      logo={false}
     >
       <Camera
+        ref={cameraRef}
         initialViewState={{
-          zoom: cameraState.zoom,
-          center: cameraState.center,
+          zoom: cameraState.lastZoom,
+          center: cameraState.lastCenter,
         }}
-        trackUserLocation={trackingMode(cameraState.followUserLocation, cameraState.orientationMode)}
-        zoom={cameraState.zoom}
-        center={cameraState.center}
+        trackUserLocation={cameraState.trackingMode}
         easing="ease"
         duration={300}
-        bearing={isNorth ? 0 : undefined}
         pitch={0}
         onTrackUserLocationChange={(e) => {
           cameraState.setFollowUserLocation(e.nativeEvent.trackUserLocation !== null);
@@ -55,7 +59,6 @@ export default function ChartView() {
       />
       <UserLocation heading />
       <TrackOverlay />
-      <TrackSheet />
     </Map>
     <SafeAreaView style={{ position: "absolute", top: 0, left: 16, right: 16, alignItems: "center" }}>
       <HeadsUpDisplay />
@@ -74,5 +77,8 @@ export default function ChartView() {
         <CurrentLocationButton />
       </SafeAreaView>
     </Animated.View>
-  </>;
+    <View style={{ position: "absolute" }}>
+      <TrackSheet />
+    </View>
+  </CameraRefContext.Provider>;
 }

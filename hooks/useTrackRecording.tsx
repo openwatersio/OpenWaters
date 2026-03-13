@@ -1,20 +1,16 @@
+import {
+  addPointRecordedListener,
+  requestPermissions,
+  resetLastPoint,
+  startBackgroundTracking,
+  startForegroundTracking,
+  stopBackgroundTracking,
+} from "@/lib/backgroundLocation";
+import { endTrack, startTrack } from "@/lib/database";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type * as Location from "expo-location";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { startTrack, endTrack, deleteTrack } from "@/lib/database";
-import {
-  requestPermissions,
-  startForegroundTracking,
-  startBackgroundTracking,
-  stopBackgroundTracking,
-  addPointRecordedListener,
-  resetLastPoint,
-} from "@/lib/backgroundLocation";
-
-// Minimum thresholds to keep a track
-const MIN_TRACK_DURATION_MS = 60_000; // 1 minute
-const MIN_TRACK_DISTANCE_M = 200; // 200 meters
 
 export type SpeedSample = { speed: number; timestamp: number };
 
@@ -99,7 +95,7 @@ export const useTrackRecording = create<State & Actions>()(
       },
 
       stop: async () => {
-        const { activeTrackId, distance, startedAt } = get();
+        const { activeTrackId, distance } = get();
 
         if (fgSubscription) {
           fgSubscription.remove();
@@ -111,15 +107,7 @@ export const useTrackRecording = create<State & Actions>()(
         resetLastPoint();
 
         if (activeTrackId) {
-          const elapsed = startedAt
-            ? Date.now() - new Date(startedAt).getTime()
-            : 0;
-
-          if (elapsed < MIN_TRACK_DURATION_MS || distance < MIN_TRACK_DISTANCE_M) {
-            await deleteTrack(activeTrackId);
-          } else {
-            await endTrack(activeTrackId, distance);
-          }
+          await endTrack(activeTrackId, distance);
         }
 
         set({
