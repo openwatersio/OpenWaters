@@ -1,25 +1,24 @@
 import {
-  formatDate,
   formatDistance,
   formatDuration,
   trackDisplayName,
   useLoadTracks,
-  useTracks,
+  useTracks
 } from "@/hooks/useTracks";
 import type { Track } from "@/lib/database";
 import { router } from "expo-router";
 import { useRef } from "react";
 import {
   Alert,
-  FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
-import type { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import type { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
 function SwipeActions({
   onMore,
@@ -41,7 +40,7 @@ function SwipeActions({
 }
 
 export default function TrackList() {
-  const { tracks, selectedId, handleDelete, handleRename, handleExport, selectTrack } =
+  const { tracks, selectedId, handleDelete, handleRename, handleExport } =
     useTracks();
   useLoadTracks();
 
@@ -100,7 +99,7 @@ export default function TrackList() {
       >
         <TouchableOpacity
           style={[styles.row, isSelected && styles.rowSelected]}
-          onPress={() => { selectTrack(item.id); router.dismiss(); }}
+          onPress={() => { router.push(`/track/${item.id}`); }}
           onLongPress={() => showActionMenu(item)}
         >
           <View style={styles.rowContent}>
@@ -120,17 +119,16 @@ export default function TrackList() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <FlatList
-        data={tracks}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => <TrackRow item={item} />}
-        ListEmptyComponent={
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ScrollView contentInsetAdjustmentBehavior="automatic">
+        {tracks.length === 0 ? (
           <Text style={styles.empty}>
             No tracks recorded yet. Tap the record button on the chart to start.
           </Text>
-        }
-      />
+        ) : (
+          tracks.map((item) => <TrackRow key={item.id} item={item} />)
+        )}
+      </ScrollView>
     </GestureHandlerRootView>
   );
 }
@@ -138,7 +136,6 @@ export default function TrackList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   row: {
     flexDirection: "row",
@@ -148,7 +145,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#e0e0e0",
-    backgroundColor: "#fff",
   },
   rowSelected: {
     backgroundColor: "#f0f7ff",

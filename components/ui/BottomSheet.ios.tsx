@@ -16,7 +16,7 @@ type BottomSheetProps = {
   onExpandedChange?: (expanded: boolean) => void;
   compactHeight?: number;
   dismissable?: boolean;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 };
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;

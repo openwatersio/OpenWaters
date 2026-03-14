@@ -1,14 +1,19 @@
 import SpeedChart from "@/components/SpeedChart";
-import BottomSheet from "@/components/ui/BottomSheet";
 import Button from "@/components/ui/Button";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import { useBottomSheetStore } from "@/hooks/useBottomSheetOffset";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
 import { useTrackRecording, type SpeedSample } from "@/hooks/useTrackRecording";
 import { useTracks } from "@/hooks/useTracks";
 import { getTrack, getTrackPoints, type Track } from "@/lib/database";
 import { exportTrackAsGPX } from "@/lib/exportTrack";
+import { useNavigation } from "@react-navigation/native";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
+import { Alert, Dimensions, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 function formatElapsed(startedAt: string | null, endedAt?: string | null): string {
   if (!startedAt) return "00:00";
@@ -27,68 +32,100 @@ function formatTime(iso: string | null): string {
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-export default function TrackSheet() {
+export default function TrackScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const trackId = Number(id);
   const { isRecording, activeTrackId, startedAt, distance, speedSamples, stop } = useTrackRecording();
-  const selectedId = useTracks((s) => s.selectedId);
+  const selectTrack = useTracks((s) => s.selectTrack);
   const clearSelectedTrack = useTracks((s) => s.clearSelectedTrack);
   const units = usePreferredUnits();
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [, setTick] = useState(0);
-  const [expanded, setExpanded] = useState(false);
-  const [compactHeight, setCompactHeight] = useState(0);
+  const [detentIndex, setDetentIndex] = useState(0);
   const [chartWidth, setChartWidth] = useState(0);
+  const [detents, setDetents] = useState<number[]>([0.15, 0.5]);
 
-  // Selected track data (loaded from DB)
-  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
-  const [selectedSpeedSamples, setSelectedSpeedSamples] = useState<SpeedSample[]>([]);
+  const isActiveRecording = isRecording && activeTrackId === trackId;
+  const expanded = detentIndex > 0;
 
-  const [dismissed, setDismissed] = useState(false);
+  // Track data for completed tracks (loaded from DB)
+  const [track, setTrack] = useState<Track | null>(null);
+  const [trackSpeedSamples, setTrackSpeedSamples] = useState<SpeedSample[]>([]);
 
-  // Reset dismissed state when recording or selection changes
+  const setHeight = useBottomSheetStore((s) => s.setHeight);
+  const removeSheet = useBottomSheetStore((s) => s.removeSheet);
+
+  // Set selected track for map overlay, clear on unmount
   useEffect(() => {
-    if (isRecording || selectedId !== null) {
-      setDismissed(false);
-    }
-  }, [isRecording, selectedId]);
+    selectTrack(trackId);
+    return () => clearSelectedTrack();
+  }, [trackId, selectTrack, clearSelectedTrack]);
 
-  const isOpen = (isRecording || selectedId !== null) && !dismissed;
-  const mode = isRecording ? "recording" : "selected";
+  // Measure compact section and set detents from actual height
+  const onCompactLayout = useCallback((e: LayoutChangeEvent) => {
+    const sheetMaxHeight = SCREEN_HEIGHT - insets.top - insets.bottom;
+    const compactFraction = e.nativeEvent.layout.height / sheetMaxHeight;
+    const newDetents = [compactFraction, 0.5];
+    setDetents(newDetents);
+    navigation.setOptions({
+      sheetAllowedDetents: newDetents,
+      sheetInitialDetentIndex: 0,
+    });
+  }, [navigation]);
 
-  // Load selected track data from DB
+  // Track sheet height for overlay button offset
   useEffect(() => {
-    if (!selectedId || isRecording) {
-      setSelectedTrack(null);
-      setSelectedSpeedSamples([]);
+    const height = detents[detentIndex] * SCREEN_HEIGHT;
+    setHeight("trackSheet", height);
+    return () => removeSheet("trackSheet");
+  }, [detentIndex, detents, setHeight, removeSheet]);
+
+  // Listen for detent changes
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("sheetDetentChange" as any, (e: any) => {
+      if (e?.data?.index !== undefined) {
+        setDetentIndex(e.data.index);
+      }
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  // Load track data from DB for completed tracks
+  useEffect(() => {
+    if (isActiveRecording) {
+      setTrack(null);
+      setTrackSpeedSamples([]);
       return;
     }
-    getTrack(selectedId).then((track) => setSelectedTrack(track));
-    getTrackPoints(selectedId).then((points) => {
+    getTrack(trackId).then((t) => setTrack(t));
+    getTrackPoints(trackId).then((points) => {
       const samples: SpeedSample[] = points
         .filter((p) => p.speed !== null)
         .map((p) => ({ speed: p.speed!, timestamp: new Date(p.timestamp).getTime() }));
-      setSelectedSpeedSamples(samples);
+      setTrackSpeedSamples(samples);
     });
-  }, [selectedId, isRecording]);
+  }, [trackId, isActiveRecording]);
 
   // Tick for live elapsed time
   useEffect(() => {
-    if (!isRecording) return;
+    if (!isActiveRecording) return;
     const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
-  }, [isRecording]);
+  }, [isActiveRecording]);
 
   const onChartLayout = useCallback((e: LayoutChangeEvent) => {
     setChartWidth(e.nativeEvent.layout.width);
   }, []);
 
   // Resolve values based on mode
-  const trackId = mode === "recording" ? activeTrackId : selectedId;
-  const trackStartedAt = mode === "recording" ? startedAt : selectedTrack?.started_at ?? null;
-  const trackEndedAt = mode === "recording" ? null : selectedTrack?.ended_at ?? null;
-  const trackDistance = mode === "recording" ? distance : selectedTrack?.distance ?? 0;
-  const trackSpeedSamples = mode === "recording" ? speedSamples : selectedSpeedSamples;
+  const trackStartedAt = isActiveRecording ? startedAt : track?.started_at ?? null;
+  const trackEndedAt = isActiveRecording ? null : track?.ended_at ?? null;
+  const trackDistance = isActiveRecording ? distance : track?.distance ?? 0;
+  const displaySpeedSamples = isActiveRecording ? speedSamples : trackSpeedSamples;
 
   const handleExport = useCallback(() => {
-    if (trackId) exportTrackAsGPX(trackId);
+    exportTrackAsGPX(trackId);
   }, [trackId]);
 
   const confirmStop = useCallback(() => {
@@ -96,29 +133,20 @@ export default function TrackSheet() {
       {
         text: "Stop", style: "destructive", onPress: () => {
           stop();
-          setDismissed(true);
+          router.back();
         }
       },
-      { text: "Cancel", style: "cancel", onPress: () => setDismissed(false) },
+      { text: "Cancel", style: "cancel" },
     ]);
   }, [stop]);
-
-  const handleClose = useCallback((open: boolean) => {
-    if (open) return;
-    if (isRecording) {
-      confirmStop();
-    } else {
-      clearSelectedTrack();
-    }
-  }, [isRecording, clearSelectedTrack, confirmStop]);
 
   const dist = units.toDistance(trackDistance);
 
   return (
-    <BottomSheet isOpen={isOpen} onOpenChange={handleClose} onExpandedChange={setExpanded} compactHeight={compactHeight} dismissable>
+    <View style={styles.container}>
       {/* Compact section — always visible */}
-      <View style={styles.compact} onLayout={(e) => setCompactHeight(e.nativeEvent.layout.height)}>
-        <IconSymbol name="route" color={mode === "recording" ? "#e53e3e" : "#007AFF"} />
+      <View style={styles.compact} onLayout={onCompactLayout}>
+        <IconSymbol name="route" color={isActiveRecording ? "#e53e3e" : "#007AFF"} />
         <View style={styles.stat}>
           <Text style={styles.label} numberOfLines={1}>Time</Text>
           <Text style={styles.value} numberOfLines={1}>{formatElapsed(trackStartedAt, trackEndedAt)}</Text>
@@ -131,7 +159,7 @@ export default function TrackSheet() {
           </Text>
         </View>
         <View style={styles.stopButton}>
-          {mode === "recording" && (
+          {isActiveRecording && (
             <Button
               onPress={confirmStop}
               role="destructive"
@@ -142,44 +170,49 @@ export default function TrackSheet() {
         </View>
       </View>
 
-      <View style={styles.expanded}>
-        <View style={styles.section} onLayout={onChartLayout}>
-          {chartWidth > 0 && (
-            <SpeedChart
-              samples={trackSpeedSamples}
-              width={chartWidth}
-            />
-          )}
-        </View>
+      {expanded && (
+        <View style={styles.expanded}>
+          <View style={styles.section} onLayout={onChartLayout}>
+            {chartWidth > 0 && (
+              <SpeedChart
+                samples={displaySpeedSamples}
+                width={chartWidth}
+              />
+            )}
+          </View>
 
-        <View style={styles.section}>
-          <View style={styles.timesRow}>
-            <View style={styles.timeItem}>
-              <Text style={styles.timeLabel}>Started</Text>
-              <Text style={styles.timeValue}>{formatTime(trackStartedAt)}</Text>
-            </View>
-            <View style={styles.timeItem}>
-              <Text style={styles.timeLabel}>{trackEndedAt ? "Ended" : "Elapsed"}</Text>
-              <Text style={styles.timeValue}>
-                {trackEndedAt ? formatTime(trackEndedAt) : formatElapsed(trackStartedAt)}
-              </Text>
+          <View style={styles.section}>
+            <View style={styles.timesRow}>
+              <View style={styles.timeItem}>
+                <Text style={styles.timeLabel}>Started</Text>
+                <Text style={styles.timeValue}>{formatTime(trackStartedAt)}</Text>
+              </View>
+              <View style={styles.timeItem}>
+                <Text style={styles.timeLabel}>{trackEndedAt ? "Ended" : "Elapsed"}</Text>
+                <Text style={styles.timeValue}>
+                  {trackEndedAt ? formatTime(trackEndedAt) : formatElapsed(trackStartedAt)}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        <View style={styles.actions}>
-          <Button
-            label="Export GPX"
-            onPress={handleExport}
-            systemImage="share"
-          />
+          <View style={styles.actions}>
+            <Button
+              label="Export GPX"
+              onPress={handleExport}
+              systemImage="share"
+            />
+          </View>
         </View>
-      </View>
-    </BottomSheet>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   compact: {
     flexDirection: "row",
     alignItems: "center",

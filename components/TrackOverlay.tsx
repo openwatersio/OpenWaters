@@ -248,7 +248,10 @@ function computeBounds(coords: Coord[]): LngLatBounds | null {
 
 function SelectedTrackOverlay() {
   const selectedId = useTracks((s) => s.selectedId);
-  const sheetHeight = useBottomSheetStore((s) => s.height);
+  const sheetHeight = useBottomSheetStore((s) => {
+    const entry = s.sheets["trackSheet"];
+    return entry?.height ?? 0;
+  });
   const bounds = useMapView((s) => s.bounds);
   const cameraRef = useCameraRef();
   const [coords, setCoords] = useState<Coord[]>([]);

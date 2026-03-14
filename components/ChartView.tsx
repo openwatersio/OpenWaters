@@ -7,14 +7,12 @@ import mapStyles from "@/styles";
 import type { CameraRef } from "@maplibre/maplibre-react-native";
 import { Camera, Map, UserLocation } from "@maplibre/maplibre-react-native";
 import { useRef } from "react";
-import { View } from "react-native";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CurrentLocationButton from "./CurrentLocationButton";
 import HeadsUpDisplay from "./HeadsUpDisplay";
 import TrackOverlay from "./TrackOverlay";
 import TrackRecordButton from "./TrackRecordButton";
-import TrackSheet from "./TrackSheet";
 import ViewOptionsButton from "./ViewOptionsButton";
 import ZoomAndScale from "./ZoomAndScale";
 
@@ -66,10 +64,10 @@ export default function ChartView() {
     <SafeAreaView style={{ position: "absolute", top: 0, right: 16, gap: 16 }}>
     </SafeAreaView>
     <SafeAreaView style={{ position: "absolute", top: 0, left: 16, gap: 16 }}>
-      <TrackRecordButton />
     </SafeAreaView>
     <Animated.View style={[{ position: "absolute", bottom: 0, left: 0, right: 0 }, bottomSheetOffset]}>
-      <SafeAreaView style={{ position: "absolute", bottom: 0, left: 16, gap: 8 }}>
+      <SafeAreaView style={{ position: "absolute", bottom: 0, left: 16, gap: 16 }}>
+        <TrackRecordButton />
         <ViewOptionsButton />
       </SafeAreaView>
       <SafeAreaView style={{ position: "absolute", bottom: 0, right: 16, gap: 16 }}>
@@ -77,8 +75,5 @@ export default function ChartView() {
         <CurrentLocationButton />
       </SafeAreaView>
     </Animated.View>
-    <View style={{ position: "absolute" }}>
-      <TrackSheet />
-    </View>
   </CameraRefContext.Provider>;
 }
