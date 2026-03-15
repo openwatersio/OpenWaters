@@ -1,11 +1,6 @@
+import useTheme from "@/hooks/useTheme";
 import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
 import { IconSymbol, type IconSymbolProps } from "./IconSymbol";
-
-const colors = {
-  tint: "#007AFF",
-  destructive: "#e53e3e",
-  filledForeground: "#ffffff",
-};
 
 export type ButtonProps = {
   label?: string;
@@ -18,8 +13,9 @@ export type ButtonProps = {
 };
 
 export default function Button({ label, onPress, systemImage, role, variant = "default", color, style: containerStyle }: ButtonProps) {
-  const tint = color ?? (role === "destructive" ? colors.destructive : colors.tint);
-  const foreground = variant === "bordered" ? colors.filledForeground : tint;
+  const theme = useTheme();
+  const tint = color ?? (role === "destructive" ? theme.danger : theme.primary);
+  const foreground = variant === "bordered" ? theme.surface : tint;
 
   return (
     <Pressable

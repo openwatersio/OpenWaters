@@ -138,6 +138,10 @@ components/ui/BottomSheet.tsx     ← wraps @expo/ui Jetpack Compose ModalBottom
 
 Consumers import the generic path (`@/components/ui/Button`) and the bundler resolves the platform file.
 
+For examples of how to use `@expo/ui`, see:
+
+- [expo-ui-playground](https://github.com/betomoedano/expo-ui-playground/)
+
 #### Map Styles
 
 Map sources are defined in `styles/index.ts` as an array of `{ id, name, style }` objects. Styles can be either a URL string or an inline MapLibre style JSON object.

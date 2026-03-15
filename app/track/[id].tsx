@@ -1,8 +1,9 @@
 import SpeedChart from "@/components/SpeedChart";
 import Button from "@/components/ui/Button";
 import { IconSymbol } from "@/components/ui/IconSymbol";
-import { useBottomSheetStore } from "@/hooks/useBottomSheetOffset";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import { useSheetReporter } from "@/hooks/useSheetPosition";
+import useTheme from "@/hooks/useTheme";
 import { useTrackRecording, type SpeedSample } from "@/hooks/useTrackRecording";
 import { useTracks } from "@/hooks/useTracks";
 import { getTrack, getTrackPoints, type Track } from "@/lib/database";
@@ -41,20 +42,17 @@ export default function TrackScreen() {
   const units = usePreferredUnits();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const [, setTick] = useState(0);
-  const [detentIndex, setDetentIndex] = useState(0);
   const [chartWidth, setChartWidth] = useState(0);
-  const [detents, setDetents] = useState<number[]>([0.15, 0.5]);
 
   const isActiveRecording = isRecording && activeTrackId === trackId;
-  const expanded = detentIndex > 0;
 
   // Track data for completed tracks (loaded from DB)
   const [track, setTrack] = useState<Track | null>(null);
   const [trackSpeedSamples, setTrackSpeedSamples] = useState<SpeedSample[]>([]);
 
-  const setHeight = useBottomSheetStore((s) => s.setHeight);
-  const removeSheet = useBottomSheetStore((s) => s.removeSheet);
+  const { onLayout: onSheetLayout, ref: sheetRef } = useSheetReporter("track");
 
   // Set selected track for map overlay, clear on unmount
   useEffect(() => {
@@ -64,31 +62,12 @@ export default function TrackScreen() {
 
   // Measure compact section and set detents from actual height
   const onCompactLayout = useCallback((e: LayoutChangeEvent) => {
+    const contentHeight = e.nativeEvent.layout.height;
     const sheetMaxHeight = SCREEN_HEIGHT - insets.top - insets.bottom;
-    const compactFraction = e.nativeEvent.layout.height / sheetMaxHeight;
-    const newDetents = [compactFraction, 0.5];
-    setDetents(newDetents);
+    const compactFraction = contentHeight / sheetMaxHeight;
     navigation.setOptions({
-      sheetAllowedDetents: newDetents,
-      sheetInitialDetentIndex: 0,
+      sheetAllowedDetents: [compactFraction, 0.5, 1.0],
     });
-  }, [navigation]);
-
-  // Track sheet height for overlay button offset
-  useEffect(() => {
-    const height = detents[detentIndex] * SCREEN_HEIGHT;
-    setHeight("trackSheet", height);
-    return () => removeSheet("trackSheet");
-  }, [detentIndex, detents, setHeight, removeSheet]);
-
-  // Listen for detent changes
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("sheetDetentChange" as any, (e: any) => {
-      if (e?.data?.index !== undefined) {
-        setDetentIndex(e.data.index);
-      }
-    });
-    return unsubscribe;
   }, [navigation]);
 
   // Load track data from DB for completed tracks
@@ -143,19 +122,19 @@ export default function TrackScreen() {
   const dist = units.toDistance(trackDistance);
 
   return (
-    <View style={styles.container}>
+    <View ref={sheetRef} onLayout={onSheetLayout} style={styles.container}>
       {/* Compact section — always visible */}
       <View style={styles.compact} onLayout={onCompactLayout}>
-        <IconSymbol name="route" color={isActiveRecording ? "#e53e3e" : "#007AFF"} />
+        <IconSymbol name="route" color={isActiveRecording ? theme.danger : theme.primary} />
         <View style={styles.stat}>
-          <Text style={styles.label} numberOfLines={1}>Time</Text>
-          <Text style={styles.value} numberOfLines={1}>{formatElapsed(trackStartedAt, trackEndedAt)}</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]} numberOfLines={1}>Time</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]} numberOfLines={1}>{formatElapsed(trackStartedAt, trackEndedAt)}</Text>
         </View>
         <View style={styles.stat}>
-          <Text style={styles.label} numberOfLines={1}>Distance</Text>
-          <Text style={styles.value} numberOfLines={1}>
+          <Text style={[styles.label, { color: theme.textSecondary }]} numberOfLines={1}>Distance</Text>
+          <Text style={[styles.value, { color: theme.textPrimary }]} numberOfLines={1}>
             {dist.value}
-            <Text style={styles.units}> {dist.abbr}</Text>
+            <Text style={[styles.units, { color: theme.textSecondary }]}> {dist.abbr}</Text>
           </Text>
         </View>
         <View style={styles.stopButton}>
@@ -170,41 +149,39 @@ export default function TrackScreen() {
         </View>
       </View>
 
-      {expanded && (
-        <View style={styles.expanded}>
-          <View style={styles.section} onLayout={onChartLayout}>
-            {chartWidth > 0 && (
-              <SpeedChart
-                samples={displaySpeedSamples}
-                width={chartWidth}
-              />
-            )}
-          </View>
+      <View style={styles.expanded}>
+        <View style={styles.section} onLayout={onChartLayout}>
+          {chartWidth > 0 && (
+            <SpeedChart
+              samples={displaySpeedSamples}
+              width={chartWidth}
+            />
+          )}
+        </View>
 
-          <View style={styles.section}>
-            <View style={styles.timesRow}>
-              <View style={styles.timeItem}>
-                <Text style={styles.timeLabel}>Started</Text>
-                <Text style={styles.timeValue}>{formatTime(trackStartedAt)}</Text>
-              </View>
-              <View style={styles.timeItem}>
-                <Text style={styles.timeLabel}>{trackEndedAt ? "Ended" : "Elapsed"}</Text>
-                <Text style={styles.timeValue}>
-                  {trackEndedAt ? formatTime(trackEndedAt) : formatElapsed(trackStartedAt)}
-                </Text>
-              </View>
+        <View style={styles.section}>
+          <View style={styles.timesRow}>
+            <View style={[styles.timeItem, { backgroundColor: theme.surfaceElevated }]}>
+              <Text style={[styles.timeLabel, { color: theme.textSecondary }]}>Started</Text>
+              <Text style={[styles.timeValue, { color: theme.textPrimary }]}>{formatTime(trackStartedAt)}</Text>
+            </View>
+            <View style={[styles.timeItem, { backgroundColor: theme.surfaceElevated }]}>
+              <Text style={[styles.timeLabel, { color: theme.textSecondary }]}>{trackEndedAt ? "Ended" : "Elapsed"}</Text>
+              <Text style={[styles.timeValue, { color: theme.textPrimary }]}>
+                {trackEndedAt ? formatTime(trackEndedAt) : formatElapsed(trackStartedAt)}
+              </Text>
             </View>
           </View>
-
-          <View style={styles.actions}>
-            <Button
-              label="Export GPX"
-              onPress={handleExport}
-              systemImage="share"
-            />
-          </View>
         </View>
-      )}
+
+        <View style={styles.actions}>
+          <Button
+            label="Export GPX"
+            onPress={handleExport}
+            systemImage="share"
+          />
+        </View>
+      </View>
     </View>
   );
 }
@@ -230,7 +207,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     textTransform: "uppercase",
-    opacity: 0.5,
     marginBottom: 4,
   },
   value: {
@@ -242,7 +218,6 @@ const styles = StyleSheet.create({
   units: {
     fontSize: 16,
     fontWeight: "500",
-    opacity: 0.5,
   },
   stopButton: {
     flex: 1,
@@ -263,7 +238,6 @@ const styles = StyleSheet.create({
   },
   timeItem: {
     flex: 1,
-    backgroundColor: "rgba(255,255,255,0.85)",
     borderRadius: 12,
     padding: 12,
   },
@@ -271,13 +245,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     textTransform: "uppercase",
-    opacity: 0.5,
     marginBottom: 4,
   },
   timeValue: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1a2b4a",
     fontVariant: ["tabular-nums"],
   },
   actions: {

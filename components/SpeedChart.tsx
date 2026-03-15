@@ -1,4 +1,5 @@
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import useTheme from "@/hooks/useTheme";
 import type { SpeedSample } from "@/hooks/useTrackRecording";
 import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -12,6 +13,7 @@ type Props = {
 
 export default function SpeedChart({ samples, width, height = 100 }: Props) {
   const units = usePreferredUnits();
+  const theme = useTheme();
 
   const { avgSpeed, maxSpeed, path, fillPath } = useMemo(() => {
     if (samples.length < 2) {
@@ -44,36 +46,33 @@ export default function SpeedChart({ samples, width, height = 100 }: Props) {
   const max = units.toSpeed(maxSpeed);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>SPEED</Text>
-      <View style={styles.chartContainer}>
-        {samples.length >= 2 && (
-          <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
-            <Defs>
-              <LinearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor="#8BC6A8" stopOpacity={0.6} />
-                <Stop offset="1" stopColor="#8BC6A8" stopOpacity={0.1} />
-              </LinearGradient>
-            </Defs>
-            <Path d={fillPath} fill="url(#fill)" />
-            <Path d={path} stroke="#8BC6A8" strokeWidth={1.5} fill="none" />
-          </Svg>
-        )}
-        <View style={styles.statsRow}>
-          <View style={styles.stat}>
-            <Text style={styles.statLabel}>AVERAGE</Text>
-            <Text style={styles.statValue}>
-              {avg.value}
-              <Text style={styles.statUnit}> {avg.abbr}</Text>
-            </Text>
-          </View>
-          <View style={styles.stat}>
-            <Text style={styles.statLabel}>MAX</Text>
-            <Text style={styles.statValue}>
-              {max.value}
-              <Text style={styles.statUnit}> {max.abbr}</Text>
-            </Text>
-          </View>
+    <View style={[styles.container, { backgroundColor: theme.surfaceElevated }]}>
+      {samples.length >= 2 && (
+        <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
+          <Defs>
+            <LinearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={theme.primary} stopOpacity={0.6} />
+              <Stop offset="1" stopColor={theme.primary} stopOpacity={0.1} />
+            </LinearGradient>
+          </Defs>
+          <Path d={fillPath} fill="url(#fill)" />
+          <Path d={path} stroke={theme.primary} strokeWidth={1.5} fill="none" />
+        </Svg>
+      )}
+      <View style={styles.statsRow}>
+        <View style={styles.stat}>
+          <Text style={[styles.statLabel, { color: theme.textPrimary }]}>AVERAGE</Text>
+          <Text style={[styles.textPrimary, { color: theme.textPrimary }]}>
+            {avg.value}
+            <Text style={styles.statUnit}> {avg.abbr}</Text>
+          </Text>
+        </View>
+        <View style={styles.stat}>
+          <Text style={[styles.statLabel, { color: theme.textPrimary }]}>MAX</Text>
+          <Text style={[styles.textPrimary, { color: theme.textPrimary }]}>
+            {max.value}
+            <Text style={styles.statUnit}> {max.abbr}</Text>
+          </Text>
         </View>
       </View>
     </View>
@@ -82,17 +81,6 @@ export default function SpeedChart({ samples, width, height = 100 }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 8,
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    opacity: 0.6,
-  },
-  chartContainer: {
-    backgroundColor: "rgba(255,255,255,0.85)",
     borderRadius: 16,
     padding: 16,
     overflow: "hidden",
@@ -109,12 +97,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     textTransform: "uppercase",
-    opacity: 0.5,
+    opacity: 0.8,
   },
-  statValue: {
+  textPrimary: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#1a2b4a",
     fontVariant: ["tabular-nums"],
     letterSpacing: -1,
   },

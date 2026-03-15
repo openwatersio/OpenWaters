@@ -1,7 +1,7 @@
-import { useBottomSheetOffset } from "@/hooks/useBottomSheetOffset";
 import { CameraRefContext } from "@/hooks/useCameraRef";
 import { useCameraState } from "@/hooks/useCameraState";
 import { useMapView } from "@/hooks/useMapView";
+import { useSheetOffset } from "@/hooks/useSheetPosition";
 import { useViewOptions } from "@/hooks/useViewOptions";
 import mapStyles from "@/styles";
 import type { CameraRef } from "@maplibre/maplibre-react-native";
@@ -11,6 +11,7 @@ import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CurrentLocationButton from "./CurrentLocationButton";
 import HeadsUpDisplay from "./HeadsUpDisplay";
+import MenuButton from "./MenuButton";
 import TrackOverlay from "./TrackOverlay";
 import TrackRecordButton from "./TrackRecordButton";
 import ViewOptionsButton from "./ViewOptionsButton";
@@ -20,7 +21,7 @@ export default function ChartView() {
   const viewOptions = useViewOptions();
   const cameraState = useCameraState();
   const mapView = useMapView();
-  const bottomSheetOffset = useBottomSheetOffset();
+  const bottomSheetOffset = useSheetOffset();
   const mapStyle = mapStyles.find(style => style.id === viewOptions.mapStyleId)?.style || mapStyles[0].style;
   const cameraRef = useRef<CameraRef>(null);
 
@@ -73,6 +74,7 @@ export default function ChartView() {
       <SafeAreaView style={{ position: "absolute", bottom: 0, right: 16, gap: 16 }}>
         <ZoomAndScale />
         <CurrentLocationButton />
+        <MenuButton />
       </SafeAreaView>
     </Animated.View>
   </CameraRefContext.Provider>;

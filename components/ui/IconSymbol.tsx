@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SymbolView, SymbolViewProps, SymbolWeight } from 'expo-symbols';
+import { SymbolView, SymbolViewProps, SymbolWeight, SymbolType } from 'expo-symbols';
 import { ComponentProps } from 'react';
-import { OpaqueColorValue, ViewStyle, type StyleProp, type TextStyle } from 'react-native';
+import { OpaqueColorValue, View, ViewStyle, type StyleProp, type TextStyle } from 'react-native';
 
 // Map MaterialIcons names to SymbolView names.
 // See Symbols app for names: https://developer.apple.com/sf-symbols/
@@ -14,6 +14,8 @@ export const ICON_MAPPING: Partial<Record<ComponentProps<typeof MaterialIcons>['
   'fiber-manual-record': 'record.circle',
   'stop': 'stop.circle',
   'route': 'point.bottomleft.forward.to.arrow.triangle.scurvepath',
+  'menu': 'line.3.horizontal',
+  'close': 'xmark.circle.fill',
 };
 
 export type IconSymbolProps = {
@@ -22,6 +24,7 @@ export type IconSymbolProps = {
   color?: string | OpaqueColorValue;
   style?: StyleProp<ViewStyle> | StyleProp<TextStyle>;
   weight?: SymbolWeight;
+  type?: SymbolType;
 }
 
 export function IconSymbol({
@@ -30,21 +33,19 @@ export function IconSymbol({
   color,
   style,
   weight = 'regular',
+  type,
 }: IconSymbolProps) {
   return (
-    <SymbolView
-      weight={weight}
-      tintColor={color}
-      resizeMode="scaleAspectFit"
-      name={ICON_MAPPING[name]!}
-      style={[
-        {
-          width: size,
-          height: size,
-        },
-        style as StyleProp<ViewStyle>,
-      ]}
-      fallback={<MaterialIcons color={color} size={size} name={name} style={style as StyleProp<TextStyle>} />}
-    />
+    <View style={[{ width: size, height: size }, style as StyleProp<ViewStyle>]}>
+      <SymbolView
+        weight={weight}
+        tintColor={color}
+        type={type}
+        size={size}
+        resizeMode="scaleAspectFit"
+        name={ICON_MAPPING[name]!}
+        fallback={<MaterialIcons color={color} size={size} name={name} />}
+      />
+    </View>
   );
 }

@@ -1,4 +1,4 @@
-import { getAllTracks, deleteTrack, renameTrack, type Track } from "@/lib/database";
+import { getAllTracksWithStats, deleteTrack, renameTrack, type Track, type TrackWithStats } from "@/lib/database";
 import { exportTrackAsGPX } from "@/lib/exportTrack";
 import { useEffect } from "react";
 import { create } from "zustand";
@@ -6,11 +6,9 @@ import { create } from "zustand";
 export function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, {
-    month: "short",
+    month: "long",
     day: "numeric",
     year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
   });
 }
 
@@ -21,9 +19,8 @@ export function formatDistance(meters: number): string {
 }
 
 export function formatDuration(startedAt: string, endedAt: string | null): string {
-  if (!endedAt) return "In progress";
-  const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
-  const totalMin = Math.floor(ms / 60000);
+  const end = endedAt ? new Date(endedAt).getTime() : Date.now();
+  const totalMin = Math.floor((end - new Date(startedAt).getTime()) / 60000);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
   if (h > 0) return `${h}h ${m}m`;
@@ -31,11 +28,11 @@ export function formatDuration(startedAt: string, endedAt: string | null): strin
 }
 
 export function trackDisplayName(track: Track): string {
-  return track.name || formatDate(track.started_at);
+  return track.name || `Track ${track.id}`;
 }
 
 interface TracksState {
-  tracks: Track[];
+  tracks: TrackWithStats[];
   selectedId: number | null;
   loadTracks: () => Promise<void>;
   handleDelete: (trackId: number) => Promise<void>;
@@ -50,7 +47,7 @@ export const useTracks = create<TracksState>((set, get) => ({
   selectedId: null,
 
   loadTracks: async () => {
-    const result = await getAllTracks();
+    const result = await getAllTracksWithStats();
     set({ tracks: result });
   },
 

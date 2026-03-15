@@ -1,4 +1,4 @@
-import { useBottomSheetStore } from "@/hooks/useBottomSheetOffset";
+import { useSheetStore } from "@/hooks/useSheetPosition";
 import { useCameraRef } from "@/hooks/useCameraRef";
 import { useCameraState } from "@/hooks/useCameraState";
 import { useMapView } from "@/hooks/useMapView";
@@ -248,7 +248,7 @@ function computeBounds(coords: Coord[]): LngLatBounds | null {
 
 function SelectedTrackOverlay() {
   const selectedId = useTracks((s) => s.selectedId);
-  const sheetHeight = useBottomSheetStore((s) => {
+  const sheetHeight = useSheetStore((s) => {
     const entry = s.sheets["trackSheet"];
     return entry?.height ?? 0;
   });

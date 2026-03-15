@@ -1,4 +1,6 @@
+import { useSheetReporter } from "@/hooks/useSheetPosition";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import useTheme from "@/hooks/useTheme";
 import { useViewOptions } from "@/hooks/useViewOptions";
 import mapStyles from "@/styles";
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
@@ -6,9 +8,12 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
 export default function ViewOptions() {
   const viewOptions = useViewOptions();
   const units = usePreferredUnits();
+  const theme = useTheme();
+  const { onLayout: onSheetLayout } = useSheetReporter("viewOptions");
+  const styles = makeStyles(theme);
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} onLayout={onSheetLayout}>
       <Text style={styles.sectionTitle}>Charts</Text>
       {mapStyles.map(({ id, name }) => {
         const selected = viewOptions.mapStyleId === id;
@@ -58,44 +63,46 @@ export default function ViewOptions() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6b6b6b",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 8,
-  },
-  label: {
-    fontSize: 13,
-    color: "#6b6b6b",
-    paddingHorizontal: 16,
-    paddingBottom: 4,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e0e0e0",
-    backgroundColor: "#fff",
-  },
-  rowText: {
-    fontSize: 16,
-    color: "#000",
-  },
-  checkmark: {
-    fontSize: 16,
-    color: "#007AFF",
-    fontWeight: "600",
-  },
-});
+function makeStyles(theme: ReturnType<typeof useTheme>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.surface,
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: theme.textSecondary,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      paddingHorizontal: 16,
+      paddingTop: 24,
+      paddingBottom: 8,
+    },
+    label: {
+      fontSize: 13,
+      color: theme.textSecondary,
+      paddingHorizontal: 16,
+      paddingBottom: 4,
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: theme.border,
+      backgroundColor: theme.surface,
+    },
+    rowText: {
+      fontSize: 16,
+      color: theme.textPrimary,
+    },
+    checkmark: {
+      fontSize: 16,
+      color: theme.primary,
+      fontWeight: "600",
+    },
+  });
+}

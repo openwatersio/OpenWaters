@@ -24,6 +24,8 @@ export const useNavigationState = create<State & Actions>()((set) => {
   }
 
   LocationManager.addListener((location) => {
+    if (!location) return;
+
     set(location);
 
     if (!location.coords?.speed || location.coords?.speed <= 0) {

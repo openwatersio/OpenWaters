@@ -125,6 +125,39 @@ export async function getAllTracks(): Promise<Track[]> {
   );
 }
 
+export type TrackWithStats = Track & {
+  avg_speed: number | null; // m/s
+  max_speed: number | null; // m/s
+};
+
+export async function getTrackDistances(
+  lat: number,
+  lng: number,
+): Promise<Map<number, number>> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{ track_id: number; dist_sq: number }>(
+    `SELECT track_id,
+       MIN((latitude - ?) * (latitude - ?) + (longitude - ?) * (longitude - ?)) as dist_sq
+     FROM track_points
+     GROUP BY track_id`,
+    lat, lat, lng, lng,
+  );
+  return new Map(rows.map((r) => [r.track_id, r.dist_sq]));
+}
+
+export async function getAllTracksWithStats(): Promise<TrackWithStats[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<TrackWithStats>(`
+    SELECT t.*,
+      AVG(tp.speed) as avg_speed,
+      MAX(tp.speed) as max_speed
+    FROM tracks t
+    LEFT JOIN track_points tp ON tp.track_id = t.id AND tp.speed IS NOT NULL
+    GROUP BY t.id
+    ORDER BY t.started_at DESC
+  `);
+}
+
 export async function getTrackPoints(trackId: number): Promise<TrackPoint[]> {
   const db = await getDatabase();
   return db.getAllAsync<TrackPoint>(

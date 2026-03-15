@@ -1,4 +1,5 @@
 import { useTrackRecording } from "@/hooks/useTrackRecording";
+import useTheme from "@/hooks/useTheme";
 import { router, usePathname } from "expo-router";
 import { useEffect } from "react";
 import { Pressable, StyleSheet } from "react-native";
@@ -13,6 +14,7 @@ import OverlayView from "./ui/OverlayView";
 
 export default function TrackRecordButton() {
   const { isRecording, activeTrackId, start } = useTrackRecording();
+  const theme = useTheme();
   const pathname = usePathname();
   const trackSheetOpen = pathname.startsWith("/track/");
 
@@ -53,11 +55,11 @@ export default function TrackRecordButton() {
     <OverlayView style={styles.buttonOverlay}>
       <Pressable
         onPress={handlePress}
-        onLongPress={() => router.push("/Tracks")}
+        onLongPress={() => router.push("/tracks")}
         style={styles.button}
       >
         <Animated.View style={isRecording ? pulseStyle : undefined}>
-          <IconSymbol name="fiber-manual-record" color="#e53e3e" />
+          <IconSymbol name="fiber-manual-record" color={theme.danger} />
         </Animated.View>
       </Pressable>
     </OverlayView>

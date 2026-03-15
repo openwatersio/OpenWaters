@@ -1,6 +1,7 @@
 
 import { NavigationState, useNavigationState } from "@/hooks/useNavigationState";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import useTheme from "@/hooks/useTheme";
 import { useTrackRecording } from "@/hooks/useTrackRecording";
 import { StyleSheet, Text, View } from "react-native";
 import OverlayView from "./ui/OverlayView";
@@ -8,13 +9,14 @@ import OverlayView from "./ui/OverlayView";
 function SpeedOverGround() {
   const units = usePreferredUnits();
   const nav = useNavigationState();
+  const theme = useTheme();
   const { value, plural } = units.toSpeed(nav.coords?.speed ?? undefined);
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionLabel}>SOG</Text>
-      <Text style={styles.sectionValue}>{value ?? "--"}</Text>
-      <Text style={styles.sectionUnits}>{plural}</Text>
+      <Text style={[{ color: theme.textPrimary }, styles.sectionLabel]}>SOG</Text>
+      <Text style={[{ color: theme.textPrimary }, styles.sectionValue]}>{value ?? "--"}</Text>
+      <Text style={[{ color: theme.textPrimary }, styles.sectionUnits]}>{plural}</Text>
     </View>
   );
 }

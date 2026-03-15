@@ -5,15 +5,16 @@ import OverlayView from './OverlayView';
 
 export type OverlyButtonProps = {
   icon: IconSymbolProps['name'];
+  iconStyle?: IconSymbolProps['style'];
 } & (LinkProps | React.ComponentProps<typeof Pressable>);
 
-export default function OverlayButton({ icon, ...props }: OverlyButtonProps) {
+export default function OverlayButton({ icon, iconStyle, ...props }: OverlyButtonProps) {
   const Wrapper = 'href' in props ? Link : Pressable;
 
   return (
     <OverlayView style={styles.overlay}>
       <Wrapper {...props as any} style={styles.button}>
-        <IconSymbol name={icon} />
+        <IconSymbol name={icon} style={iconStyle} />
       </Wrapper>
     </OverlayView>
   );
