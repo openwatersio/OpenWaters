@@ -1,4 +1,4 @@
-import { distanceMeters, headingDelta } from "@/lib/geo";
+import { bearingDegrees, distanceMeters, formatBearing, headingDelta } from "@/lib/geo";
 
 describe("distanceMeters", () => {
   it("returns 0 for the same point", () => {
@@ -34,5 +34,57 @@ describe("headingDelta", () => {
 
   it("returns max 180", () => {
     expect(headingDelta(0, 180)).toBe(180);
+  });
+});
+
+describe("bearingDegrees", () => {
+  it("returns ~0 for due north", () => {
+    // Point directly north: same longitude, higher latitude
+    const b = bearingDegrees(47.0, -122.0, 48.0, -122.0);
+    expect(b).toBeCloseTo(0, 0);
+  });
+
+  it("returns ~90 for due east at equator", () => {
+    const b = bearingDegrees(0, 0, 0, 1);
+    expect(b).toBeCloseTo(90, 0);
+  });
+
+  it("returns ~180 for due south", () => {
+    const b = bearingDegrees(48.0, -122.0, 47.0, -122.0);
+    expect(b).toBeCloseTo(180, 0);
+  });
+
+  it("returns ~270 for due west at equator", () => {
+    const b = bearingDegrees(0, 1, 0, 0);
+    expect(b).toBeCloseTo(270, 0);
+  });
+
+  it("returns known bearing (Seattle to Portland ~187°)", () => {
+    // Portland is south-southwest of Seattle
+    const b = bearingDegrees(47.6062, -122.3321, 45.5152, -122.6784);
+    expect(b).toBeGreaterThan(183);
+    expect(b).toBeLessThan(190);
+  });
+});
+
+describe("formatBearing", () => {
+  it("pads single-digit bearings", () => {
+    expect(formatBearing(5)).toBe("005°T");
+  });
+
+  it("pads two-digit bearings", () => {
+    expect(formatBearing(45)).toBe("045°T");
+  });
+
+  it("formats three-digit bearings", () => {
+    expect(formatBearing(270)).toBe("270°T");
+  });
+
+  it("rounds decimal values", () => {
+    expect(formatBearing(44.7)).toBe("045°T");
+  });
+
+  it("normalizes 360 to 000", () => {
+    expect(formatBearing(360)).toBe("000°T");
   });
 });

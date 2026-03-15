@@ -16,12 +16,17 @@ export default function MainSheet() {
               label="Tracks"
               onPress={() => router.push("/tracks")}
             />
+            <Button
+              systemImage="map"
+              label="Charts"
+              onPress={() => router.push("/charts")}
+            />
           </Section>
           <Section>
             <Button
-              systemImage="square.3.layers.3d"
-              label="View Options"
-              onPress={() => router.push("/ViewOptions")}
+              systemImage="gearshape"
+              label="Settings"
+              onPress={() => router.push("/settings")}
             />
           </Section>
         </List>

@@ -1,15 +1,15 @@
 import SpeedChart from "@/components/SpeedChart";
 import Button from "@/components/ui/Button";
-import { SymbolView } from "expo-symbols";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
 import { useSheetReporter } from "@/hooks/useSheetPosition";
 import useTheme from "@/hooks/useTheme";
-import { useTrackRecording, type SpeedSample } from "@/hooks/useTrackRecording";
+import { useSpeedSamples, useTrackRecording, type SpeedSample } from "@/hooks/useTrackRecording";
 import { useTracks } from "@/hooks/useTracks";
 import { getTrack, getTrackPoints, type Track } from "@/lib/database";
 import { exportTrackAsGPX } from "@/lib/exportTrack";
 import { useNavigation } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
+import { SymbolView } from "expo-symbols";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Dimensions, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -36,7 +36,8 @@ function formatTime(iso: string | null): string {
 export default function TrackScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const trackId = Number(id);
-  const { isRecording, activeTrackId, startedAt, distance, speedSamples, stop } = useTrackRecording();
+  const { isRecording, activeTrackId, startedAt, distance, stop } = useTrackRecording();
+  const speedSamples = useSpeedSamples();
   const selectTrack = useTracks((s) => s.selectTrack);
   const clearSelectedTrack = useTracks((s) => s.clearSelectedTrack);
   const units = usePreferredUnits();
@@ -75,7 +76,7 @@ export default function TrackScreen() {
     navigation.setOptions({
       sheetAllowedDetents: [compactFraction, 0.5, 1.0],
     });
-  }, [navigation]);
+  }, [navigation, insets]);
 
   // Load track data from DB for completed tracks
   useEffect(() => {

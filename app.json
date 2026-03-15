@@ -13,13 +13,16 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Permission is necessary to display user location",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow SeaScape to record your track while the app is in the background.",
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": [
+          "location"
+        ]
       },
       "bundleIdentifier": "io.openwaters.seascape"
     },
     "plugins": [
       "expo-router",
       "@maplibre/maplibre-react-native",
+      "react-native-map-link",
       [
         "expo-splash-screen",
         {
@@ -46,10 +49,18 @@
       "expo-font",
       "expo-image",
       "expo-sqlite",
-      "expo-sharing"
+      "expo-sharing",
+      "react-native-map-link"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "android": {
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "io.openwaters.seascape"
     }
   }
 }

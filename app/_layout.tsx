@@ -1,5 +1,5 @@
-import "@/lib/backgroundLocation"; // Register background task at module scope
 import { CloseButton } from "@/components/CloseButton";
+import "@/lib/backgroundLocation"; // Register background task at module scope
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { useColorScheme } from 'react-native';
@@ -19,18 +19,33 @@ export default function RootLayout() {
           sheetGrabberVisible: true,
           headerShown: false,
         }} />
-        <Stack.Screen name="ViewOptions" options={{
+        <Stack.Screen name="charts" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
           sheetAllowedDetents: [0.5, 1],
           sheetGrabberVisible: true,
-          title: "View Options",
+          title: "Charts",
           headerRight: () => <CloseButton />,
+        }} />
+        <Stack.Screen name="settings" options={{
+          presentation: "formSheet",
+          sheetLargestUndimmedDetentIndex: "last",
+          sheetAllowedDetents: [0.5, 1],
+          sheetGrabberVisible: true,
+          title: "Settings",
+          headerRight: () => <CloseButton />,
+        }} />
+        <Stack.Screen name="location" options={{
+          presentation: "formSheet",
+          sheetLargestUndimmedDetentIndex: "last",
+          sheetAllowedDetents: [0.3, 0.5],
+          sheetGrabberVisible: true,
+          headerShown: false,
         }} />
         <Stack.Screen name="MainSheet" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [0.25],
+          sheetAllowedDetents: [0.5],
           sheetGrabberVisible: true,
           headerShown: false,
         }} />

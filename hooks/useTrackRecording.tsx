@@ -14,6 +14,16 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 export type SpeedSample = { speed: number; timestamp: number };
 
+// Mutable array kept outside Zustand state to avoid O(n) copies on every point.
+// Consumers use useSpeedSamples() which subscribes to the version counter
+// for re-renders while reading from the mutable buffer.
+let speedSamplesBuffer: SpeedSample[] = [];
+
+export function useSpeedSamples(): readonly SpeedSample[] {
+  useTrackRecording((s) => s.speedSamplesVersion);
+  return speedSamplesBuffer;
+}
+
 type State = {
   isRecording: boolean;
   activeTrackId: number | null;
@@ -21,7 +31,7 @@ type State = {
   distance: number;
   startedAt: string | null;
   maxSpeed: number;
-  speedSamples: SpeedSample[];
+  speedSamplesVersion: number;
 };
 
 type Actions = {
@@ -33,6 +43,20 @@ type Actions = {
 let fgSubscription: Location.LocationSubscription | null = null;
 let removePointListener: (() => void) | null = null;
 
+function subscribeToPoints(set: (fn: (state: State) => Partial<State>) => void) {
+  return addPointRecordedListener((_lat, _lon, segmentDistance, speed, timestamp) => {
+    if (speed != null) {
+      speedSamplesBuffer.push({ speed, timestamp });
+    }
+    set((state) => ({
+      pointCount: state.pointCount + 1,
+      distance: state.distance + segmentDistance,
+      maxSpeed: speed != null ? Math.max(state.maxSpeed, speed) : state.maxSpeed,
+      speedSamplesVersion: speed != null ? state.speedSamplesVersion + 1 : state.speedSamplesVersion,
+    }));
+  });
+}
+
 export const useTrackRecording = create<State & Actions>()(
   persist(
     (set, get) => ({
@@ -42,7 +66,7 @@ export const useTrackRecording = create<State & Actions>()(
       distance: 0,
       startedAt: null,
       maxSpeed: 0,
-      speedSamples: [],
+      speedSamplesVersion: 0,
 
       start: async () => {
         const granted = await requestPermissions();
@@ -50,6 +74,7 @@ export const useTrackRecording = create<State & Actions>()(
 
         const trackId = await startTrack();
         resetLastPoint();
+        speedSamplesBuffer = [];
 
         set({
           isRecording: true,
@@ -58,19 +83,10 @@ export const useTrackRecording = create<State & Actions>()(
           distance: 0,
           startedAt: new Date().toISOString(),
           maxSpeed: 0,
-          speedSamples: [],
+          speedSamplesVersion: 0,
         });
 
-        removePointListener = addPointRecordedListener((_lat, _lon, segmentDistance, speed, timestamp) => {
-          set((state) => ({
-            pointCount: state.pointCount + 1,
-            distance: state.distance + segmentDistance,
-            maxSpeed: speed != null ? Math.max(state.maxSpeed, speed) : state.maxSpeed,
-            speedSamples: speed != null
-              ? [...state.speedSamples, { speed, timestamp }]
-              : state.speedSamples,
-          }));
-        });
+        removePointListener = subscribeToPoints(set);
 
         fgSubscription = await startForegroundTracking(trackId);
         await startBackgroundTracking(trackId);
@@ -80,16 +96,7 @@ export const useTrackRecording = create<State & Actions>()(
         const { isRecording, activeTrackId } = get();
         if (!isRecording || !activeTrackId) return;
 
-        removePointListener = addPointRecordedListener((_lat, _lon, segmentDistance, speed, timestamp) => {
-          set((state) => ({
-            pointCount: state.pointCount + 1,
-            distance: state.distance + segmentDistance,
-            maxSpeed: speed != null ? Math.max(state.maxSpeed, speed) : state.maxSpeed,
-            speedSamples: speed != null
-              ? [...state.speedSamples, { speed, timestamp }]
-              : state.speedSamples,
-          }));
-        });
+        removePointListener = subscribeToPoints(set);
 
         fgSubscription = await startForegroundTracking(activeTrackId);
       },
@@ -110,6 +117,8 @@ export const useTrackRecording = create<State & Actions>()(
           await endTrack(activeTrackId, distance);
         }
 
+        speedSamplesBuffer = [];
+
         set({
           isRecording: false,
           activeTrackId: null,
@@ -117,7 +126,7 @@ export const useTrackRecording = create<State & Actions>()(
           distance: 0,
           startedAt: null,
           maxSpeed: 0,
-          speedSamples: [],
+          speedSamplesVersion: 0,
         });
       },
     }),
@@ -125,7 +134,7 @@ export const useTrackRecording = create<State & Actions>()(
       name: "track-recording",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => {
-        const { speedSamples: _, ...rest } = state;
+        const { speedSamplesVersion: _, ...rest } = state;
         return rest;
       },
       onRehydrateStorage: () => (state) => {

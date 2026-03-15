@@ -149,6 +149,7 @@
 				2163BFDC8DB74B6FB0D7FE2F /* Remove signature files (Xcode workaround) */,
 				C37EEB4D932313C76A6CBD74 /* [CP] Embed Pods Frameworks */,
 				CE1E09680CFFBC1DE18F25C4 /* [CP] Copy Pods Resources */,
+				A50707BA51D8418B9BA4AE42 /* Remove signature files (Xcode workaround) */,
 			);
 			buildRules = (
 			);
@@ -364,6 +365,23 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		A50707BA51D8418B9BA4AE42 /* Remove signature files (Xcode workaround) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Remove signature files (Xcode workaround)";
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			shellPath = /bin/sh;
+			shellScript = "
+          echo \"Remove signature files (Xcode workaround)\";
+          rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\";
+        ";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -407,7 +425,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = io.openwaters.seascape;
-				PRODUCT_NAME = SeaScape;
+				PRODUCT_NAME = "SeaScape";
 				SWIFT_OBJC_BRIDGING_HEADER = "SeaScape/SeaScape-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -439,7 +457,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = io.openwaters.seascape;
-				PRODUCT_NAME = SeaScape;
+				PRODUCT_NAME = "SeaScape";
 				SWIFT_OBJC_BRIDGING_HEADER = "SeaScape/SeaScape-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

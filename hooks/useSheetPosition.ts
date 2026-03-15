@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { type LayoutChangeEvent, type View } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
 import {
   useAnimatedStyle,
   useSharedValue,
@@ -56,6 +57,41 @@ const useSheetStore = create<{
 
 export { useSheetStore };
 
+/** Height of the topmost open sheet (0 if none). */
+function getTopSheetHeight(sheets: Record<string, SheetEntry>): number {
+  const entries = Object.values(sheets).filter((e) => e.height > 0);
+  if (entries.length === 0) return 0;
+  return entries.reduce((a, b) => (a.presentedAt > b.presentedAt ? a : b)).height;
+}
+
+/**
+ * Returns the topmost sheet height as an animated shared value.
+ */
+export function useSheetHeight(): SharedValue<number> {
+  const sheetHeight = useSheetStore((s) => getTopSheetHeight(s.sheets));
+  const animated = useSharedValue(0);
+
+  useEffect(() => {
+    animated.value = withTiming(sheetHeight, { duration: 50 });
+  }, [sheetHeight, animated]);
+
+  return animated;
+}
+
+/**
+ * Returns a ref that always holds the current topmost sheet height
+ * without triggering re-renders.
+ */
+export function useSheetHeightRef(): React.RefObject<number> {
+  const ref = useRef(getTopSheetHeight(useSheetStore.getState().sheets));
+  useEffect(() => {
+    return useSheetStore.subscribe((s) => {
+      ref.current = getTopSheetHeight(s.sheets);
+    });
+  }, []);
+  return ref;
+}
+
 /**
  * Call from each formSheet screen's root View onLayout.
  * Reports the sheet's content height continuously.
@@ -85,23 +121,10 @@ export function useSheetReporter(id: string) {
  * Returns an animated style that shifts content up by the topmost sheet's height.
  */
 export function useSheetOffset() {
-  const sheetHeight = useSheetStore((s) => {
-    const entries = Object.values(s.sheets).filter((e) => e.height > 0);
-    if (entries.length === 0) return 0;
-    const entry = entries.reduce((a, b) =>
-      a.presentedAt > b.presentedAt ? a : b,
-    );
-    return entry.height;
-  });
-
-  const offset = useSharedValue(0);
-
-  useEffect(() => {
-    offset.value = withTiming(sheetHeight, { duration: 50 });
-  }, [sheetHeight, offset]);
+  const sheetHeight = useSheetHeight();
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -offset.value }],
+    transform: [{ translateY: -sheetHeight.value }],
   }));
 
   return animatedStyle;

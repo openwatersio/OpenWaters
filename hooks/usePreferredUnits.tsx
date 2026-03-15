@@ -39,38 +39,36 @@ interface Actions {
 
 export const usePreferredUnits = create<State & Actions>()(
   persist(
-    (set) => {
-      return {
-        speed: 'knot',
-        distance: 'nm',
-        set,
+    (set, get) => ({
+      speed: 'knot',
+      distance: 'nm',
+      set,
 
-        speedUnits() {
-          return Object.keys(speedUnits) as SpeedUnit[];
-        },
+      speedUnits() {
+        return Object.keys(speedUnits) as SpeedUnit[];
+      },
 
-        distanceUnits() {
-          return Object.keys(distanceUnitDefs) as DistanceUnit[];
-        },
+      distanceUnits() {
+        return Object.keys(distanceUnitDefs) as DistanceUnit[];
+      },
 
-        describe(unit) {
-          const def = speedUnits[unit as SpeedUnit] ?? distanceUnitDefs[unit as DistanceUnit];
-          return { abbr: def.abbr, singular: def.singular, plural: def.plural };
-        },
+      describe(unit) {
+        const def = speedUnits[unit as SpeedUnit] ?? distanceUnitDefs[unit as DistanceUnit];
+        return { abbr: def.abbr, singular: def.singular, plural: def.plural };
+      },
 
-        toSpeed(measure, { decimals = 1 } = {}) {
-          const def = speedUnits[this.speed];
-          const value = ((measure ?? 0) * def.fromMps).toFixed(decimals);
-          return { value, abbr: def.abbr, singular: def.singular, plural: def.plural };
-        },
+      toSpeed(measure, { decimals = 1 } = {}) {
+        const def = speedUnits[get().speed];
+        const value = ((measure ?? 0) * def.fromMps).toFixed(decimals);
+        return { value, abbr: def.abbr, singular: def.singular, plural: def.plural };
+      },
 
-        toDistance(meters, { decimals = 1 } = {}) {
-          const def = distanceUnitDefs[this.distance];
-          const value = ((meters ?? 0) * def.fromMeters).toFixed(decimals);
-          return { value, abbr: def.abbr, singular: def.singular, plural: def.plural };
-        }
-      }
-    },
+      toDistance(meters, { decimals = 1 } = {}) {
+        const def = distanceUnitDefs[get().distance];
+        const value = ((meters ?? 0) * def.fromMeters).toFixed(decimals);
+        return { value, abbr: def.abbr, singular: def.singular, plural: def.plural };
+      },
+    }),
     {
       name: "preferred-units",
       version: 1,

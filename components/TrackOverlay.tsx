@@ -110,8 +110,7 @@ function ActiveTrackOverlay() {
     if (!isRecording) return;
 
     return addPointRecordedListener((lat, lon) => {
-      // TODO: isn't `...` expensive for a lot of data points? Is there any way to just mutate an existing array and force the view to re-render?
-      allCoordsRef.current = [...allCoordsRef.current, [lon, lat]];
+      allCoordsRef.current.push([lon, lat]);
       setCoordVersion((v) => v + 1);
     });
   }, [isRecording]);
@@ -256,24 +255,28 @@ function SelectedTrackOverlay() {
   const cameraRef = useCameraRef();
   const [coords, setCoords] = useState<Coord[]>([]);
 
+  // Load track points when selection changes
   useEffect(() => {
     if (!selectedId) {
       setCoords([]);
       return;
     }
     getTrackPoints(selectedId).then((points) => {
-      const c: Coord[] = points.map((p) => [p.longitude, p.latitude]);
-      setCoords(c);
-      const trackBounds = computeBounds(c);
-      if (trackBounds) {
-        useCameraState.getState().setFollowUserLocation(false);
-        cameraRef.current?.fitBounds(trackBounds, {
-          padding: { top: 60, right: 60, bottom: 60 + sheetHeight, left: 60 },
-          duration: 300,
-        });
-      }
+      setCoords(points.map((p) => [p.longitude, p.latitude]));
     });
-  }, [selectedId, sheetHeight, cameraRef]);
+  }, [selectedId]);
+
+  // Fit camera to track bounds once coords are loaded
+  useEffect(() => {
+    if (coords.length === 0) return;
+    const trackBounds = computeBounds(coords);
+    if (!trackBounds) return;
+    useCameraState.getState().setFollowUserLocation(false);
+    cameraRef.current?.fitBounds(trackBounds, {
+      padding: { top: 60, right: 60, bottom: 60 + sheetHeight, left: 60 },
+      duration: 300,
+    });
+  }, [coords, sheetHeight, cameraRef]);
 
   const trackData = useMemo(() => {
     if (coords.length < 2) return null;

@@ -97,7 +97,7 @@ function processLocation(
 // Register the background task — must be called at module scope (top level)
 TaskManager.defineTask(TASK_NAME, async ({ data, error }) => {
   if (error) {
-    console.error("Background location error:", error.message);
+    console.warn("Background location error:", error.message);
     return;
   }
 
