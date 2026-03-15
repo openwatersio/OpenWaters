@@ -60,6 +60,13 @@ export default function TrackScreen() {
     return () => clearSelectedTrack();
   }, [trackId, selectTrack, clearSelectedTrack]);
 
+  // Expand sheet for completed tracks
+  useEffect(() => {
+    if (!isActiveRecording) {
+      navigation.setOptions({ sheetInitialDetentIndex: 1 });
+    }
+  }, [isActiveRecording, navigation]);
+
   // Measure compact section and set detents from actual height
   const onCompactLayout = useCallback((e: LayoutChangeEvent) => {
     const contentHeight = e.nativeEvent.layout.height;
