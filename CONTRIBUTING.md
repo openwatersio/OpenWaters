@@ -128,6 +128,7 @@ The app uses `@expo/ui` for platform-native components (SwiftUI on iOS)..
 For examples of how to use `@expo/ui`, see:
 
 - [expo-ui-playground](https://github.com/betomoedano/expo-ui-playground/)
+- [native-component-list](https://github.com/expo/expo/tree/main/apps/native-component-list/src/screens/UI)
 
 #### Map Styles
 

@@ -1,5 +1,6 @@
+import SheetView from "@/components/ui/SheetView";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
-import { useSheetReporter } from "@/hooks/useSheetPosition";
+import useTheme from "@/hooks/useTheme";
 import { useTrackRecording } from "@/hooks/useTrackRecording";
 import {
   formatDate,
@@ -9,7 +10,6 @@ import {
   useTracks,
 } from "@/hooks/useTracks";
 import { getTrackDistances, type TrackWithStats } from "@/lib/database";
-import useTheme from "@/hooks/useTheme";
 import {
   Button,
   ContextMenu,
@@ -17,26 +17,25 @@ import {
   Host,
   List,
   Picker,
-  Section,
   Spacer,
   Text,
-  VStack,
+  VStack
 } from "@expo/ui/swift-ui";
 import {
-  bold,
   font,
   foregroundStyle,
   labelsHidden,
+  lineLimit,
   monospacedDigit,
   onTapGesture,
   padding,
   pickerStyle,
-  tag,
+  tag
 } from "@expo/ui/swift-ui/modifiers";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, View } from "react-native";
+import { Alert } from "react-native";
 
 type SortBy = "date" | "distance" | "duration" | "speed" | "nearby";
 
@@ -61,8 +60,7 @@ function StatItem({ label, value }: { label: string; value: string }) {
 export default function TrackList() {
   const { tracks, handleDelete, handleRename, handleExport } = useTracks();
   useLoadTracks();
-  const { activeTrackId } = useTrackRecording();
-  const { onLayout: onSheetLayout, ref } = useSheetReporter("tracks");
+  const activeTrack = useTrackRecording((s) => s.track);
   const units = usePreferredUnits();
   const theme = useTheme();
   const [sort, setSort] = useState<SortBy>("date");
@@ -125,48 +123,48 @@ export default function TrackList() {
   }
 
   return (
-    <View ref={ref} onLayout={onSheetLayout} style={{ flex: 1 }}>
+    <SheetView id="tracks">
       <Host style={{ flex: 1 }}>
         <List>
-          <Section>
-            <Picker
-              selection={sort}
-              onSelectionChange={(s) => setSort(s as SortBy)}
-              modifiers={[pickerStyle("segmented"), labelsHidden()]}
-            >
-              <Text modifiers={[tag("date")]}>Date</Text>
-              <Text modifiers={[tag("distance")]}>Distance</Text>
-              <Text modifiers={[tag("duration")]}>Duration</Text>
-              <Text modifiers={[tag("speed")]}>Speed</Text>
-              <Text modifiers={[tag("nearby")]}>Nearby</Text>
-            </Picker>
+          <Picker
+            selection={sort}
+            onSelectionChange={(s) => setSort(s as SortBy)}
+            modifiers={[pickerStyle("segmented"), labelsHidden()]}
+          >
+            <Text modifiers={[tag("date")]}>Date</Text>
+            <Text modifiers={[tag("distance")]}>Distance</Text>
+            <Text modifiers={[tag("duration")]}>Duration</Text>
+            <Text modifiers={[tag("speed")]}>Speed</Text>
+            <Text modifiers={[tag("nearby")]}>Nearby</Text>
+          </Picker>
 
-            <List.ForEach
-              onDelete={(indices) => {
-                indices.forEach((i) => confirmDelete(sortedTracks[i]));
-              }}
-            >
-              {sortedTracks.map((track) => {
-                const isActiveRecording = activeTrackId === track.id;
-                const dist = units.toDistance(track.distance);
-                const avgSpd = track.avg_speed != null ? units.toSpeed(track.avg_speed) : null;
-                const maxSpd = track.max_speed != null ? units.toSpeed(track.max_speed) : null;
+          <List.ForEach>
+            {sortedTracks.map((track) => {
+              const isActiveRecording = activeTrack?.id === track.id;
+              const dist = units.toDistance(track.distance);
+              const avgSpd = track.avg_speed != null ? units.toSpeed(track.avg_speed) : null;
+              const maxSpd = track.max_speed != null ? units.toSpeed(track.max_speed) : null;
 
-                return (
-                  <ContextMenu key={track.id}>
-                    <ContextMenu.Trigger>
-                      <VStack
-                        alignment="leading"
-                        spacing={6}
-                        modifiers={[
-                          onTapGesture(() => {
+              return (
+                <ContextMenu key={track.id}>
+                  <ContextMenu.Trigger>
+                    <VStack
+                      alignment="leading"
+                      spacing={6}
+                      modifiers={[
+                        onTapGesture(() => {
+                          if (isActiveRecording) {
+                            router.replace("/track/record");
+                          } else {
                             router.replace(`/track/${track.id}`);
-                          }),
-                          padding({ vertical: 4 }),
-                        ]}
-                      >
+                          }
+                        }),
+                        padding({ vertical: 4 }),
+                      ]}
+                    >
+                      <HStack spacing={6}>
                         <HStack spacing={6}>
-                          <Text modifiers={[bold(), font({ size: 17 })]}>
+                          <Text modifiers={[font({ size: 16, weight: "semibold" }), lineLimit(1)]}>
                             {trackDisplayName(track)}
                           </Text>
                           {isActiveRecording && (
@@ -176,64 +174,65 @@ export default function TrackList() {
                           )}
                         </HStack>
 
+                        <Spacer />
+
                         <Text
                           modifiers={[
-                            font({ size: 14 }),
-                            foregroundStyle({ type: "hierarchical", style: "secondary" }),
+                            font({ size: 14 })
                           ]}
                         >
                           {formatDate(track.started_at)}
                         </Text>
+                      </HStack>
 
-                        <HStack spacing={0} modifiers={[padding({ top: 4 })]}>
-                          <StatItem
-                            label="DISTANCE"
-                            value={`${dist.value} ${dist.abbr}`}
-                          />
-                          <Spacer />
-                          <StatItem
-                            label="DURATION"
-                            value={formatDuration(track.started_at, track.ended_at)}
-                          />
-                          <Spacer />
-                          <StatItem
-                            label="AVG SPEED"
-                            value={avgSpd ? `${avgSpd.value} ${avgSpd.abbr}` : "—"}
-                          />
-                          <Spacer />
-                          <StatItem
-                            label="MAX SPEED"
-                            value={maxSpd ? `${maxSpd.value} ${maxSpd.abbr}` : "—"}
-                          />
-                        </HStack>
-                      </VStack>
-                    </ContextMenu.Trigger>
+                      <HStack spacing={0} modifiers={[padding({ top: 4 })]}>
+                        <StatItem
+                          label="DISTANCE"
+                          value={`${dist.value} ${dist.abbr}`}
+                        />
+                        <Spacer />
+                        <StatItem
+                          label="DURATION"
+                          value={formatDuration(track.started_at, track.ended_at)}
+                        />
+                        <Spacer />
+                        <StatItem
+                          label="AVG SPEED"
+                          value={avgSpd ? `${avgSpd.value} ${avgSpd.abbr}` : "—"}
+                        />
+                        <Spacer />
+                        <StatItem
+                          label="MAX SPEED"
+                          value={maxSpd ? `${maxSpd.value} ${maxSpd.abbr}` : "—"}
+                        />
+                      </HStack>
+                    </VStack>
+                  </ContextMenu.Trigger>
 
-                    <ContextMenu.Items>
-                      <Button
-                        label="Rename"
-                        systemImage="pencil"
-                        onPress={() => promptRename(track)}
-                      />
-                      <Button
-                        label="Export GPX"
-                        systemImage="square.and.arrow.up"
-                        onPress={() => handleExport(track.id)}
-                      />
-                      <Button
-                        label="Delete"
-                        systemImage="trash"
-                        role="destructive"
-                        onPress={() => confirmDelete(track)}
-                      />
-                    </ContextMenu.Items>
-                  </ContextMenu>
-                );
-              })}
-            </List.ForEach>
-          </Section>
+                  <ContextMenu.Items>
+                    <Button
+                      label="Rename"
+                      systemImage="pencil"
+                      onPress={() => promptRename(track)}
+                    />
+                    <Button
+                      label="Export GPX"
+                      systemImage="square.and.arrow.up"
+                      onPress={() => handleExport(track.id)}
+                    />
+                    <Button
+                      label="Delete"
+                      systemImage="trash"
+                      role="destructive"
+                      onPress={() => confirmDelete(track)}
+                    />
+                  </ContextMenu.Items>
+                </ContextMenu>
+              );
+            })}
+          </List.ForEach>
         </List>
       </Host>
-    </View>
+    </SheetView>
   );
 }

@@ -1,15 +1,13 @@
+import SheetView from "@/components/ui/SheetView";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
-import { useSheetReporter } from "@/hooks/useSheetPosition";
 import { Host, List, Picker, Section, Text, VStack } from "@expo/ui/swift-ui";
 import { tag } from "@expo/ui/swift-ui/modifiers";
-import { View } from "react-native";
 
 export default function Settings() {
   const units = usePreferredUnits();
-  const { onLayout: onSheetLayout } = useSheetReporter("settings");
 
   return (
-    <View style={{ flex: 1 }} onLayout={onSheetLayout}>
+    <SheetView id="settings">
       <Host style={{ flex: 1 }}>
         <VStack alignment="leading">
           <List>
@@ -40,6 +38,6 @@ export default function Settings() {
           </List>
         </VStack>
       </Host>
-    </View>
+    </SheetView>
   );
 }

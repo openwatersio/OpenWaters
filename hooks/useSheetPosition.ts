@@ -26,7 +26,7 @@ type SheetEntry = {
   presentedAt: number;
 };
 
-const useSheetStore = create<{
+export const useSheetStore = create<{
   sheets: Record<string, SheetEntry>;
   setHeight: (id: string, height: number) => void;
   removeSheet: (id: string) => void;
@@ -55,25 +55,36 @@ const useSheetStore = create<{
     }),
 }));
 
-export { useSheetStore };
-
 /** Height of the topmost open sheet (0 if none). */
-function getTopSheetHeight(sheets: Record<string, SheetEntry>): number {
+export function getTopSheetHeight(sheets: Record<string, SheetEntry>): number {
   const entries = Object.values(sheets).filter((e) => e.height > 0);
   if (entries.length === 0) return 0;
-  return entries.reduce((a, b) => (a.presentedAt > b.presentedAt ? a : b)).height;
+  return entries.reduce((a, b) => (a.presentedAt > b.presentedAt ? a : b))
+    .height;
+}
+
+/**
+ * Returns the topmost sheet height as a plain number, re-renders on change.
+ */
+export function useTopSheetHeight(): number {
+  return useSheetStore((s) => getTopSheetHeight(s.sheets));
 }
 
 /**
  * Returns the topmost sheet height as an animated shared value.
  */
 export function useSheetHeight(): SharedValue<number> {
-  const sheetHeight = useSheetStore((s) => getTopSheetHeight(s.sheets));
-  const animated = useSharedValue(0);
+  const animated = useSharedValue(
+    getTopSheetHeight(useSheetStore.getState().sheets),
+  );
 
   useEffect(() => {
-    animated.value = withTiming(sheetHeight, { duration: 50 });
-  }, [sheetHeight, animated]);
+    return useSheetStore.subscribe((s) => {
+      animated.value = withTiming(getTopSheetHeight(s.sheets), {
+        duration: 50,
+      });
+    });
+  }, [animated]);
 
   return animated;
 }

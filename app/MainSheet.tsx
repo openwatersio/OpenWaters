@@ -1,22 +1,28 @@
-import { useSheetReporter } from "@/hooks/useSheetPosition";
+import SheetView from "@/components/ui/SheetView";
 import { Button, Host, List, Section } from "@expo/ui/swift-ui";
+import { tint } from "@expo/ui/swift-ui/modifiers";
 import { router } from "expo-router";
-import { View } from "react-native";
 
 export default function MainSheet() {
-  const { onLayout, ref } = useSheetReporter("main");
-
   return (
-    <View ref={ref} onLayout={onLayout} style={{ flex: 1 }}>
+    <SheetView id="main">
       <Host style={{ flex: 1 }}>
         <List>
           <Section>
             <Button
+              modifiers={[tint('primary')]}
               systemImage="point.bottomleft.forward.to.arrow.triangle.scurvepath"
               label="Tracks"
               onPress={() => router.push("/tracks")}
             />
             <Button
+              modifiers={[tint('primary')]}
+              systemImage="mappin.and.ellipse"
+              label="Waypoints"
+              onPress={() => router.push("/waypoints")}
+            />
+            <Button
+              modifiers={[tint('primary')]}
               systemImage="map"
               label="Charts"
               onPress={() => router.push("/charts")}
@@ -24,6 +30,7 @@ export default function MainSheet() {
           </Section>
           <Section>
             <Button
+              modifiers={[tint('primary')]}
               systemImage="gearshape"
               label="Settings"
               onPress={() => router.push("/settings")}
@@ -31,6 +38,6 @@ export default function MainSheet() {
           </Section>
         </List>
       </Host>
-    </View>
+    </SheetView>
   );
 }

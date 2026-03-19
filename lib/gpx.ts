@@ -1,5 +1,5 @@
 import { XMLBuilder } from "fast-xml-parser";
-import type { Track, TrackPoint } from "@/lib/database";
+import type { Track, TrackPoint, Waypoint } from "@/lib/database";
 
 const builder = new XMLBuilder({
   ignoreAttributes: false,
@@ -48,6 +48,36 @@ export function toGPX(track: Track, points: TrackPoint[]): string {
           trkpt,
         },
       },
+    },
+  };
+
+  return builder.build(gpxObj);
+}
+
+/** Generate GPX 1.1 XML for a single waypoint */
+export function waypointToGPX(waypoint: Waypoint): string {
+  const name = waypoint.name || `Waypoint ${waypoint.id}`;
+
+  const wpt: Record<string, unknown> = {
+    "@_lat": waypoint.latitude,
+    "@_lon": waypoint.longitude,
+    name,
+    time: waypoint.created_at,
+  };
+  if (waypoint.notes) wpt.desc = waypoint.notes;
+  if (waypoint.icon) wpt.sym = waypoint.icon;
+
+  const gpxObj = {
+    "?xml": { "@_version": "1.0", "@_encoding": "UTF-8" },
+    gpx: {
+      "@_version": "1.1",
+      "@_creator": "SeaScape",
+      "@_xmlns": "http://www.topografix.com/GPX/1/1",
+      "@_xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+      "@_xsi:schemaLocation":
+        "http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd",
+      metadata: { name, time: waypoint.created_at },
+      wpt,
     },
   };
 

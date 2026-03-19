@@ -1,59 +1,57 @@
-import SpeedChart from "@/components/SpeedChart";
-import Button from "@/components/ui/Button";
+import SheetHeader from "@/components/ui/SheetHeader";
+import SheetView from "@/components/ui/SheetView";
+import Stat from "@/components/ui/Stat";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
-import { useSheetReporter } from "@/hooks/useSheetPosition";
+import { useSheetDetents } from "@/hooks/useSheetDetents";
 import useTheme from "@/hooks/useTheme";
-import { useSpeedSamples, useTrackRecording, type SpeedSample } from "@/hooks/useTrackRecording";
-import { useTracks } from "@/hooks/useTracks";
-import { getTrack, getTrackPoints, type Track } from "@/lib/database";
+import { trackDisplayName, useTracks } from "@/hooks/useTracks";
+import { getTrack, getTrackPoints, TrackPoint, type Track } from "@/lib/database";
 import { exportTrackAsGPX } from "@/lib/exportTrack";
-import { useNavigation } from "@react-navigation/native";
+import { formatDate, formatElapsedTime, formatTime } from "@/lib/format";
+import type { ChartDataPoint } from "@expo/ui/swift-ui";
+import {
+  Button,
+  Chart,
+  Form,
+  Host,
+  HStack,
+  ScrollView,
+  Section,
+  VStack
+} from "@expo/ui/swift-ui";
+import {
+  background,
+  buttonStyle,
+  cornerRadius,
+  frame,
+  labelStyle,
+  offset,
+  padding,
+  tint
+} from "@expo/ui/swift-ui/modifiers";
+import { useHeaderHeight } from "@react-navigation/elements";
 import { router, useLocalSearchParams } from "expo-router";
-import { SymbolView } from "expo-symbols";
-import { useCallback, useEffect, useState } from "react";
-import { Alert, Dimensions, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-const SCREEN_HEIGHT = Dimensions.get("window").height;
-
-function formatElapsed(startedAt: string | null, endedAt?: string | null): string {
-  if (!startedAt) return "00:00";
-  const end = endedAt ? new Date(endedAt).getTime() : Date.now();
-  const seconds = Math.floor((end - new Date(startedAt).getTime()) / 1000);
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-
-function formatTime(iso: string | null): string {
-  if (!iso) return "--";
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert } from "react-native";
 
 export default function TrackScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const trackId = Number(id);
-  const { isRecording, activeTrackId, startedAt, distance, stop } = useTrackRecording();
-  const speedSamples = useSpeedSamples();
   const selectTrack = useTracks((s) => s.selectTrack);
   const clearSelectedTrack = useTracks((s) => s.clearSelectedTrack);
+  const handleRename = useTracks((s) => s.handleRename);
+  const handleDelete = useTracks((s) => s.handleDelete);
   const units = usePreferredUnits();
-  const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const theme = useTheme();
-  const [, setTick] = useState(0);
-  const [chartWidth, setChartWidth] = useState(0);
+  const headerHeight = useHeaderHeight();
+  const { setDetentHeight } = useSheetDetents([0.5, 1]);
 
-  const isActiveRecording = isRecording && activeTrackId === trackId;
+  useEffect(() => {
+    setDetentHeight(headerHeight);
+  }, [headerHeight, setDetentHeight]);
 
-  // Track data for completed tracks (loaded from DB)
   const [track, setTrack] = useState<Track | null>(null);
-  const [trackSpeedSamples, setTrackSpeedSamples] = useState<SpeedSample[]>([]);
-
-  const { onLayout: onSheetLayout, ref: sheetRef } = useSheetReporter("track");
+  const [points, setPoints] = useState<TrackPoint[]>([]);
 
   // Set selected track for map overlay, clear on unmount
   useEffect(() => {
@@ -61,207 +59,136 @@ export default function TrackScreen() {
     return () => clearSelectedTrack();
   }, [trackId, selectTrack, clearSelectedTrack]);
 
-  // Expand sheet for completed tracks
+  // Load track data from DB
   useEffect(() => {
-    if (!isActiveRecording) {
-      navigation.setOptions({ sheetInitialDetentIndex: 1 });
-    }
-  }, [isActiveRecording, navigation]);
-
-  // Measure compact section and set detents from actual height
-  const onCompactLayout = useCallback((e: LayoutChangeEvent) => {
-    const contentHeight = e.nativeEvent.layout.height;
-    const sheetMaxHeight = SCREEN_HEIGHT - insets.top - insets.bottom;
-    const compactFraction = contentHeight / sheetMaxHeight;
-    navigation.setOptions({
-      sheetAllowedDetents: [compactFraction, 0.5, 1.0],
-    });
-  }, [navigation, insets]);
-
-  // Load track data from DB for completed tracks
-  useEffect(() => {
-    if (isActiveRecording) {
-      setTrack(null);
-      setTrackSpeedSamples([]);
-      return;
-    }
-    getTrack(trackId).then((t) => setTrack(t));
-    getTrackPoints(trackId).then((points) => {
-      const samples: SpeedSample[] = points
-        .filter((p) => p.speed !== null)
-        .map((p) => ({ speed: p.speed!, timestamp: new Date(p.timestamp).getTime() }));
-      setTrackSpeedSamples(samples);
-    });
-  }, [trackId, isActiveRecording]);
-
-  // Tick for live elapsed time
-  useEffect(() => {
-    if (!isActiveRecording) return;
-    const interval = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(interval);
-  }, [isActiveRecording]);
-
-  const onChartLayout = useCallback((e: LayoutChangeEvent) => {
-    setChartWidth(e.nativeEvent.layout.width);
-  }, []);
-
-  // Resolve values based on mode
-  const trackStartedAt = isActiveRecording ? startedAt : track?.started_at ?? null;
-  const trackEndedAt = isActiveRecording ? null : track?.ended_at ?? null;
-  const trackDistance = isActiveRecording ? distance : track?.distance ?? 0;
-  const displaySpeedSamples = isActiveRecording ? speedSamples : trackSpeedSamples;
+    getTrack(trackId).then(setTrack);
+    getTrackPoints(trackId).then(setPoints);
+  }, [trackId]);
 
   const handleExport = useCallback(() => {
     exportTrackAsGPX(trackId);
   }, [trackId]);
 
-  const confirmStop = useCallback(() => {
-    Alert.alert("Stop Tracking", "Would you like to stop tracking?", [
-      {
-        text: "Stop", style: "destructive", onPress: () => {
-          stop();
-          router.back();
-        }
+  const promptRename = useCallback(() => {
+    Alert.prompt(
+      "Rename Track",
+      undefined,
+      (name: string) => {
+        handleRename(trackId, name);
+        setTrack((t) => t ? { ...t, name } : t);
       },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  }, [stop]);
+      "plain-text",
+      track?.name || "",
+    );
+  }, [trackId, track?.name, handleRename]);
 
-  const dist = units.toDistance(trackDistance);
+  const confirmDelete = useCallback(() => {
+    Alert.alert(
+      "Delete Track",
+      `Delete "${track?.name ?? `Track ${trackId}`}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            handleDelete(trackId);
+            router.dismiss();
+          },
+        },
+      ],
+    );
+  }, [trackId, track?.name, handleDelete]);
+
+  const dist = units.toDistance(track?.distance ?? 0);
+
+  const chartData: ChartDataPoint[] = useMemo(() => {
+    if (points.length < 2) return [];
+    return points.filter(p => p.speed !== null).map((s, i) => ({ x: i, y: s.speed as number }));
+  }, [points]);
+
+  // FIXME: this should be in useTracks or a similar hook
+  const { avgSpeed, maxSpeed } = useMemo(() => {
+    if (points.length < 2) return { avgSpeed: units.toSpeed(0), maxSpeed: units.toSpeed(0) };
+    const speeds = points.map((s) => s.speed).filter(Boolean) as number[];
+    const avg = speeds.reduce((a, b) => a + b, 0) / speeds.length;
+    const max = Math.max(...speeds);
+    return { avgSpeed: units.toSpeed(avg), maxSpeed: units.toSpeed(max) };
+  }, [points, units]);
 
   return (
-    <View ref={sheetRef} onLayout={onSheetLayout} style={styles.container}>
-      {/* Compact section — always visible */}
-      <View style={styles.compact} onLayout={onCompactLayout}>
-        <SymbolView name="point.bottomleft.forward.to.arrow.triangle.scurvepath" size={24} tintColor={isActiveRecording ? theme.danger : theme.primary} />
-        <View style={styles.stat}>
-          <Text style={[styles.label, { color: theme.textSecondary }]} numberOfLines={1}>Time</Text>
-          <Text style={[styles.value, { color: theme.textPrimary }]} numberOfLines={1}>{formatElapsed(trackStartedAt, trackEndedAt)}</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={[styles.label, { color: theme.textSecondary }]} numberOfLines={1}>Distance</Text>
-          <Text style={[styles.value, { color: theme.textPrimary }]} numberOfLines={1}>
-            {dist.value}
-            <Text style={[styles.units, { color: theme.textSecondary }]}> {dist.abbr}</Text>
-          </Text>
-        </View>
-        <View style={styles.stopButton}>
-          {isActiveRecording && (
+    <SheetView id="track" style={{ flex: 1 }}>
+      <SheetHeader
+        title={track ? trackDisplayName(track) : ""}
+        subtitle={track?.started_at ? formatDate(track.started_at) : undefined}
+        headerLeft={() => (
+          <Host matchContents>
             <Button
-              onPress={confirmStop}
-              role="destructive"
-              variant="bordered"
-              systemImage="stop.circle"
+              onPress={handleExport}
+              systemImage="square.and.arrow.up"
+              modifiers={[
+                labelStyle("iconOnly"),
+                buttonStyle("borderless"),
+                tint("primary"),
+                offset({ y: -3 }),
+              ]}
+              label="Export GPX"
             />
-          )}
-        </View>
-      </View>
+          </Host>
+        )}
+      />
+      <Host style={{ flex: 1 }}>
+        <ScrollView showsIndicators={false}>
+          <VStack spacing={12} modifiers={[padding({ horizontal: 20, top: 16 })]}>
+            <HStack spacing={12}>
+              <Stat label="Started" value={formatTime(track?.started_at ?? null)} />
+              <Stat label="Ended" value={formatTime(track?.ended_at ?? null)} />
+            </HStack>
 
-      <View style={styles.expanded}>
-        <View style={styles.section} onLayout={onChartLayout}>
-          {chartWidth > 0 && (
-            <SpeedChart
-              samples={displaySpeedSamples}
-              width={chartWidth}
-            />
-          )}
-        </View>
+            <HStack spacing={12}>
+              <Stat label="Duration" value={formatElapsedTime(track?.started_at ?? null, track?.ended_at ?? null)} />
+              <Stat label="Distance" value={dist.value} unit={dist.abbr} />
+            </HStack>
 
-        <View style={styles.section}>
-          <View style={styles.timesRow}>
-            <View style={[styles.timeItem, { backgroundColor: theme.surfaceElevated }]}>
-              <Text style={[styles.timeLabel, { color: theme.textSecondary }]}>Started</Text>
-              <Text style={[styles.timeValue, { color: theme.textPrimary }]}>{formatTime(trackStartedAt)}</Text>
-            </View>
-            <View style={[styles.timeItem, { backgroundColor: theme.surfaceElevated }]}>
-              <Text style={[styles.timeLabel, { color: theme.textSecondary }]}>{trackEndedAt ? "Ended" : "Elapsed"}</Text>
-              <Text style={[styles.timeValue, { color: theme.textPrimary }]}>
-                {trackEndedAt ? formatTime(trackEndedAt) : formatElapsed(trackStartedAt)}
-              </Text>
-            </View>
-          </View>
-        </View>
+            <HStack spacing={12}>
+              <Stat label="Avg Speed" value={avgSpeed.value} unit={avgSpeed.abbr} />
+              <Stat label="Max Speed" value={maxSpeed.value} unit={maxSpeed.abbr} />
+            </HStack>
 
-        <View style={styles.actions}>
-          <Button
-            label="Export GPX"
-            onPress={handleExport}
-            systemImage="square.and.arrow.up"
-          />
-        </View>
-      </View>
-    </View>
+            {chartData.length > 0 && (
+              <Chart
+                data={chartData}
+                type="area"
+                showGrid={false}
+                areaStyle={{ color: theme.primary + "50" }}
+                lineStyle={{ color: theme.primary, width: 1.5 }}
+                modifiers={[
+                  padding({ top: 10 }),
+                  frame({ height: 70 }),
+                  background(theme.surfaceElevated),
+                  cornerRadius(12),
+                ]}
+              />
+            )}
+          </VStack>
+
+          <Form modifiers={[frame({ height: 150 })]}>
+            <Section>
+              <Button
+                label="Rename"
+                systemImage="pencil"
+                onPress={promptRename}
+              />
+              <Button
+                label="Delete Track"
+                systemImage="trash"
+                role="destructive"
+                onPress={confirmDelete}
+              />
+            </Section>
+          </Form>
+        </ScrollView>
+      </Host>
+    </SheetView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  compact: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    paddingTop: 16,
-    gap: 20,
-  },
-  stat: {
-    alignItems: "center",
-    flex: 1,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  value: {
-    fontSize: 24,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-    letterSpacing: -0.8,
-  },
-  units: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  stopButton: {
-    flex: 1,
-    alignItems: "flex-end",
-  },
-  expanded: {
-    marginTop: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    gap: 20,
-  },
-  section: {
-    gap: 12,
-  },
-  timesRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  timeItem: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  timeLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  timeValue: {
-    fontSize: 20,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "center",
-  },
-});

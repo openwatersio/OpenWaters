@@ -36,7 +36,7 @@ describe('HeadsUpDisplay', () => {
 
   it('is visible when recording even if moored', () => {
     useNavigationState.setState({ state: NavigationState.Moored });
-    useTrackRecording.setState({ isRecording: true, startedAt: new Date().toISOString(), distance: 0 });
+    useTrackRecording.setState({ isRecording: true, track: { id: 1, name: null, started_at: new Date().toISOString(), ended_at: null, distance: 0, color: null } });
     render(<HeadsUpDisplay />);
     expect(screen.getByText('SOG')).toBeTruthy();
   });

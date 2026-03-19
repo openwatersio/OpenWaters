@@ -1,15 +1,12 @@
-import { useSheetReporter } from "@/hooks/useSheetPosition";
-import { useViewOptions } from "@/hooks/useViewOptions";
-import mapStyles from "@/styles";
+import SheetView from "@/components/ui/SheetView";
+import { mapStyles, useViewOptions } from "@/hooks/useViewOptions";
 import { Button, Host, List, Section, VStack } from "@expo/ui/swift-ui";
-import { View } from "react-native";
 
 export default function Charts() {
   const viewOptions = useViewOptions();
-  const { onLayout: onSheetLayout } = useSheetReporter("charts");
 
   return (
-    <View style={{ flex: 1 }} onLayout={onSheetLayout}>
+    <SheetView id="charts">
       <Host style={{ flex: 1 }}>
         <VStack alignment="leading">
           <List>
@@ -29,6 +26,6 @@ export default function Charts() {
           </List>
         </VStack>
       </Host>
-    </View>
+    </SheetView>
   );
 }

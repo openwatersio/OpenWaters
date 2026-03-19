@@ -61,6 +61,51 @@ jest.mock("expo-task-manager", () => ({
   defineTask: jest.fn(),
 }));
 
+// @expo/ui/swift-ui uses native SwiftUI components; mock for tests
+jest.mock("@expo/ui/swift-ui", () => {
+  const React = require("react");
+  const { View, Text, Pressable } = require("react-native");
+  return {
+    Button: ({ onPress, label, children, ...props }: any) =>
+      React.createElement(
+        Pressable,
+        { onPress, testID: `button-${label || "unknown"}`, ...props },
+        children,
+      ),
+    Image: ({ systemName, ...props }: any) =>
+      React.createElement(View, { testID: `image-${systemName}`, ...props }),
+    VStack: ({ children, ...props }: any) =>
+      React.createElement(View, props, children),
+    Divider: (props: any) => React.createElement(View, props),
+    Menu: ({ children, ...props }: any) =>
+      React.createElement(View, props, children),
+    Text: ({ children, ...props }: any) =>
+      React.createElement(Text, props, children),
+    ZStack: ({ children, ...props }: any) =>
+      React.createElement(View, props, children),
+    HStack: ({ children, ...props }: any) =>
+      React.createElement(View, props, children),
+    Host: ({ children, ...props }: any) =>
+      React.createElement(View, props, children),
+    Namespace: ({ children, ...props }: any) =>
+      React.createElement(View, props, children),
+    GlassEffectContainer: ({ children, ...props }: any) =>
+      React.createElement(View, props, children),
+  };
+});
+
+jest.mock("@expo/ui/swift-ui/modifiers", () => ({
+  environment: () => ({}),
+  frame: () => ({}),
+  glassEffect: () => ({}),
+  glassEffectId: () => ({}),
+  labelStyle: () => ({}),
+  contentTransition: () => ({}),
+  animation: () => ({}),
+  Animation: { default: "default" },
+  tint: () => ({}),
+}));
+
 // react-native-safe-area-context uses native modules; mock insets
 jest.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
