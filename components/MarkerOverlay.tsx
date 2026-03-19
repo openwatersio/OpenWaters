@@ -1,7 +1,7 @@
 import { Annotation } from "@/components/map/Annotation";
 import { useCameraView } from "@/hooks/useCameraView";
 import useTheme from "@/hooks/useTheme";
-import { useWaypoints } from "@/hooks/useWaypoints";
+import { useMarkers } from "@/hooks/useMarkers";
 import type { LngLatBounds } from "@maplibre/maplibre-react-native";
 import { router } from "expo-router";
 import type { SFSymbol } from "expo-symbols";
@@ -19,29 +19,29 @@ function isInBounds(lat: number, lng: number, bounds: LngLatBounds): boolean {
     && lng >= west - lngBuf && lng <= east + lngBuf;
 }
 
-export default function WaypointOverlay() {
-  const waypoints = useWaypoints((s) => s.waypoints);
-  const selectedId = useWaypoints((s) => s.selectedWaypointId);
-  const updateWaypoint = useWaypoints((s) => s.updateWaypoint);
+export default function MarkerOverlay() {
+  const markers = useMarkers((s) => s.markers);
+  const selectedId = useMarkers((s) => s.selectedMarkerId);
+  const updateMarker = useMarkers((s) => s.updateMarker);
   const bounds = useCameraView((s) => s.bounds);
   const theme = useTheme();
 
   const visible = useMemo(() => {
-    if (!bounds) return waypoints;
-    return waypoints.filter((w) => isInBounds(w.latitude, w.longitude, bounds));
-  }, [waypoints, bounds]);
+    if (!bounds) return markers;
+    return markers.filter((m) => isInBounds(m.latitude, m.longitude, bounds));
+  }, [markers, bounds]);
 
   return (
     <>
-      {visible.map((waypoint) => {
-        const isSelected = waypoint.id === selectedId;
+      {visible.map((marker) => {
+        const isSelected = marker.id === selectedId;
         return (
           <Annotation
-            key={waypoint.id}
-            id={`waypoint-${waypoint.id}`}
-            lngLat={[waypoint.longitude, waypoint.latitude]}
-            icon={(waypoint.icon as SFSymbol | null) ?? DEFAULT_ICON}
-            color={waypoint.color ?? theme.primary}
+            key={marker.id}
+            id={`marker-${marker.id}`}
+            lngLat={[marker.longitude, marker.latitude]}
+            icon={(marker.icon as SFSymbol | null) ?? DEFAULT_ICON}
+            color={marker.color ?? theme.primary}
             selected={isSelected}
             draggable={isSelected}
             onSelected={() => console.log("SELECTED")}
@@ -49,12 +49,12 @@ export default function WaypointOverlay() {
             snippet="What does this do?"
             onPress={isSelected ? undefined : () => {
               selectedId ?
-                router.setParams({ id: waypoint.id }) :
-                router.navigate({ pathname: "/waypoint/[id]", params: { id: waypoint.id } });
+                router.setParams({ id: marker.id }) :
+                router.navigate({ pathname: "/marker/[id]", params: { id: marker.id } });
             }}
             onDragEnd={(e) => {
               const [lng, lat] = e.nativeEvent.lngLat;
-              updateWaypoint(waypoint.id, { latitude: lat, longitude: lng });
+              updateMarker(marker.id, { latitude: lat, longitude: lng });
             }}
           />
         );

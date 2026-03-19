@@ -2,8 +2,8 @@ import SheetView from "@/components/ui/SheetView";
 import { useNavigationState } from "@/hooks/useNavigationState";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
-import { useWaypoints } from "@/hooks/useWaypoints";
-import type { Waypoint } from "@/lib/database";
+import { useMarkers } from "@/hooks/useMarkers";
+import type { Marker } from "@/lib/database";
 import { bearingDegrees, distanceMeters, formatBearing } from "@/lib/geo";
 import {
   Button,
@@ -41,11 +41,11 @@ function formatCoords(lat: number, lon: number): string {
   return `${latStr}  ${lonStr}`;
 }
 
-export default function WaypointList() {
-  const waypoints = useWaypoints((s) => s.waypoints);
-  const loadWaypoints = useWaypoints((s) => s.loadWaypoints);
-  const deleteWaypoint = useWaypoints((s) => s.deleteWaypoint);
-  const updateWaypoint = useWaypoints((s) => s.updateWaypoint);
+export default function MarkerList() {
+  const markers = useMarkers((s) => s.markers);
+  const loadMarkers = useMarkers((s) => s.loadMarkers);
+  const deleteMarker = useMarkers((s) => s.deleteMarker);
+  const updateMarker = useMarkers((s) => s.updateMarker);
 
   const nav = useNavigationState();
   const units = usePreferredUnits();
@@ -53,21 +53,21 @@ export default function WaypointList() {
   const [sort, setSort] = useState<SortBy>("created");
 
   useEffect(() => {
-    loadWaypoints();
-  }, [loadWaypoints]);
+    loadMarkers();
+  }, [loadMarkers]);
 
   const proximityMap = useMemo(() => {
     if (sort !== "nearby" || !nav.coords) return null;
     const { latitude, longitude } = nav.coords;
     const map = new Map<number, number>();
-    for (const w of waypoints) {
-      map.set(w.id, distanceMeters(latitude, longitude, w.latitude, w.longitude));
+    for (const m of markers) {
+      map.set(m.id, distanceMeters(latitude, longitude, m.latitude, m.longitude));
     }
     return map;
-  }, [sort, waypoints, nav.coords?.latitude, nav.coords?.longitude]);
+  }, [sort, markers, nav.coords?.latitude, nav.coords?.longitude]);
 
-  const sortedWaypoints = useMemo(() => {
-    return [...waypoints].sort((a, b) => {
+  const sortedMarkers = useMemo(() => {
+    return [...markers].sort((a, b) => {
       switch (sort) {
         case "name":
           return (a.name ?? "").localeCompare(b.name ?? "");
@@ -80,40 +80,40 @@ export default function WaypointList() {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
-  }, [waypoints, sort, proximityMap]);
+  }, [markers, sort, proximityMap]);
 
-  function confirmDelete(waypoint: Waypoint) {
+  function confirmDelete(marker: Marker) {
     Alert.alert(
-      "Delete Waypoint",
-      `Delete "${waypoint.name ?? `Waypoint ${waypoint.id}`}"?`,
+      "Delete Marker",
+      `Delete "${marker.name ?? `Marker ${marker.id}`}"?`,
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => deleteWaypoint(waypoint.id) },
+        { text: "Delete", style: "destructive", onPress: () => deleteMarker(marker.id) },
       ],
     );
   }
 
-  function promptRename(waypoint: Waypoint) {
+  function promptRename(marker: Marker) {
     Alert.prompt(
-      "Rename Waypoint",
+      "Rename Marker",
       undefined,
-      (name: string) => updateWaypoint(waypoint.id, { name: name || null }),
+      (name: string) => updateMarker(marker.id, { name: name || null }),
       "plain-text",
-      waypoint.name ?? "",
+      marker.name ?? "",
     );
   }
 
-  function getDistanceLabel(waypoint: Waypoint): string | null {
+  function getDistanceLabel(marker: Marker): string | null {
     if (!nav.coords) return null;
-    const dist = proximityMap?.get(waypoint.id)
-      ?? distanceMeters(nav.coords.latitude, nav.coords.longitude, waypoint.latitude, waypoint.longitude);
+    const dist = proximityMap?.get(marker.id)
+      ?? distanceMeters(nav.coords.latitude, nav.coords.longitude, marker.latitude, marker.longitude);
     const formatted = units.toDistance(dist);
-    const bearing = bearingDegrees(nav.coords.latitude, nav.coords.longitude, waypoint.latitude, waypoint.longitude);
+    const bearing = bearingDegrees(nav.coords.latitude, nav.coords.longitude, marker.latitude, marker.longitude);
     return `${formatted.value} ${formatted.abbr} ${formatBearing(bearing)}`;
   }
 
   return (
-    <SheetView id="waypoints">
+    <SheetView id="markers">
       <Host style={{ flex: 1 }}>
         <List>
           <Picker
@@ -127,26 +127,26 @@ export default function WaypointList() {
           </Picker>
 
           <List.ForEach>
-            {sortedWaypoints.map((waypoint) => {
-              const distLabel = getDistanceLabel(waypoint);
-              const coordsLabel = formatCoords(waypoint.latitude, waypoint.longitude);
+            {sortedMarkers.map((marker) => {
+              const distLabel = getDistanceLabel(marker);
+              const coordsLabel = formatCoords(marker.latitude, marker.longitude);
 
               return (
-                <ContextMenu key={waypoint.id}>
+                <ContextMenu key={marker.id}>
                   <ContextMenu.Trigger>
                     <VStack
                       alignment="leading"
                       spacing={2}
                       modifiers={[
                         onTapGesture(() => {
-                          router.push({ pathname: "/waypoint/[id]", params: { id: waypoint.id } });
+                          router.push({ pathname: "/marker/[id]", params: { id: marker.id } });
                         }),
                         padding({ vertical: 4 }),
                       ]}
                     >
                       <HStack spacing={6}>
                         <Text modifiers={[font({ size: 16, weight: "semibold" }), lineLimit(1)]}>
-                          {waypoint.name ?? `Waypoint ${waypoint.id}`}
+                          {marker.name ?? `Marker ${marker.id}`}
                         </Text>
                         <Spacer />
                         {distLabel && (
@@ -165,13 +165,13 @@ export default function WaypointList() {
                     <Button
                       label="Rename"
                       systemImage="pencil"
-                      onPress={() => promptRename(waypoint)}
+                      onPress={() => promptRename(marker)}
                     />
                     <Button
                       label="Delete"
                       systemImage="trash"
                       role="destructive"
-                      onPress={() => confirmDelete(waypoint)}
+                      onPress={() => confirmDelete(marker)}
                     />
                   </ContextMenu.Items>
                 </ContextMenu>

@@ -4,7 +4,7 @@ import { mapRef } from "@/hooks/useMapRef";
 import { useSheetOffset } from "@/hooks/useSheetPosition";
 import useTheme from "@/hooks/useTheme";
 import { mapStyles, useViewOptions } from "@/hooks/useViewOptions";
-import { useWaypoints } from "@/hooks/useWaypoints";
+import { useMarkers } from "@/hooks/useMarkers";
 import type { CameraRef } from "@maplibre/maplibre-react-native";
 import { Camera, Map, UserLocation } from "@maplibre/maplibre-react-native";
 import { router, useGlobalSearchParams, usePathname } from "expo-router";
@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import HeadsUpDisplay from "./HeadsUpDisplay";
 import { MapControls } from "./MapControls";
 import TrackOverlay from "./TrackOverlay";
-import WaypointOverlay from "./WaypointOverlay";
+import MarkerOverlay from "./MarkerOverlay";
 import { Annotation } from "./map/Annotation";
 import TrackRecordButton from "./map/TrackRecordButton";
 
@@ -30,7 +30,7 @@ export default function ChartView() {
   const cameraRef = useRef<CameraRef>(null);
 
   useEffect(() => {
-    useWaypoints.getState().loadWaypoints();
+    useMarkers.getState().loadMarkers();
   }, []);
 
   const { coords } = useGlobalSearchParams<{ coords?: string }>();
@@ -105,7 +105,7 @@ export default function ChartView() {
       )}
       <UserLocation heading />
       <TrackOverlay />
-      <WaypointOverlay />
+      <MarkerOverlay />
     </Map>
     <SafeAreaView style={{ position: "absolute", top: 0, left: 16, right: 16, alignItems: "center" }}>
       <HeadsUpDisplay />

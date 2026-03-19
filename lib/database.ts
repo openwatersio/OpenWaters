@@ -2,7 +2,7 @@ import { LocationObject } from "expo-location";
 import * as SQLite from "expo-sqlite";
 
 const DATABASE_NAME = "seascape.db";
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 4;
 
 let db: SQLite.SQLiteDatabase | null = null;
 
@@ -46,9 +46,9 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
     `);
   }
 
-  if (currentVersion < 3) {
+  if (currentVersion < 4) {
     await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS waypoints (
+      CREATE TABLE IF NOT EXISTS markers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
         latitude REAL NOT NULL,
@@ -206,9 +206,9 @@ export type SpeedStats = {
   maxSpeed: number;
 };
 
-// -- Waypoint operations --
+// -- Marker operations --
 
-export type Waypoint = {
+export type Marker = {
   id: number;
   name: string | null;
   latitude: number;
@@ -219,7 +219,7 @@ export type Waypoint = {
   created_at: string;
 };
 
-export type WaypointFields = {
+export type MarkerFields = {
   latitude: number;
   longitude: number;
   name?: string | null;
@@ -228,10 +228,10 @@ export type WaypointFields = {
   icon?: string | null;
 };
 
-export async function insertWaypoint(fields: WaypointFields): Promise<Waypoint> {
+export async function insertMarker(fields: MarkerFields): Promise<Marker> {
   const db = await getDatabase();
   const result = await db.runAsync(
-    `INSERT INTO waypoints (latitude, longitude, name, notes, color, icon, created_at)
+    `INSERT INTO markers (latitude, longitude, name, notes, color, icon, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     fields.latitude,
     fields.longitude,
@@ -241,26 +241,30 @@ export async function insertWaypoint(fields: WaypointFields): Promise<Waypoint> 
     fields.icon ?? null,
     new Date().toISOString(),
   );
-  const waypoint = await db.getFirstAsync<Waypoint>(
-    "SELECT * FROM waypoints WHERE id = ?",
+  const marker = await db.getFirstAsync<Marker>(
+    "SELECT * FROM markers WHERE id = ?",
     result.lastInsertRowId,
   );
-  return waypoint!;
+  return marker!;
 }
 
-export async function getWaypoint(id: number): Promise<Waypoint | null> {
+export async function getMarker(id: number): Promise<Marker | null> {
   const db = await getDatabase();
-  return db.getFirstAsync<Waypoint>("SELECT * FROM waypoints WHERE id = ?", id);
+  return db.getFirstAsync<Marker>("SELECT * FROM markers WHERE id = ?", id);
 }
 
-export async function getAllWaypoints(): Promise<Waypoint[]> {
+export async function getAllMarkers(): Promise<Marker[]> {
   const db = await getDatabase();
-  return db.getAllAsync<Waypoint>("SELECT * FROM waypoints ORDER BY created_at DESC");
+  return db.getAllAsync<Marker>(
+    "SELECT * FROM markers ORDER BY created_at DESC",
+  );
 }
 
-export async function updateWaypoint(
+export async function updateMarker(
   id: number,
-  fields: Partial<Pick<Waypoint, "name" | "notes" | "color" | "icon" | "latitude" | "longitude">>,
+  fields: Partial<
+    Pick<Marker, "name" | "notes" | "color" | "icon" | "latitude" | "longitude">
+  >,
 ): Promise<void> {
   const db = await getDatabase();
   const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
@@ -268,15 +272,15 @@ export async function updateWaypoint(
   const setClauses = entries.map(([k]) => `${k} = ?`).join(", ");
   const values = entries.map(([, v]) => v);
   await db.runAsync(
-    `UPDATE waypoints SET ${setClauses} WHERE id = ?`,
+    `UPDATE markers SET ${setClauses} WHERE id = ?`,
     ...values,
     id,
   );
 }
 
-export async function deleteWaypoint(id: number): Promise<void> {
+export async function deleteMarker(id: number): Promise<void> {
   const db = await getDatabase();
-  await db.runAsync("DELETE FROM waypoints WHERE id = ?", id);
+  await db.runAsync("DELETE FROM markers WHERE id = ?", id);
 }
 
 export async function getAllTimeSpeedStats(): Promise<SpeedStats> {

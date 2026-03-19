@@ -3,7 +3,7 @@ import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
 import { useCameraView } from "@/hooks/useCameraView";
 import useTheme from "@/hooks/useTheme";
-import { useWaypoints } from "@/hooks/useWaypoints";
+import { useMarkers } from "@/hooks/useMarkers";
 import {
   Button,
   ColorPicker,
@@ -22,19 +22,19 @@ import { Pressable, View } from "react-native";
 
 const coordFormat = new CoordinateFormat("minutes");
 
-export default function EditWaypointScreen() {
+export default function EditMarkerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const waypointId = Number(id);
+  const markerId = Number(id);
 
-  const waypoint = useWaypoints((s) => s.waypoints.find((w) => w.id === waypointId));
-  const updateWaypoint = useWaypoints((s) => s.updateWaypoint);
+  const marker = useMarkers((s) => s.markers.find((m) => m.id === markerId));
+  const updateMarker = useMarkers((s) => s.updateMarker);
   const theme = useTheme();
 
-  const [color, setColor] = useState<string | null>(waypoint?.color ?? null);
-  const [icon, setIcon] = useState<AnnotationIconName>((waypoint?.icon as AnnotationIconName) ?? "pin");
+  const [color, setColor] = useState<string | null>(marker?.color ?? null);
+  const [icon, setIcon] = useState<AnnotationIconName>((marker?.icon as AnnotationIconName) ?? "pin");
 
-  const subtitle = waypoint
-    ? coordFormat.format(waypoint.longitude, waypoint.latitude).join("  ")
+  const subtitle = marker
+    ? coordFormat.format(marker.longitude, marker.latitude).join("  ")
     : undefined;
 
   const handleSave = useCallback(() => {
@@ -42,20 +42,20 @@ export default function EditWaypointScreen() {
   }, []);
 
   useEffect(() => {
-    if (!waypoint) return;
+    if (!marker) return;
 
     useCameraView.getState().cameraRef?.current?.flyTo({
-      center: [waypoint.longitude, waypoint.latitude],
+      center: [marker.longitude, marker.latitude],
       duration: 600,
     });
-  }, [waypoint]);
+  }, [marker]);
 
-  if (!waypoint) return null;
+  if (!marker) return null;
 
   return (
-    <SheetView id="waypoint-edit" style={{ flex: 1 }}>
+    <SheetView id="marker-edit" style={{ flex: 1 }}>
       <SheetHeader
-        title={waypoint.name ?? "Edit Waypoint"}
+        title={marker.name ?? "Edit Marker"}
         subtitle={subtitle}
         headerRight={() => (
           <Host matchContents>
@@ -77,23 +77,23 @@ export default function EditWaypointScreen() {
           <Section>
             <TextField
               placeholder="Name (optional)"
-              defaultValue={waypoint.name ?? ""}
-              onChangeText={(v) => updateWaypoint(waypointId, { name: v.trim() || null })}
+              defaultValue={marker.name ?? ""}
+              onChangeText={(v) => updateMarker(markerId, { name: v.trim() || null })}
               autocorrection={false}
             />
             <TextField
               placeholder="Notes"
-              defaultValue={waypoint.notes ?? ""}
+              defaultValue={marker.notes ?? ""}
               multiline
               numberOfLines={3}
-              onChangeText={(v) => updateWaypoint(waypointId, { notes: v.trim() || null })}
+              onChangeText={(v) => updateMarker(markerId, { notes: v.trim() || null })}
             />
           </Section>
 
           <Section header={<Text modifiers={[font({ size: 13 }), foregroundStyle("secondary")]}>Icon</Text>}>
             <ColorPicker
               selection={color}
-              onSelectionChange={(c) => { setColor(c); updateWaypoint(waypointId, { color: c }); }}
+              onSelectionChange={(c) => { setColor(c); updateMarker(markerId, { color: c }); }}
               label="Color"
               supportsOpacity={false}
             />
@@ -102,7 +102,7 @@ export default function EditWaypointScreen() {
                 {Object.keys(ICONS).map((name) => (
                   <Pressable
                     key={name}
-                    onPress={() => { setIcon(name as AnnotationIconName); updateWaypoint(waypointId, { icon: name }); }}
+                    onPress={() => { setIcon(name as AnnotationIconName); updateMarker(markerId, { icon: name }); }}
                   >
                     <AnnotationIcon name={name} size={24} color={icon === name ? color ?? undefined : theme.textPrimary} />
                   </Pressable>

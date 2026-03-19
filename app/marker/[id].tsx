@@ -4,8 +4,8 @@ import { useNavigationState } from "@/hooks/useNavigationState";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
 import { useSheetDetents } from "@/hooks/useSheetDetents";
 import useTheme from "@/hooks/useTheme";
-import { useWaypoints } from "@/hooks/useWaypoints";
-import { exportWaypointAsGPX } from "@/lib/exportTrack";
+import { useMarkers } from "@/hooks/useMarkers";
+import { exportMarkerAsGPX } from "@/lib/exportTrack";
 import { bearingDegrees, distanceMeters, formatBearing } from "@/lib/geo";
 import {
   Button,
@@ -42,13 +42,13 @@ function formatCoords(lat: number, lon: number): [string, string] {
   return [latStr, lonStr];
 }
 
-export default function WaypointScreen() {
+export default function MarkerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const waypointId = Number(id);
+  const markerId = Number(id);
 
-  const waypoint = useWaypoints((s) => s.waypoints.find((w) => w.id === waypointId) ?? null);
-  const setSelected = useWaypoints((s) => s.setSelected);
-  const deleteWaypoint = useWaypoints((s) => s.deleteWaypoint);
+  const marker = useMarkers((s) => s.markers.find((m) => m.id === markerId) ?? null);
+  const setSelected = useMarkers((s) => s.setSelected);
+  const deleteMarker = useMarkers((s) => s.deleteMarker);
 
   const nav = useNavigationState();
   const units = usePreferredUnits();
@@ -61,56 +61,56 @@ export default function WaypointScreen() {
   }, [headerHeight, setDetentHeight]);
 
   useEffect(() => {
-    setSelected(waypointId);
+    setSelected(markerId);
     return () => setSelected(null);
-  }, [waypointId, setSelected]);
+  }, [markerId, setSelected]);
 
   const distBearing = useMemo(() => {
-    if (!nav.coords?.latitude || !nav.coords?.longitude || !waypoint) return null;
-    const dist = distanceMeters(nav.coords.latitude, nav.coords.longitude, waypoint.latitude, waypoint.longitude);
-    const bearing = bearingDegrees(nav.coords.latitude, nav.coords.longitude, waypoint.latitude, waypoint.longitude);
+    if (!nav.coords?.latitude || !nav.coords?.longitude || !marker) return null;
+    const dist = distanceMeters(nav.coords.latitude, nav.coords.longitude, marker.latitude, marker.longitude);
+    const bearing = bearingDegrees(nav.coords.latitude, nav.coords.longitude, marker.latitude, marker.longitude);
     return { dist, bearing };
-  }, [waypoint?.latitude, waypoint?.longitude, nav.coords?.latitude, nav.coords?.longitude]);
+  }, [marker?.latitude, marker?.longitude, nav.coords?.latitude, nav.coords?.longitude]);
 
   const distFormatted = distBearing ? units.toDistance(distBearing.dist) : null;
   const bearingFormatted = distBearing ? formatBearing(distBearing.bearing) : null;
 
   const [latStr, lonStr] = useMemo(
-    () => waypoint ? formatCoords(waypoint.latitude, waypoint.longitude) : ["—", "—"],
-    [waypoint?.latitude, waypoint?.longitude],
+    () => marker ? formatCoords(marker.latitude, marker.longitude) : ["—", "—"],
+    [marker?.latitude, marker?.longitude],
   );
 
   const handleShare = useCallback(async () => {
-    if (!waypoint) return;
+    if (!marker) return;
     try {
-      await exportWaypointAsGPX(waypoint);
+      await exportMarkerAsGPX(marker);
     } catch (e) {
       Alert.alert("Export Failed", String(e));
     }
-  }, [waypoint]);
+  }, [marker]);
 
   const confirmDelete = useCallback(() => {
     Alert.alert(
-      "Delete Waypoint",
-      `Delete "${waypoint?.name ?? `Waypoint ${waypointId}`}"?`,
+      "Delete Marker",
+      `Delete "${marker?.name ?? `Marker ${markerId}`}"?`,
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
           onPress: () => {
-            deleteWaypoint(waypointId);
+            deleteMarker(markerId);
             router.dismiss();
           },
         },
       ],
     );
-  }, [waypointId, waypoint?.name, deleteWaypoint]);
+  }, [markerId, marker?.name, deleteMarker]);
 
   return (
-    <SheetView id="waypoint" style={{ flex: 1 }}>
+    <SheetView id="marker" style={{ flex: 1 }}>
       <SheetHeader
-        title={waypoint?.name ?? "Waypoint"}
+        title={marker?.name ?? "Marker"}
         subtitle={[latStr, lonStr,].join(", ")}
         headerLeft={() => (
           <Host matchContents>
@@ -131,8 +131,8 @@ export default function WaypointScreen() {
               />
               <Button
                 onPress={() => showLocation({
-                  latitude: waypoint?.latitude,
-                  longitude: waypoint?.longitude,
+                  latitude: marker?.latitude,
+                  longitude: marker?.longitude,
                   title: `${latStr} ${lonStr}`,
                 })}
                 modifiers={[
@@ -160,16 +160,16 @@ export default function WaypointScreen() {
               </HStack>
             )}
             {/* Notes */}
-            {waypoint?.notes && (
+            {marker?.notes && (
               <Text>
-                {waypoint.notes}
+                {marker.notes}
               </Text>
             )}
           </Section>
           <Section>
             <Button
               label="Edit"
-              onPress={() => router.push({ pathname: "/waypoint/edit", params: { id: waypointId } })}
+              onPress={() => router.push({ pathname: "/marker/edit", params: { id: markerId } })}
             />
             <Button
               label="Delete"

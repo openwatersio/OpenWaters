@@ -18,8 +18,8 @@ export default function MainSheet() {
             <Button
               modifiers={[tint('primary')]}
               systemImage="mappin.and.ellipse"
-              label="Waypoints"
-              onPress={() => router.push("/waypoints")}
+              label="Markers"
+              onPress={() => router.push("/markers")}
             />
             <Button
               modifiers={[tint('primary')]}

@@ -7,16 +7,16 @@ import {
   getTrackPoints,
   deleteTrack,
   renameTrack,
-  insertWaypoint,
-  getWaypoint,
-  getAllWaypoints,
-  updateWaypoint,
-  deleteWaypoint,
+  insertMarker,
+  getMarker,
+  getAllMarkers,
+  updateMarker,
+  deleteMarker,
 } from "@/lib/database";
 
 // Mock expo-sqlite with an in-memory implementation
-const rows: Record<string, any[]> = { tracks: [], track_points: [], waypoints: [] };
-let autoIncrement: Record<string, number> = { tracks: 0, track_points: 0, waypoints: 0 };
+const rows: Record<string, any[]> = { tracks: [], track_points: [], markers: [] };
+let autoIncrement: Record<string, number> = { tracks: 0, track_points: 0, markers: 0 };
 let userVersion = 0;
 
 const mockDb = {
@@ -36,9 +36,9 @@ const mockDb = {
       const id = args[0];
       return rows.tracks.find((t) => t.id === id) ?? null;
     }
-    if (sql.includes("FROM waypoints WHERE id")) {
+    if (sql.includes("FROM markers WHERE id")) {
       const id = args[0];
-      return rows.waypoints.find((w) => w.id === id) ?? null;
+      return rows.markers.find((m) => m.id === id) ?? null;
     }
     return null;
   }),
@@ -50,8 +50,8 @@ const mockDb = {
       const trackId = args[0];
       return rows.track_points.filter((p) => p.track_id === trackId);
     }
-    if (sql.includes("FROM waypoints ORDER BY")) {
-      return [...rows.waypoints].reverse();
+    if (sql.includes("FROM markers ORDER BY")) {
+      return [...rows.markers].reverse();
     }
     return [];
   }),
@@ -82,9 +82,9 @@ const mockDb = {
       });
       return { lastInsertRowId: id };
     }
-    if (sql.includes("INSERT INTO waypoints")) {
-      const id = ++autoIncrement.waypoints;
-      rows.waypoints.push({
+    if (sql.includes("INSERT INTO markers")) {
+      const id = ++autoIncrement.markers;
+      rows.markers.push({
         id,
         latitude: args[0],
         longitude: args[1],
@@ -109,18 +109,18 @@ const mockDb = {
       if (track) track.name = args[0];
       return { changes: track ? 1 : 0 };
     }
-    if (sql.match(/UPDATE waypoints SET .+ WHERE id/)) {
+    if (sql.match(/UPDATE markers SET .+ WHERE id/)) {
       const id = args[args.length - 1];
-      const waypoint = rows.waypoints.find((w) => w.id === id);
-      if (waypoint) {
+      const marker = rows.markers.find((m) => m.id === id);
+      if (marker) {
         // Parse SET clause to apply updates
         const setMatch = sql.match(/SET (.+) WHERE/);
         if (setMatch) {
           const keys = setMatch[1].split(", ").map((s) => s.replace(" = ?", "").trim());
-          keys.forEach((key, i) => { waypoint[key] = args[i]; });
+          keys.forEach((key, i) => { marker[key] = args[i]; });
         }
       }
-      return { changes: waypoint ? 1 : 0 };
+      return { changes: marker ? 1 : 0 };
     }
     if (sql.includes("DELETE FROM track_points WHERE track_id")) {
       rows.track_points = rows.track_points.filter(
@@ -132,8 +132,8 @@ const mockDb = {
       rows.tracks = rows.tracks.filter((t) => t.id !== args[0]);
       return { changes: 0 };
     }
-    if (sql.includes("DELETE FROM waypoints WHERE id")) {
-      rows.waypoints = rows.waypoints.filter((w) => w.id !== args[0]);
+    if (sql.includes("DELETE FROM markers WHERE id")) {
+      rows.markers = rows.markers.filter((m) => m.id !== args[0]);
       return { changes: 0 };
     }
     return { lastInsertRowId: 0, changes: 0 };
@@ -147,8 +147,8 @@ jest.mock("expo-sqlite", () => ({
 beforeEach(() => {
   rows.tracks = [];
   rows.track_points = [];
-  rows.waypoints = [];
-  autoIncrement = { tracks: 0, track_points: 0, waypoints: 0 };
+  rows.markers = [];
+  autoIncrement = { tracks: 0, track_points: 0, markers: 0 };
 });
 
 describe("database", () => {
@@ -237,18 +237,18 @@ describe("database", () => {
     });
   });
 
-  describe("waypoints", () => {
-    it("inserts and retrieves a waypoint", async () => {
-      const waypoint = await insertWaypoint({ latitude: 47.6, longitude: -122.3 });
-      expect(waypoint.id).toBe(1);
-      expect(waypoint.latitude).toBe(47.6);
-      expect(waypoint.longitude).toBe(-122.3);
-      expect(waypoint.name).toBeNull();
-      expect(waypoint.created_at).toBeTruthy();
+  describe("markers", () => {
+    it("inserts and retrieves a marker", async () => {
+      const marker = await insertMarker({ latitude: 47.6, longitude: -122.3 });
+      expect(marker.id).toBe(1);
+      expect(marker.latitude).toBe(47.6);
+      expect(marker.longitude).toBe(-122.3);
+      expect(marker.name).toBeNull();
+      expect(marker.created_at).toBeTruthy();
     });
 
-    it("inserts a waypoint with all fields", async () => {
-      const waypoint = await insertWaypoint({
+    it("inserts a marker with all fields", async () => {
+      const marker = await insertMarker({
         latitude: 47.6,
         longitude: -122.3,
         name: "Home Cove",
@@ -256,32 +256,32 @@ describe("database", () => {
         color: "#FF0000",
         icon: "mappin",
       });
-      expect(waypoint.name).toBe("Home Cove");
-      expect(waypoint.color).toBe("#FF0000");
+      expect(marker.name).toBe("Home Cove");
+      expect(marker.color).toBe("#FF0000");
     });
 
-    it("lists all waypoints", async () => {
-      await insertWaypoint({ latitude: 47.6, longitude: -122.3 });
-      await insertWaypoint({ latitude: 47.7, longitude: -122.4 });
+    it("lists all markers", async () => {
+      await insertMarker({ latitude: 47.6, longitude: -122.3 });
+      await insertMarker({ latitude: 47.7, longitude: -122.4 });
 
-      const waypoints = await getAllWaypoints();
-      expect(waypoints).toHaveLength(2);
+      const markers = await getAllMarkers();
+      expect(markers).toHaveLength(2);
     });
 
-    it("updates waypoint fields", async () => {
-      const { id } = await insertWaypoint({ latitude: 47.6, longitude: -122.3 });
-      await updateWaypoint(id, { name: "Sunset Cove" });
+    it("updates marker fields", async () => {
+      const { id } = await insertMarker({ latitude: 47.6, longitude: -122.3 });
+      await updateMarker(id, { name: "Sunset Cove" });
 
-      const waypoint = await getWaypoint(id);
-      expect(waypoint!.name).toBe("Sunset Cove");
+      const marker = await getMarker(id);
+      expect(marker!.name).toBe("Sunset Cove");
     });
 
-    it("deletes a waypoint", async () => {
-      const { id } = await insertWaypoint({ latitude: 47.6, longitude: -122.3 });
-      await deleteWaypoint(id);
+    it("deletes a marker", async () => {
+      const { id } = await insertMarker({ latitude: 47.6, longitude: -122.3 });
+      await deleteMarker(id);
 
-      const waypoint = await getWaypoint(id);
-      expect(waypoint).toBeNull();
+      const marker = await getMarker(id);
+      expect(marker).toBeNull();
     });
   });
 });

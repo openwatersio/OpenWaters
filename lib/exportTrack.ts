@@ -1,7 +1,7 @@
 import { Paths, File } from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import { getTrack, getTrackPoints, type Waypoint } from "@/lib/database";
-import { toGPX, waypointToGPX } from "@/lib/gpx";
+import { getTrack, getTrackPoints, type Marker } from "@/lib/database";
+import { toGPX, markerToGPX } from "@/lib/gpx";
 
 export async function exportTrackAsGPX(trackId: number): Promise<void> {
   const track = await getTrack(trackId);
@@ -20,13 +20,13 @@ export async function exportTrackAsGPX(trackId: number): Promise<void> {
   });
 }
 
-export async function exportWaypointAsGPX(waypoint: Waypoint): Promise<void> {
-  const gpx = waypointToGPX(waypoint);
-  const file = new File(Paths.cache, `waypoint-${waypoint.id}.gpx`);
+export async function exportMarkerAsGPX(marker: Marker): Promise<void> {
+  const gpx = markerToGPX(marker);
+  const file = new File(Paths.cache, `marker-${marker.id}.gpx`);
   file.write(gpx);
   await Sharing.shareAsync(file.uri, {
     mimeType: "application/gpx+xml",
-    dialogTitle: "Export Waypoint",
+    dialogTitle: "Export Marker",
     UTI: "com.topografix.gpx",
   });
 }

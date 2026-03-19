@@ -65,30 +65,30 @@ export default function RootLayout() {
           headerLargeTitleEnabled: true,
           // headerRight: () => <CloseButton />,
         }} />
-        <Stack.Screen name="waypoints/index" options={{
+        <Stack.Screen name="markers/index" options={{
           presentation: "formSheet",
           sheetAllowedDetents: [0.5, 1],
           sheetInitialDetentIndex: 0,
           sheetGrabberVisible: true,
           sheetExpandsWhenScrolledToEdge: true,
-          title: "Waypoints",
+          title: "Markers",
           headerLargeTitleEnabled: true,
         }} />
-        <Stack.Screen name="waypoint/[id]" options={{
+        <Stack.Screen name="marker/[id]" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
           sheetAllowedDetents: [0.4, 1],
           sheetInitialDetentIndex: 0,
           sheetGrabberVisible: true,
         }} />
-        <Stack.Screen name="waypoint/new" options={{
+        <Stack.Screen name="marker/new" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
           sheetAllowedDetents: [0.6, 1],
           sheetInitialDetentIndex: 0,
           sheetGrabberVisible: true,
         }} />
-        <Stack.Screen name="waypoint/edit" options={{
+        <Stack.Screen name="marker/edit" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
           sheetAllowedDetents: [0.6],

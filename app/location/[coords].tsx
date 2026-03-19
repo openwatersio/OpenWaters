@@ -160,7 +160,7 @@ export default function LocationScreen() {
             {/* Action Buttons */}
             <HStack spacing={10}>
               <Button
-                onPress={() => router.push({ pathname: "/waypoint/new", params: { lat, lon } })}
+                onPress={() => router.push({ pathname: "/marker/new", params: { lat, lon } })}
                 modifiers={[
                   buttonStyle("bordered"),
                   controlSize("large"),
@@ -171,7 +171,7 @@ export default function LocationScreen() {
                 <VStack alignment="center" spacing={6}>
                   <Image systemName="mappin.and.ellipse" size={20} />
                   <Text modifiers={[font({ size: 13, weight: "medium" })]}>
-                    Waypoint
+                    Marker
                   </Text>
                 </VStack>
               </Button>

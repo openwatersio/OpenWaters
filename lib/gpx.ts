@@ -1,5 +1,5 @@
 import { XMLBuilder } from "fast-xml-parser";
-import type { Track, TrackPoint, Waypoint } from "@/lib/database";
+import type { Track, TrackPoint, Marker } from "@/lib/database";
 
 const builder = new XMLBuilder({
   ignoreAttributes: false,
@@ -54,18 +54,18 @@ export function toGPX(track: Track, points: TrackPoint[]): string {
   return builder.build(gpxObj);
 }
 
-/** Generate GPX 1.1 XML for a single waypoint */
-export function waypointToGPX(waypoint: Waypoint): string {
-  const name = waypoint.name || `Waypoint ${waypoint.id}`;
+/** Generate GPX 1.1 XML for a single marker */
+export function markerToGPX(marker: Marker): string {
+  const name = marker.name || `Marker ${marker.id}`;
 
   const wpt: Record<string, unknown> = {
-    "@_lat": waypoint.latitude,
-    "@_lon": waypoint.longitude,
+    "@_lat": marker.latitude,
+    "@_lon": marker.longitude,
     name,
-    time: waypoint.created_at,
+    time: marker.created_at,
   };
-  if (waypoint.notes) wpt.desc = waypoint.notes;
-  if (waypoint.icon) wpt.sym = waypoint.icon;
+  if (marker.notes) wpt.desc = marker.notes;
+  if (marker.icon) wpt.sym = marker.icon;
 
   const gpxObj = {
     "?xml": { "@_version": "1.0", "@_encoding": "UTF-8" },
@@ -76,7 +76,7 @@ export function waypointToGPX(waypoint: Waypoint): string {
       "@_xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
       "@_xsi:schemaLocation":
         "http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd",
-      metadata: { name, time: waypoint.created_at },
+      metadata: { name, time: marker.created_at },
       wpt,
     },
   };
