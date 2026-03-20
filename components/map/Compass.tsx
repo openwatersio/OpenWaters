@@ -1,5 +1,5 @@
-import { useCameraState } from '@/hooks/useCameraState';
-import { useCameraView } from '@/hooks/useCameraView';
+import { cycleTrackingMode, useCameraState } from '@/hooks/useCameraState';
+import { resetNorth, useCameraView } from '@/hooks/useCameraView';
 import {
   Button,
   Image,
@@ -25,8 +25,8 @@ function bearingToDirection(bearing: number): string {
 const NS_ID = 'map-controls';
 
 export function Compass() {
-  const { bearing, resetNorth } = useCameraView();
-  const { trackingMode, cycleTrackingMode } = useCameraState();
+  const bearing = useCameraView((s) => s.bearing);
+  const trackingMode = useCameraState((s) => s.trackingMode);
 
   if (!trackingMode || trackingMode === "default") {
     return null;

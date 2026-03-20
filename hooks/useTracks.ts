@@ -18,56 +18,36 @@ export function trackDisplayName(track: Track): string {
 
 interface TracksState {
   tracks: TrackWithStats[];
-  selectedId: number | null;
-  loadTracks: () => Promise<void>;
-  handleDelete: (trackId: number) => Promise<void>;
-  handleRename: (trackId: number, name: string) => Promise<void>;
-  handleExport: (trackId: number) => void;
-  selectTrack: (trackId: number) => void;
-  clearSelectedTrack: () => void;
 }
 
-export const useTracks = create<TracksState>((set, get) => ({
+export const useTracks = create<TracksState>(() => ({
   tracks: [],
-  selectedId: null,
-
-  loadTracks: async () => {
-    const result = await getAllTracksWithStats();
-    set({ tracks: result });
-  },
-
-  handleDelete: async (trackId: number) => {
-    await deleteTrack(trackId);
-    set((s) => ({
-      selectedId: s.selectedId === trackId ? null : s.selectedId,
-    }));
-    await get().loadTracks();
-  },
-
-  handleRename: async (trackId: number, name: string) => {
-    if (name.trim()) {
-      await renameTrack(trackId, name.trim());
-      await get().loadTracks();
-    }
-  },
-
-  handleExport: (trackId: number) => {
-    exportTrackAsGPX(trackId);
-  },
-
-  selectTrack: (trackId: number) => {
-    set({ selectedId: trackId });
-  },
-
-  clearSelectedTrack: () => {
-    set({ selectedId: null });
-  },
 }));
+
+export async function loadTracks() {
+  const result = await getAllTracksWithStats();
+  useTracks.setState({ tracks: result });
+}
+
+export async function handleDelete(trackId: number) {
+  await deleteTrack(trackId);
+  await loadTracks();
+}
+
+export async function handleRename(trackId: number, name: string) {
+  if (name.trim()) {
+    await renameTrack(trackId, name.trim());
+    await loadTracks();
+  }
+}
+
+export function handleExport(trackId: number) {
+  exportTrackAsGPX(trackId);
+}
 
 /** Hook to load tracks on mount */
 export function useLoadTracks() {
-  const loadTracks = useTracks((s) => s.loadTracks);
   useEffect(() => {
     loadTracks();
-  }, [loadTracks]);
+  }, []);
 }

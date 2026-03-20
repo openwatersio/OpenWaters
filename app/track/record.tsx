@@ -1,8 +1,7 @@
 import SheetView from "@/components/ui/SheetView";
-import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
 import { useSheetDetents } from "@/hooks/useSheetDetents";
-import { useTrackRecording } from "@/hooks/useTrackRecording";
-import { useTracks } from "@/hooks/useTracks";
+import { start, stop, useTrackRecording } from "@/hooks/useTrackRecording";
 import { formatElapsedTime } from "@/lib/format";
 import { Host, HStack, Spacer, Button as SwiftButton, Text as SwiftText, VStack } from "@expo/ui/swift-ui";
 import { buttonStyle, clipShape, controlSize, font, foregroundStyle, labelStyle, monospacedDigit, padding } from "@expo/ui/swift-ui/modifiers";
@@ -11,10 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, StyleSheet } from "react-native";
 
 export default function RecordScreen() {
-  const { track, isRecording, averageSpeed, start, stop } = useTrackRecording();
-  const selectTrack = useTracks((s) => s.selectTrack);
-  const clearSelectedTrack = useTracks((s) => s.clearSelectedTrack);
-  const units = usePreferredUnits();
+  const { track, isRecording, averageSpeed } = useTrackRecording();
   const { onHostLayout } = useSheetDetents();
   const [, setTick] = useState(0);
 
@@ -24,13 +20,6 @@ export default function RecordScreen() {
       start();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Set selected track for map overlay, clear on unmount
-  const trackId = track?.id ?? null;
-  useEffect(() => {
-    if (trackId) selectTrack(trackId);
-    return () => clearSelectedTrack();
-  }, [trackId, selectTrack, clearSelectedTrack]);
 
   // Tick for live elapsed time
   useEffect(() => {
@@ -50,8 +39,8 @@ export default function RecordScreen() {
     ]);
   }, [stop]);
 
-  const dist = units.toDistance(track?.distance ?? 0);
-  const avgSpd = units.toSpeed(averageSpeed);
+  const dist = toDistance(track?.distance ?? 0);
+  const avgSpd = toSpeed(averageSpeed);
 
   return (
     <SheetView id="record" style={styles.container}>

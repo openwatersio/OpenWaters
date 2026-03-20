@@ -1,10 +1,10 @@
 import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
+import { useMarkers, deleteMarker } from "@/hooks/useMarkers";
 import { useNavigationState } from "@/hooks/useNavigationState";
-import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import { toDistance } from "@/hooks/usePreferredUnits";
 import { useSheetDetents } from "@/hooks/useSheetDetents";
 import useTheme from "@/hooks/useTheme";
-import { useMarkers } from "@/hooks/useMarkers";
 import { exportMarkerAsGPX } from "@/lib/exportTrack";
 import { bearingDegrees, distanceMeters, formatBearing } from "@/lib/geo";
 import {
@@ -47,11 +47,8 @@ export default function MarkerScreen() {
   const markerId = Number(id);
 
   const marker = useMarkers((s) => s.markers.find((m) => m.id === markerId) ?? null);
-  const setSelected = useMarkers((s) => s.setSelected);
-  const deleteMarker = useMarkers((s) => s.deleteMarker);
 
   const nav = useNavigationState();
-  const units = usePreferredUnits();
   const theme = useTheme();
   const headerHeight = useHeaderHeight();
   const { setDetentHeight } = useSheetDetents([0.4, 1]);
@@ -60,24 +57,19 @@ export default function MarkerScreen() {
     setDetentHeight(headerHeight);
   }, [headerHeight, setDetentHeight]);
 
-  useEffect(() => {
-    setSelected(markerId);
-    return () => setSelected(null);
-  }, [markerId, setSelected]);
-
   const distBearing = useMemo(() => {
-    if (!nav.coords?.latitude || !nav.coords?.longitude || !marker) return null;
+    if (!nav.coords || !marker) return null;
     const dist = distanceMeters(nav.coords.latitude, nav.coords.longitude, marker.latitude, marker.longitude);
     const bearing = bearingDegrees(nav.coords.latitude, nav.coords.longitude, marker.latitude, marker.longitude);
     return { dist, bearing };
-  }, [marker?.latitude, marker?.longitude, nav.coords?.latitude, nav.coords?.longitude]);
+  }, [marker, nav.coords]);
 
-  const distFormatted = distBearing ? units.toDistance(distBearing.dist) : null;
+  const distFormatted = distBearing ? toDistance(distBearing.dist) : null;
   const bearingFormatted = distBearing ? formatBearing(distBearing.bearing) : null;
 
   const [latStr, lonStr] = useMemo(
     () => marker ? formatCoords(marker.latitude, marker.longitude) : ["—", "—"],
-    [marker?.latitude, marker?.longitude],
+    [marker],
   );
 
   const handleShare = useCallback(async () => {

@@ -81,13 +81,6 @@ export default function RootLayout() {
           sheetInitialDetentIndex: 0,
           sheetGrabberVisible: true,
         }} />
-        <Stack.Screen name="marker/new" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [0.6, 1],
-          sheetInitialDetentIndex: 0,
-          sheetGrabberVisible: true,
-        }} />
         <Stack.Screen name="marker/edit" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",

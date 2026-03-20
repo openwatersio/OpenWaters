@@ -39,7 +39,7 @@ export function Annotation({
   useEffect(() => {
     liftScale.value = withSpring(1, { damping: 50, stiffness: 1000 });
     liftY.value = withSpring(0, { damping: 70, stiffness: 1000 });
-  }, []);
+  }, [liftScale, liftY]);
 
   const liftStyle = useAnimatedStyle(() => ({
     transform: [

@@ -1,9 +1,9 @@
 import SheetView from "@/components/ui/SheetView";
-import { mapStyles, useViewOptions } from "@/hooks/useViewOptions";
+import { mapStyles, setViewOptions, useViewOptions } from "@/hooks/useViewOptions";
 import { Button, Host, List, Section, VStack } from "@expo/ui/swift-ui";
 
 export default function Charts() {
-  const viewOptions = useViewOptions();
+  const mapStyleId = useViewOptions((s) => s.mapStyleId);
 
   return (
     <SheetView id="charts">
@@ -12,13 +12,13 @@ export default function Charts() {
           <List>
             <Section>
               {mapStyles.map(({ id, name }) => {
-                const image = viewOptions.mapStyleId === id ? "checkmark.circle.fill" : "circle";
+                const image = mapStyleId === id ? "checkmark.circle.fill" : "circle";
                 return (
                   <Button
                     key={id}
                     systemImage={image}
                     label={name}
-                    onPress={() => viewOptions.set({ mapStyleId: id })}
+                    onPress={() => setViewOptions({ mapStyleId: id })}
                   />
                 );
               })}

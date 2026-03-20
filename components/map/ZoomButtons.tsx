@@ -1,4 +1,4 @@
-import { useCameraView } from '@/hooks/useCameraView';
+import { zoomIn, zoomOut } from '@/hooks/useCameraView';
 import { Button, Divider, VStack } from '@expo/ui/swift-ui';
 import {
   frame,
@@ -10,8 +10,6 @@ import {
 const NS_ID = 'map-controls';
 
 export function ZoomButtons() {
-  const { zoomIn, zoomOut } = useCameraView();
-
   return (
     <VStack
       spacing={0}

@@ -1,10 +1,11 @@
 import SheetView from "@/components/ui/SheetView";
-import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import { describeUnit, getDistanceUnits, getSpeedUnits, setPreferredUnits, usePreferredUnits } from "@/hooks/usePreferredUnits";
 import { Host, List, Picker, Section, Text, VStack } from "@expo/ui/swift-ui";
 import { tag } from "@expo/ui/swift-ui/modifiers";
 
 export default function Settings() {
-  const units = usePreferredUnits();
+  const speed = usePreferredUnits((s) => s.speed);
+  const distance = usePreferredUnits((s) => s.distance);
 
   return (
     <SheetView id="settings">
@@ -14,23 +15,23 @@ export default function Settings() {
             <Section title="Preferred Units">
               <Picker
                 label="Speed"
-                selection={units.speed}
-                onSelectionChange={(unit) => units.set({ speed: unit })}
+                selection={speed}
+                onSelectionChange={(unit) => setPreferredUnits({ speed: unit })}
               >
-                {units.speedUnits().map((unit) => (
+                {getSpeedUnits().map((unit) => (
                   <Text key={unit} modifiers={[tag(unit)]}>
-                    {units.describe(unit).plural}
+                    {describeUnit(unit).plural}
                   </Text>
                 ))}
               </Picker>
               <Picker
                 label="Distance"
-                selection={units.distance}
-                onSelectionChange={(unit) => units.set({ distance: unit })}
+                selection={distance}
+                onSelectionChange={(unit) => setPreferredUnits({ distance: unit })}
               >
-                {units.distanceUnits().map((unit) => (
+                {getDistanceUnits().map((unit) => (
                   <Text key={unit} modifiers={[tag(unit)]}>
-                    {units.describe(unit).plural}
+                    {describeUnit(unit).plural}
                   </Text>
                 ))}
               </Picker>

@@ -1,10 +1,13 @@
 import SheetView from "@/components/ui/SheetView";
-import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
 import { useTrackRecording } from "@/hooks/useTrackRecording";
 import {
   formatDate,
   formatDuration,
+  handleDelete,
+  handleExport,
+  handleRename,
   trackDisplayName,
   useLoadTracks,
   useTracks,
@@ -58,10 +61,9 @@ function StatItem({ label, value }: { label: string; value: string }) {
 }
 
 export default function TrackList() {
-  const { tracks, handleDelete, handleRename, handleExport } = useTracks();
+  const tracks = useTracks((s) => s.tracks);
   useLoadTracks();
   const activeTrack = useTrackRecording((s) => s.track);
-  const units = usePreferredUnits();
   const theme = useTheme();
   const [sort, setSort] = useState<SortBy>("date");
   const [proximityMap, setProximityMap] = useState<Map<number, number> | null>(null);
@@ -141,9 +143,9 @@ export default function TrackList() {
           <List.ForEach>
             {sortedTracks.map((track) => {
               const isActiveRecording = activeTrack?.id === track.id;
-              const dist = units.toDistance(track.distance);
-              const avgSpd = track.avg_speed != null ? units.toSpeed(track.avg_speed) : null;
-              const maxSpd = track.max_speed != null ? units.toSpeed(track.max_speed) : null;
+              const dist = toDistance(track.distance);
+              const avgSpd = track.avg_speed != null ? toSpeed(track.avg_speed) : null;
+              const maxSpd = track.max_speed != null ? toSpeed(track.max_speed) : null;
 
               return (
                 <ContextMenu key={track.id}>

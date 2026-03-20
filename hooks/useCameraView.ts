@@ -8,39 +8,36 @@ interface State {
   zoom: number;
 }
 
-interface Actions {
-  setCameraRef(ref: React.RefObject<CameraRef | null>): void;
-  onRegionIsChanging(bearing: number): void;
-  onRegionDidChange(bearing: number, bounds: LngLatBounds, zoom: number): void;
-  zoomIn(): void;
-  zoomOut(): void;
-  resetNorth(): void;
-}
-
-export const useCameraView = create<State & Actions>()((set, get) => ({
+export const useCameraView = create<State>()(() => ({
   bearing: 0,
   bounds: undefined,
   cameraRef: null,
   zoom: 0,
-  setCameraRef(ref) {
-    set({ cameraRef: ref });
-  },
-  onRegionIsChanging(bearing: number) {
-    set({ bearing });
-  },
-  onRegionDidChange(bearing: number, bounds: LngLatBounds, zoom: number) {
-    set({ bearing, bounds, zoom });
-  },
-  zoomIn() {
-    const { cameraRef, zoom } = get();
-    cameraRef?.current?.zoomTo(zoom + 1, { duration: 300 });
-  },
-  zoomOut() {
-    const { cameraRef, zoom } = get();
-    cameraRef?.current?.zoomTo(zoom - 1, { duration: 300 });
-  },
-  resetNorth() {
-    const { cameraRef } = get();
-    cameraRef?.current?.setStop({ bearing: 0, duration: 300 });
-  },
 }));
+
+export function setCameraRef(ref: React.RefObject<CameraRef | null>) {
+  useCameraView.setState({ cameraRef: ref });
+}
+
+export function onRegionIsChanging(bearing: number) {
+  useCameraView.setState({ bearing });
+}
+
+export function onRegionDidChange(bearing: number, bounds: LngLatBounds, zoom: number) {
+  useCameraView.setState({ bearing, bounds, zoom });
+}
+
+export function zoomIn() {
+  const { cameraRef, zoom } = useCameraView.getState();
+  cameraRef?.current?.zoomTo(zoom + 1, { duration: 300 });
+}
+
+export function zoomOut() {
+  const { cameraRef, zoom } = useCameraView.getState();
+  cameraRef?.current?.zoomTo(zoom - 1, { duration: 300 });
+}
+
+export function resetNorth() {
+  const { cameraRef } = useCameraView.getState();
+  cameraRef?.current?.setStop({ bearing: 0, duration: 300 });
+}

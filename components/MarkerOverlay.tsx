@@ -1,7 +1,8 @@
 import { Annotation } from "@/components/map/Annotation";
 import { useCameraView } from "@/hooks/useCameraView";
+import { updateMarker, useMarkers } from "@/hooks/useMarkers";
+import { useSelection } from "@/hooks/useSelection";
 import useTheme from "@/hooks/useTheme";
-import { useMarkers } from "@/hooks/useMarkers";
 import type { LngLatBounds } from "@maplibre/maplibre-react-native";
 import { router } from "expo-router";
 import type { SFSymbol } from "expo-symbols";
@@ -21,8 +22,8 @@ function isInBounds(lat: number, lng: number, bounds: LngLatBounds): boolean {
 
 export default function MarkerOverlay() {
   const markers = useMarkers((s) => s.markers);
-  const selectedId = useMarkers((s) => s.selectedMarkerId);
-  const updateMarker = useMarkers((s) => s.updateMarker);
+  const selection = useSelection();
+  const selectedId = selection?.type === "marker" ? selection.id : null;
   const bounds = useCameraView((s) => s.bounds);
   const theme = useTheme();
 
@@ -44,13 +45,15 @@ export default function MarkerOverlay() {
             color={marker.color ?? theme.primary}
             selected={isSelected}
             draggable={isSelected}
-            onSelected={() => console.log("SELECTED")}
-            onDeselected={() => console.log("DESELECTED")}
-            snippet="What does this do?"
             onPress={isSelected ? undefined : () => {
-              selectedId ?
-                router.setParams({ id: marker.id }) :
-                router.navigate({ pathname: "/marker/[id]", params: { id: marker.id } });
+              const href = { pathname: "/marker/[id]" as const, params: { id: marker.id } };
+              if (selection?.type === "marker") {
+                router.setParams({ id: marker.id });
+              } else if (selection) {
+                router.replace(href);
+              } else {
+                router.navigate(href);
+              }
             }}
             onDragEnd={(e) => {
               const [lng, lat] = e.nativeEvent.lngLat;

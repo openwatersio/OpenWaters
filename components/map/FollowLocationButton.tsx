@@ -1,4 +1,4 @@
-import { useCameraState } from '@/hooks/useCameraState';
+import { cycleTrackingMode, useCameraState } from '@/hooks/useCameraState';
 import { Button, Image } from '@expo/ui/swift-ui';
 import {
   animation,
@@ -12,8 +12,8 @@ import {
 const NS_ID = 'map-controls';
 
 export function FollowLocationButton() {
-  const { followUserLocation, trackingMode, cycleTrackingMode } =
-    useCameraState();
+  const followUserLocation = useCameraState((s) => s.followUserLocation);
+  const trackingMode = useCameraState((s) => s.trackingMode);
 
   return (
     <Button

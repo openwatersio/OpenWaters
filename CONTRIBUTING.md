@@ -1,6 +1,6 @@
 # Contributing
 
-SeaScape is a modern, open source, mobile-first marine navigation app built with React Native and Expo. See [docs/](docs/README.md) for the full product plan, competitive analysis, and roadmap.
+Open Waters is a modern, open source, mobile-first marine navigation app built with React Native and Expo. See [docs/](docs/README.md) for the full product plan, competitive analysis, and roadmap.
 
 ## Getting Started
 
@@ -69,26 +69,57 @@ import mapStyles from "@/styles";
 
 #### State Management (Zustand)
 
-All app state uses Zustand stores with a consistent pattern:
+Stores hold **state only**. Actions are **plain exported functions** that call `setState`/`getState` on the store. This keeps actions callable from anywhere (components, effects, callbacks, background tasks) without needing `getState()` at the call site.
+
+```typescript
+import { create } from "zustand";
+
+type State = {
+  items: Item[];
+};
+
+// Store: state only
+export const useItems = create<State>()(() => ({
+  items: [],
+}));
+
+// Actions: plain functions
+export async function loadItems() {
+  const items = await fetchItems();
+  useItems.setState({ items });
+}
+
+export async function addItem(fields: ItemFields) {
+  const item = await insertItem(fields);
+  useItems.setState((s) => ({ items: [item, ...s.items] }));
+  return item;
+}
+```
+
+Components subscribe to state via selectors and import actions directly:
+
+```typescript
+import { useItems, loadItems, addItem } from "@/hooks/useItems";
+
+function MyComponent() {
+  const items = useItems((s) => s.items); // subscribes to state
+  // Call actions directly — no hook needed
+  useEffect(() => { loadItems(); }, []);
+  return <Button onPress={() => addItem({ name: "New" })} />;
+}
+```
+
+For persisted stores, wrap the initializer with `persist` middleware — `setState` works with the middleware automatically:
 
 ```typescript
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-type State = {
-  someValue: string;
-};
-
-type Actions = {
-  set: (state: Partial<State>) => void;
-};
-
-export const useSomeState = create<State & Actions>()(
+export const useSomeState = create<State>()(
   persist(
-    (set) => ({
+    (): State => ({
       someValue: "default",
-      set: (state) => set(state),
     }),
     {
       name: "some-state", // AsyncStorage key, kebab-case
@@ -96,14 +127,23 @@ export const useSomeState = create<State & Actions>()(
     },
   ),
 );
+
+export function setSomeValue(value: string) {
+  useSomeState.setState({ someValue: value });
+}
 ```
 
 Existing stores:
 
-- `useCameraState` — zoom, bounds, follow-user mode (key: `"camera"`)
+- `useCameraState` — follow-user mode, tracking mode, last viewport (key: `"camera"`)
+- `useCameraView` — bearing, bounds, zoom, camera ref (not persisted)
 - `useViewOptions` — selected map style (key: `"view-options"`)
-- `usePreferredUnits` — speed unit preference (key: `"preferred-units"`)
+- `usePreferredUnits` — speed/distance unit preference (key: `"preferred-units"`)
 - `useNavigationState` — GPS position, speed, moored/underway state (not persisted)
+- `useTrackRecording` — recording state, active track (key: `"track-recording"`)
+- `useTracks` — track list from database (not persisted)
+- `useMarkers` — marker list from database (not persisted)
+- `useSheetStore` — sheet height tracking for overlay positioning (not persisted)
 
 #### Components
 
@@ -148,7 +188,7 @@ Use `SymbolView` from `expo-symbols` directly with SF Symbol names (e.g. `"locat
 
 #### Unit Conversions
 
-Use `usePreferredUnits` for all unit conversions. Internal data is always in SI/metric units (meters, meters/second); conversion happens at the display layer only via `toSpeed()` and `toDistance()`.
+Use `toSpeed()` and `toDistance()` from `@/hooks/usePreferredUnits` for all unit conversions. Internal data is always in SI/metric units (meters, meters/second); conversion happens at the display layer only.
 
 ### Naming Conventions
 
@@ -157,8 +197,8 @@ Use `usePreferredUnits` for all unit conversions. Internal data is always in SI/
 | Components     | PascalCase            | `ChartView.tsx`               |
 | Hooks          | camelCase, use-prefix | `useCameraState.tsx`          |
 | Zustand stores | use-prefix export     | `export const useCameraState` |
+| Store actions  | plain named exports   | `export function loadItems()` |
 | State types    | `State`               | `type State = { ... }`        |
-| Action types   | `Actions`             | `type Actions = { ... }`      |
 | Storage keys   | kebab-case string     | `"preferred-units"`           |
 | Constants      | SCREAMING_SNAKE_CASE  | `SPEED_THRESHOLD`             |
 | Enums          | PascalCase            | `NavigationState.Underway`    |
@@ -166,8 +206,7 @@ Use `usePreferredUnits` for all unit conversions. Internal data is always in SI/
 ### TypeScript
 
 - Strict mode is enabled
-- Define `State` and `Actions` interfaces for all Zustand stores
-- Use `Partial<State>` for setter methods
+- Define `State` interface for Zustand stores (actions are standalone functions, not typed on the store)
 - Use type guards (`'href' in props`) for polymorphic components
 - Use `fontVariant: ['tabular-nums']` for any dynamically changing numeric display
 - Avoid `as` casts where possible; prefer proper type definitions

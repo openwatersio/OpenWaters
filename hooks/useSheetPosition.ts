@@ -28,32 +28,34 @@ type SheetEntry = {
 
 export const useSheetStore = create<{
   sheets: Record<string, SheetEntry>;
-  setHeight: (id: string, height: number) => void;
-  removeSheet: (id: string) => void;
-}>((set) => ({
+}>(() => ({
   sheets: {},
-  setHeight: (id, height) =>
-    set((state) => {
-      const existing = state.sheets[id];
-      const wasOpen = existing && existing.height > 0;
-      const isOpen = height > 0;
-      return {
-        sheets: {
-          ...state.sheets,
-          [id]: {
-            height,
-            presentedAt:
-              !wasOpen && isOpen ? Date.now() : (existing?.presentedAt ?? 0),
-          },
-        },
-      };
-    }),
-  removeSheet: (id) =>
-    set((state) => {
-      const { [id]: _, ...rest } = state.sheets;
-      return { sheets: rest };
-    }),
 }));
+
+export function setSheetHeight(id: string, height: number) {
+  useSheetStore.setState((state) => {
+    const existing = state.sheets[id];
+    const wasOpen = existing && existing.height > 0;
+    const isOpen = height > 0;
+    return {
+      sheets: {
+        ...state.sheets,
+        [id]: {
+          height,
+          presentedAt:
+            !wasOpen && isOpen ? Date.now() : (existing?.presentedAt ?? 0),
+        },
+      },
+    };
+  });
+}
+
+export function removeSheet(id: string) {
+  useSheetStore.setState((state) => {
+    const { [id]: _, ...rest } = state.sheets;
+    return { sheets: rest };
+  });
+}
 
 /** Height of the topmost open sheet (0 if none). */
 export function getTopSheetHeight(sheets: Record<string, SheetEntry>): number {
@@ -108,21 +110,18 @@ export function useSheetHeightRef(): React.RefObject<number> {
  * Reports the sheet's content height continuously.
  */
 export function useSheetReporter(id: string) {
-  const setHeight = useSheetStore((s) => s.setHeight);
-  const removeSheet = useSheetStore((s) => s.removeSheet);
-
   useEffect(() => {
     return () => removeSheet(id);
-  }, [id, removeSheet]);
+  }, [id]);
 
   const viewRef = useRef<View>(null);
 
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
       const { height } = e.nativeEvent.layout;
-      setHeight(id, height);
+      setSheetHeight(id, height);
     },
-    [id, setHeight],
+    [id],
   );
 
   return { onLayout, ref: viewRef };

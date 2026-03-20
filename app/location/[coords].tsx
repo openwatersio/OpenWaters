@@ -1,8 +1,9 @@
 import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
 import { mapRef } from "@/hooks/useMapRef";
+import { addMarker } from "@/hooks/useMarkers";
 import { useNavigationState } from "@/hooks/useNavigationState";
-import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import { toDistance } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
 import { bearingDegrees, distanceMeters, formatBearing } from "@/lib/geo";
 import {
@@ -25,14 +26,12 @@ import {
   labelStyle,
   monospacedDigit,
   offset,
-  onTapGesture,
   padding,
   tint
 } from "@expo/ui/swift-ui/modifiers";
 import { CoordinateFormat } from "coordinate-format";
-import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { showLocation } from "react-native-map-link";
 
 const coordFormat = new CoordinateFormat("minutes");
@@ -47,7 +46,6 @@ export default function LocationScreen() {
   const [lon, lat] = coords.split(",").map(Number) as [number, number];
   const [features, setFeatures] = useState<GeoJSON.Feature[]>([]);
   const nav = useNavigationState();
-  const units = usePreferredUnits();
   const theme = useTheme();
 
   useEffect(() => {
@@ -70,17 +68,7 @@ export default function LocationScreen() {
     return { dist, bearing };
   }, [lat, lon, nav.coords?.latitude, nav.coords?.longitude]);
 
-  const [copied, setCopied] = useState(false);
-  const copiedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  const handleCopyCoords = useCallback(() => {
-    Clipboard.setStringAsync(`${latStr} ${lonStr}`);
-    setCopied(true);
-    clearTimeout(copiedTimer.current);
-    copiedTimer.current = setTimeout(() => setCopied(false), 1500);
-  }, [latStr, lonStr]);
-
-  const distFormatted = distBearing ? units.toDistance(distBearing.dist) : null;
+  const distFormatted = distBearing ? toDistance(distBearing.dist) : null;
   const bearingFormatted = distBearing ? formatBearing(distBearing.bearing) : null;
 
   return (
@@ -111,32 +99,6 @@ export default function LocationScreen() {
       <Host style={{ flex: 1 }}>
         <ScrollView showsIndicators={false}>
           <VStack spacing={16} modifiers={[padding({ horizontal: 20, top: 16 })]}>
-            {/* Coordinates */}
-            <VStack alignment="center" spacing={2} modifiers={[onTapGesture(handleCopyCoords)]}>
-              <Text modifiers={[
-                font({ size: 22, weight: "bold" }),
-                monospacedDigit(),
-                foregroundStyle("primary"),
-              ]}>
-                {latStr}
-              </Text>
-              <Text modifiers={[
-                font({ size: 22, weight: "bold" }),
-                monospacedDigit(),
-                foregroundStyle("primary"),
-              ]}>
-                {lonStr}
-              </Text>
-              {copied && (
-                <Text modifiers={[
-                  font({ size: 12, weight: "semibold" }),
-                  foregroundStyle("secondary"),
-                ]}>
-                  Copied
-                </Text>
-              )}
-            </VStack>
-
             {/* Distance & Bearing from current location */}
             {distBearing && (
               <HStack alignment="center" spacing={6}>
@@ -160,7 +122,10 @@ export default function LocationScreen() {
             {/* Action Buttons */}
             <HStack spacing={10}>
               <Button
-                onPress={() => router.push({ pathname: "/marker/new", params: { lat, lon } })}
+                onPress={async () => {
+                  const marker = await addMarker({ latitude: lat, longitude: lon });
+                  router.replace({ pathname: "/marker/edit", params: { id: marker.id } });
+                }}
                 modifiers={[
                   buttonStyle("bordered"),
                   controlSize("large"),

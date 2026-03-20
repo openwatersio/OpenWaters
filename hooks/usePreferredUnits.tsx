@@ -28,46 +28,11 @@ interface State {
   distance: DistanceUnit;
 }
 
-interface Actions {
-  speedUnits(): SpeedUnit[];
-  distanceUnits(): DistanceUnit[];
-  toSpeed(value: number | undefined, options?: { decimals?: number }): { value: string } & UnitInfo;
-  toDistance(meters: number | undefined, options?: { decimals?: number }): { value: string } & UnitInfo;
-  set(state: Partial<State>): void;
-  describe(unit: SpeedUnit | DistanceUnit): UnitInfo;
-}
-
-export const usePreferredUnits = create<State & Actions>()(
+export const usePreferredUnits = create<State>()(
   persist(
-    (set, get) => ({
-      speed: 'knot',
-      distance: 'nm',
-      set,
-
-      speedUnits() {
-        return Object.keys(speedUnits) as SpeedUnit[];
-      },
-
-      distanceUnits() {
-        return Object.keys(distanceUnitDefs) as DistanceUnit[];
-      },
-
-      describe(unit) {
-        const def = speedUnits[unit as SpeedUnit] ?? distanceUnitDefs[unit as DistanceUnit];
-        return { abbr: def.abbr, singular: def.singular, plural: def.plural };
-      },
-
-      toSpeed(measure, { decimals = 1 } = {}) {
-        const def = speedUnits[get().speed];
-        const value = ((measure ?? 0) * def.fromMps).toFixed(decimals);
-        return { value, abbr: def.abbr, singular: def.singular, plural: def.plural };
-      },
-
-      toDistance(meters, { decimals = 1 } = {}) {
-        const def = distanceUnitDefs[get().distance];
-        const value = ((meters ?? 0) * def.fromMeters).toFixed(decimals);
-        return { value, abbr: def.abbr, singular: def.singular, plural: def.plural };
-      },
+    () => ({
+      speed: 'knot' as SpeedUnit,
+      distance: 'nm' as DistanceUnit,
     }),
     {
       name: "preferred-units",
@@ -80,8 +45,36 @@ export const usePreferredUnits = create<State & Actions>()(
           if (state.distance === 'nMi') state.distance = 'nm';
           if (state.speed === 'm/s') state.speed = 'knot';
         }
-        return state as unknown as State & Actions;
+        return state as unknown as State;
       },
     }
   )
 )
+
+export function setPreferredUnits(state: Partial<State>) {
+  usePreferredUnits.setState(state);
+}
+
+export function getSpeedUnits(): SpeedUnit[] {
+  return Object.keys(speedUnits) as SpeedUnit[];
+}
+
+export function getDistanceUnits(): DistanceUnit[] {
+  return Object.keys(distanceUnitDefs) as DistanceUnit[];
+}
+
+export function describeUnit(unit: SpeedUnit | DistanceUnit): UnitInfo {
+  return speedUnits[unit as SpeedUnit] ?? distanceUnitDefs[unit as DistanceUnit];
+}
+
+export function toSpeed(measure: number | undefined, { decimals = 1 } = {}): { value: string } & UnitInfo {
+  const unit = speedUnits[usePreferredUnits.getState().speed];
+  const value = ((measure ?? 0) * unit.fromMps).toFixed(decimals);
+  return { value, ...unit };
+}
+
+export function toDistance(meters: number | undefined, { decimals = 1 } = {}): { value: string } & UnitInfo {
+  const def = distanceUnitDefs[usePreferredUnits.getState().distance];
+  const value = ((meters ?? 0) * def.fromMeters).toFixed(decimals);
+  return { value, ...def };
+}

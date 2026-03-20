@@ -2,8 +2,8 @@ import { AnnotationIcon, AnnotationIconName, ICONS } from "@/components/map/Anno
 import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
 import { useCameraView } from "@/hooks/useCameraView";
+import { updateMarker, useMarkers } from "@/hooks/useMarkers";
 import useTheme from "@/hooks/useTheme";
-import { useMarkers } from "@/hooks/useMarkers";
 import {
   Button,
   ColorPicker,
@@ -27,7 +27,6 @@ export default function EditMarkerScreen() {
   const markerId = Number(id);
 
   const marker = useMarkers((s) => s.markers.find((m) => m.id === markerId));
-  const updateMarker = useMarkers((s) => s.updateMarker);
   const theme = useTheme();
 
   const [color, setColor] = useState<string | null>(marker?.color ?? null);

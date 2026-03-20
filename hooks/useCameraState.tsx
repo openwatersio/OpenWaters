@@ -10,41 +10,13 @@ interface State {
   lastZoom?: number;
 }
 
-interface Actions {
-  setFollowUserLocation: (follow: boolean) => void;
-  cycleTrackingMode(): void;
-  saveViewport(center: LngLat, zoom: number): void;
-}
-
-export const useCameraState = create<State & Actions>()(
+export const useCameraState = create<State>()(
   persist(
-    (set) => ({
+    (): State => ({
       followUserLocation: true,
       trackingMode: "default",
       lastCenter: undefined,
       lastZoom: undefined,
-      setFollowUserLocation: (follow: boolean) => {
-        if (follow) {
-          set((state) => ({
-            followUserLocation: true,
-            trackingMode: state.trackingMode ?? "default",
-          }));
-        } else {
-          set({ followUserLocation: false, trackingMode: undefined });
-        }
-      },
-      cycleTrackingMode() {
-        set((state) => {
-          if (state.followUserLocation && state.trackingMode === "default") {
-            return { trackingMode: "course" };
-          }
-
-          return { followUserLocation: true, trackingMode: "default" };
-        })
-      },
-      saveViewport(center: LngLat, zoom: number) {
-        set({ lastCenter: center, lastZoom: zoom });
-      },
     }),
     {
       name: "camera",
@@ -58,10 +30,34 @@ export const useCameraState = create<State & Actions>()(
             followUserLocation: state.followUserLocation ?? true,
             lastCenter: state.center,
             lastZoom: state.zoom,
-          } as State & Actions;
+          } as State;
         }
-        return state as unknown as State & Actions;
+        return state as unknown as State;
       },
     }
   )
 )
+
+export function setFollowUserLocation(follow: boolean) {
+  if (follow) {
+    useCameraState.setState((state) => ({
+      followUserLocation: true,
+      trackingMode: state.trackingMode ?? "default",
+    }));
+  } else {
+    useCameraState.setState({ followUserLocation: false, trackingMode: undefined });
+  }
+}
+
+export function cycleTrackingMode() {
+  useCameraState.setState((state) => {
+    if (state.followUserLocation && state.trackingMode === "default") {
+      return { trackingMode: "course" as const };
+    }
+    return { followUserLocation: true, trackingMode: "default" as const };
+  });
+}
+
+export function saveViewport(center: LngLat, zoom: number) {
+  useCameraState.setState({ lastCenter: center, lastZoom: zoom });
+}

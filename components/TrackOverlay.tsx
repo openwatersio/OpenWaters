@@ -1,9 +1,9 @@
-import { useCameraState } from "@/hooks/useCameraState";
+import { setFollowUserLocation } from "@/hooks/useCameraState";
 import { useCameraView } from "@/hooks/useCameraView";
+import { useSelection } from "@/hooks/useSelection";
 import { useSheetStore } from "@/hooks/useSheetPosition";
 import useTheme from "@/hooks/useTheme";
 import { subscribeToLocationUpdate, useTrackRecording } from "@/hooks/useTrackRecording";
-import { useTracks } from "@/hooks/useTracks";
 import { getTrackPoints, Track } from "@/lib/database";
 import type { LngLatBounds } from "@maplibre/maplibre-react-native";
 import { getBounds } from "geolib";
@@ -56,7 +56,8 @@ function computeBounds(coords: Coord[]): LngLatBounds | null {
 
 function SelectedTrackOverlay() {
   const theme = useTheme();
-  const selectedId = useTracks((s) => s.selectedId);
+  const selection = useSelection();
+  const selectedId = selection?.type === "track" ? selection.id : null;
   const sheetHeight = useSheetStore((s) => {
     const entry = s.sheets["track"];
     return entry?.height ?? 0;
@@ -82,7 +83,7 @@ function SelectedTrackOverlay() {
     const trackBounds = computeBounds(coords);
     if (!trackBounds) return;
     console.log("Fitting camera to track bounds:", { trackBounds, sheetHeight });
-    useCameraState.getState().setFollowUserLocation(false);
+    setFollowUserLocation(false);
     cameraRef?.current?.fitBounds(trackBounds, {
       padding: { top: insets.top + 16, right: 16, bottom: 16 + sheetHeight, left: 16 },
       duration: 300,

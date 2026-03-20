@@ -39,129 +39,122 @@ type State = {
   lastLocation: LocationObject | null;
 };
 
-type Actions = {
-  start: () => Promise<void>;
-  stop: () => Promise<void>;
-  resume: () => Promise<void>;
-};
-
 const MIN_TRACK_DURATION_MS = 60_000;
 
-export const useTrackRecording = create<State & Actions>()(
-  persist((set, get) => {
-    let stopForegroundSubscription: (() => void) | null = null;
+let stopForegroundSubscription: (() => void) | null = null;
 
-    async function startForegroundTracking() {
-      stopForegroundSubscription = subscribeToLocationUpdate((location) => {
-        const { track } = get();
-        if (!track) {
-          console.warn("Received location update while no track is active.");
-          stopForegroundTracking();
-          return
-        }
-
-        insertTrackPoint(track.id, location);
-        onLocationUpdate(location);
-      });
+function startForegroundTracking() {
+  stopForegroundSubscription = subscribeToLocationUpdate((location) => {
+    const { track } = useTrackRecording.getState();
+    if (!track) {
+      console.warn("Received location update while no track is active.");
+      stopForegroundTracking();
+      return;
     }
 
-    async function stopForegroundTracking() {
-      if (stopForegroundSubscription) {
-        stopForegroundSubscription();
-        stopForegroundSubscription = null;
-      }
-    }
+    insertTrackPoint(track.id, location);
+    onLocationUpdate(location);
+  });
+}
 
-    function onLocationUpdate(location: LocationObject) {
-      set((state) => {
-        // This should never happen since we only subscribe when recording, but just in case:
-        if (!state.track) throw new Error("Received point when track is not recording.");
+function stopForegroundTracking() {
+  if (stopForegroundSubscription) {
+    stopForegroundSubscription();
+    stopForegroundSubscription = null;
+  }
+}
 
-        const { coords } = location;
-        const segmentDistance = state.lastLocation ? getDistance(state.lastLocation?.coords, coords) : 0;
+function onLocationUpdate(location: LocationObject) {
+  useTrackRecording.setState((state) => {
+    // This should never happen since we only subscribe when recording, but just in case:
+    if (!state.track) throw new Error("Received point when track is not recording.");
 
-        return {
-          lastLocation: location,
-          distance: state.distance + segmentDistance,
-          pointCount: state.pointCount + 1,
-          maxSpeed: Math.max(state.maxSpeed, coords.speed ?? 0),
-          averageSpeed: coords.speed != null
-            ? (state.averageSpeed * state.pointCount + coords.speed) / (state.pointCount + 1)
-            : state.averageSpeed,
-        }
-      });
-    }
+    const { coords } = location;
+    const segmentDistance = state.lastLocation ? getDistance(state.lastLocation?.coords, coords) : 0;
 
     return {
-      isRecording: false,
-      track: null,
+      lastLocation: location,
+      distance: state.distance + segmentDistance,
+      pointCount: state.pointCount + 1,
+      maxSpeed: Math.max(state.maxSpeed, coords.speed ?? 0),
+      averageSpeed: coords.speed != null
+        ? (state.averageSpeed * state.pointCount + coords.speed) / (state.pointCount + 1)
+        : state.averageSpeed,
+    };
+  });
+}
+
+export const useTrackRecording = create<State>()(
+  persist(
+    () => ({
+      isRecording: false as boolean,
+      track: null as Track | null,
       distance: 0,
       pointCount: 0,
       maxSpeed: 0,
       averageSpeed: 0,
-      lastLocation: null,
-
-      start: async () => {
-        const granted = await requestPermissions();
-        if (!granted) return;
-
-        const track = await startTrack();
-
-        set({
-          track,
-          isRecording: true,
-          pointCount: 0,
-          maxSpeed: 0,
-          averageSpeed: 0,
-        });
-
-        await startForegroundTracking();
-        await startBackgroundTracking();
-      },
-
-      resume: async () => {
-        const { isRecording, track } = get();
-        if (!isRecording || !track) return;
-
-        await startForegroundTracking();
-      },
-
-      stop: async () => {
-        stopForegroundTracking();
-        await stopBackgroundTracking();
-
-        const { track } = get();
-
-        if (track) {
-          const durationMs = Date.now() - new Date(track.started_at).getTime();
-          if (durationMs < MIN_TRACK_DURATION_MS) {
-            await deleteTrack(track.id);
-          } else {
-            await endTrack(track.id, track.distance);
-          }
-        }
-
-        set({
-          isRecording: false,
-          track: null,
-          pointCount: 0,
-          maxSpeed: 0,
-          averageSpeed: 0,
-        });
-      },
-    }
-  },
+      lastLocation: null as LocationObject | null,
+    }),
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => AsyncStorage),
       onRehydrateStorage: () => (state) => {
         if (state?.isRecording) {
-          state.resume();
+          resume();
         }
       },
     },
   ),
 );
+
+export async function start() {
+  const granted = await requestPermissions();
+  if (!granted) return;
+
+  const track = await startTrack();
+
+  useTrackRecording.setState({
+    track,
+    isRecording: true,
+    pointCount: 0,
+    maxSpeed: 0,
+    averageSpeed: 0,
+  });
+
+  startForegroundTracking();
+  await startBackgroundTracking();
+}
+
+export async function resume() {
+  const { isRecording, track } = useTrackRecording.getState();
+  if (!isRecording || !track) return;
+
+  startForegroundTracking();
+}
+
+export async function stop() {
+  stopForegroundTracking();
+  await stopBackgroundTracking();
+
+  const { track } = useTrackRecording.getState();
+
+  if (track) {
+    const durationMs = Date.now() - new Date(track.started_at).getTime();
+    if (durationMs < MIN_TRACK_DURATION_MS) {
+      await deleteTrack(track.id);
+    } else {
+      await endTrack(track.id, track.distance);
+    }
+  }
+
+  useTrackRecording.setState({
+    isRecording: false,
+    track: null,
+    pointCount: 0,
+    maxSpeed: 0,
+    averageSpeed: 0,
+  });
+}
 
 export async function requestPermissions(): Promise<boolean> {
   const { status: fgStatus } =
@@ -183,7 +176,6 @@ defineTask<{ locations: LocationObject[] }>(
 
     const { locations } = data;
 
-    let trackId: number | null = null;
     const { track, isRecording } = useTrackRecording.getState() ?? {};
 
     if (!track || !isRecording) {

@@ -1,8 +1,9 @@
+import { AnnotationIcon } from "@/components/map/AnnotationIcon";
 import SheetView from "@/components/ui/SheetView";
+import { deleteMarker, loadMarkers, updateMarker, useMarkers } from "@/hooks/useMarkers";
 import { useNavigationState } from "@/hooks/useNavigationState";
-import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import { toDistance } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
-import { useMarkers } from "@/hooks/useMarkers";
 import type { Marker } from "@/lib/database";
 import { bearingDegrees, distanceMeters, formatBearing } from "@/lib/geo";
 import {
@@ -12,6 +13,7 @@ import {
   HStack,
   List,
   Picker,
+  RNHostView,
   Spacer,
   Text,
   VStack,
@@ -30,7 +32,7 @@ import {
 import { CoordinateFormat } from "coordinate-format";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, View } from "react-native";
 
 type SortBy = "name" | "created" | "nearby";
 
@@ -43,18 +45,14 @@ function formatCoords(lat: number, lon: number): string {
 
 export default function MarkerList() {
   const markers = useMarkers((s) => s.markers);
-  const loadMarkers = useMarkers((s) => s.loadMarkers);
-  const deleteMarker = useMarkers((s) => s.deleteMarker);
-  const updateMarker = useMarkers((s) => s.updateMarker);
 
   const nav = useNavigationState();
-  const units = usePreferredUnits();
   const theme = useTheme();
   const [sort, setSort] = useState<SortBy>("created");
 
   useEffect(() => {
     loadMarkers();
-  }, [loadMarkers]);
+  }, []);
 
   const proximityMap = useMemo(() => {
     if (sort !== "nearby" || !nav.coords) return null;
@@ -64,7 +62,7 @@ export default function MarkerList() {
       map.set(m.id, distanceMeters(latitude, longitude, m.latitude, m.longitude));
     }
     return map;
-  }, [sort, markers, nav.coords?.latitude, nav.coords?.longitude]);
+  }, [sort, markers, nav.coords]);
 
   const sortedMarkers = useMemo(() => {
     return [...markers].sort((a, b) => {
@@ -107,7 +105,7 @@ export default function MarkerList() {
     if (!nav.coords) return null;
     const dist = proximityMap?.get(marker.id)
       ?? distanceMeters(nav.coords.latitude, nav.coords.longitude, marker.latitude, marker.longitude);
-    const formatted = units.toDistance(dist);
+    const formatted = toDistance(dist);
     const bearing = bearingDegrees(nav.coords.latitude, nav.coords.longitude, marker.latitude, marker.longitude);
     return `${formatted.value} ${formatted.abbr} ${formatBearing(bearing)}`;
   }
@@ -134,9 +132,9 @@ export default function MarkerList() {
               return (
                 <ContextMenu key={marker.id}>
                   <ContextMenu.Trigger>
-                    <VStack
-                      alignment="leading"
-                      spacing={2}
+                    <HStack
+                      alignment="center"
+                      spacing={10}
                       modifiers={[
                         onTapGesture(() => {
                           router.push({ pathname: "/marker/[id]", params: { id: marker.id } });
@@ -144,21 +142,30 @@ export default function MarkerList() {
                         padding({ vertical: 4 }),
                       ]}
                     >
-                      <HStack spacing={6}>
-                        <Text modifiers={[font({ size: 16, weight: "semibold" }), lineLimit(1)]}>
-                          {marker.name ?? `Marker ${marker.id}`}
-                        </Text>
-                        <Spacer />
-                        {distLabel && (
-                          <Text modifiers={[font({ size: 13 }), monospacedDigit(), foregroundStyle("secondary")]}>
-                            {distLabel}
+                      <RNHostView matchContents>
+                        <View style={{
+                          backgroundColor: marker.color ?? theme.primary,
+                        }}>
+                          <AnnotationIcon name={marker.icon ?? "pin"} color={theme.textPrimary} size={22} />
+                        </View>
+                      </RNHostView>
+                      <VStack alignment="leading" spacing={2}>
+                        <HStack spacing={6}>
+                          <Text modifiers={[font({ size: 16, weight: "semibold" }), lineLimit(1)]}>
+                            {marker.name ?? `Marker ${marker.id}`}
                           </Text>
-                        )}
-                      </HStack>
-                      <Text modifiers={[font({ size: 12 }), monospacedDigit(), foregroundStyle(theme.textSecondary)]}>
-                        {coordsLabel}
-                      </Text>
-                    </VStack>
+                          <Spacer />
+                          {distLabel && (
+                            <Text modifiers={[font({ size: 13 }), monospacedDigit(), foregroundStyle("secondary")]}>
+                              {distLabel}
+                            </Text>
+                          )}
+                        </HStack>
+                        <Text modifiers={[font({ size: 12 }), monospacedDigit(), foregroundStyle(theme.textSecondary)]}>
+                          {coordsLabel}
+                        </Text>
+                      </VStack>
+                    </HStack>
                   </ContextMenu.Trigger>
 
                   <ContextMenu.Items>

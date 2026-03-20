@@ -7,19 +7,12 @@ interface State {
   mapStyleId?: (typeof mapStyles[number])["id"];
 }
 
-interface Actions {
-  set: (options: Partial<State>) => void;
-}
-
 export { mapStyles };
 
-export const useViewOptions = create<State & Actions>()(
+export const useViewOptions = create<State>()(
   persist(
-    (set) => ({
+    (): State => ({
       mapStyleId: mapStyles[0].id,
-      set(options: Partial<State>) {
-        set(options)
-      },
     }),
     {
       name: "view-options",
@@ -27,3 +20,7 @@ export const useViewOptions = create<State & Actions>()(
     }
   )
 )
+
+export function setViewOptions(options: Partial<State>) {
+  useViewOptions.setState(options);
+}

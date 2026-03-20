@@ -1,10 +1,10 @@
 import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
 import Stat from "@/components/ui/Stat";
-import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
 import { useSheetDetents } from "@/hooks/useSheetDetents";
 import useTheme from "@/hooks/useTheme";
-import { trackDisplayName, useTracks } from "@/hooks/useTracks";
+import { handleDelete, handleRename, trackDisplayName } from "@/hooks/useTracks";
 import { getTrack, getTrackPoints, TrackPoint, type Track } from "@/lib/database";
 import { exportTrackAsGPX } from "@/lib/exportTrack";
 import { formatDate, formatElapsedTime, formatTime } from "@/lib/format";
@@ -37,11 +37,6 @@ import { Alert } from "react-native";
 export default function TrackScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const trackId = Number(id);
-  const selectTrack = useTracks((s) => s.selectTrack);
-  const clearSelectedTrack = useTracks((s) => s.clearSelectedTrack);
-  const handleRename = useTracks((s) => s.handleRename);
-  const handleDelete = useTracks((s) => s.handleDelete);
-  const units = usePreferredUnits();
   const theme = useTheme();
   const headerHeight = useHeaderHeight();
   const { setDetentHeight } = useSheetDetents([0.5, 1]);
@@ -52,12 +47,6 @@ export default function TrackScreen() {
 
   const [track, setTrack] = useState<Track | null>(null);
   const [points, setPoints] = useState<TrackPoint[]>([]);
-
-  // Set selected track for map overlay, clear on unmount
-  useEffect(() => {
-    selectTrack(trackId);
-    return () => clearSelectedTrack();
-  }, [trackId, selectTrack, clearSelectedTrack]);
 
   // Load track data from DB
   useEffect(() => {
@@ -100,7 +89,7 @@ export default function TrackScreen() {
     );
   }, [trackId, track?.name, handleDelete]);
 
-  const dist = units.toDistance(track?.distance ?? 0);
+  const dist = toDistance(track?.distance ?? 0);
 
   const chartData: ChartDataPoint[] = useMemo(() => {
     if (points.length < 2) return [];
@@ -109,12 +98,12 @@ export default function TrackScreen() {
 
   // FIXME: this should be in useTracks or a similar hook
   const { avgSpeed, maxSpeed } = useMemo(() => {
-    if (points.length < 2) return { avgSpeed: units.toSpeed(0), maxSpeed: units.toSpeed(0) };
+    if (points.length < 2) return { avgSpeed: toSpeed(0), maxSpeed: toSpeed(0) };
     const speeds = points.map((s) => s.speed).filter(Boolean) as number[];
     const avg = speeds.reduce((a, b) => a + b, 0) / speeds.length;
     const max = Math.max(...speeds);
-    return { avgSpeed: units.toSpeed(avg), maxSpeed: units.toSpeed(max) };
-  }, [points, units]);
+    return { avgSpeed: toSpeed(avg), maxSpeed: toSpeed(max) };
+  }, [points]);
 
   return (
     <SheetView id="track" style={{ flex: 1 }}>

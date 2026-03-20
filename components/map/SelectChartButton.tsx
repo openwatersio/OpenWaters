@@ -1,4 +1,4 @@
-import { mapStyles, useViewOptions } from '@/hooks/useViewOptions';
+import { mapStyles, setViewOptions } from '@/hooks/useViewOptions';
 import { Button, Menu } from '@expo/ui/swift-ui';
 import {
   contentShape,
@@ -12,8 +12,6 @@ import {
 const NS_ID = 'map-controls';
 
 export function SelectChartButton() {
-  const setViewOptions = useViewOptions((s) => s.set);
-
   return (
     <Menu
       label="Map Type"

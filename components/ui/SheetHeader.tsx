@@ -1,19 +1,19 @@
 import useTheme from "@/hooks/useTheme";
-import { Stack, StackScreenProps, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import type { ReactNode } from "react";
 import { Dimensions, Text, View } from "react-native";
+import CloseButton from "./CloseButton";
 
-type Props = StackScreenProps & {
+type Props = {
   title: string;
   subtitle?: string;
   headerLeft?: () => ReactNode;
   headerRight?: () => ReactNode;
 };
 
-export default function SheetHeader({ title, subtitle, headerLeft, ...props }: Props) {
+export default function SheetHeader({ title, subtitle, headerLeft, headerRight }: Props) {
   const theme = useTheme();
   const { width } = Dimensions.get("window");
-  const router = useRouter();
 
   return (
     <Stack.Screen options={{
@@ -29,22 +29,7 @@ export default function SheetHeader({ title, subtitle, headerLeft, ...props }: P
           )}
         </View>
       ),
-      ...(headerLeft != null ? { headerLeft } : {
-        unstable_headerRightItems: () => {
-          return [
-            {
-              type: "button",
-              label: "Close",
-              icon: {
-                type: "sfSymbol",
-                name: "xmark",
-              },
-              onPress: () => router.dismiss(),
-            }
-          ];
-        }
-      }),
-      ...props
+      headerRight: headerRight ?? (() => <CloseButton />),
     }} />
   );
 }
