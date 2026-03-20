@@ -282,7 +282,7 @@ PODS:
   - libwebp/sharpyuv (1.5.0)
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
-  - MapLibreReactNative (11.0.0-beta.10):
+  - MapLibreReactNative (11.0.0-beta.12):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2870,7 +2870,7 @@ SPEC CHECKSUMS:
   libavif: 84bbb62fb232c3018d6f1bab79beea87e35de7b7
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
-  MapLibreReactNative: 4a81bef970637406bf00626599775d962bd452ce
+  MapLibreReactNative: 59256c7942acaf8f585b7365aca4b2af143e3ee0
   RCTDeprecation: a522c536d2c7be8f518dd834883cf6dce1d4f545
   RCTRequired: 44337def23abb244c025e9e7ab58f9cd3d63ec7d
   RCTSwiftUI: b2f0c2f2761631b8cd605767536cbb1cbf8d020f

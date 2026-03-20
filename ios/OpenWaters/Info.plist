@@ -28,7 +28,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>openwaters</string>
-				<string>io.openwaters.app</string>
+				<string>io.openwaters.mobile</string>
 			</array>
 		</dict>
 		<dict>

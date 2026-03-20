@@ -1,11 +1,21 @@
 import CloseButton from "@/components/ui/CloseButton";
 import "@/hooks/useTrackRecording"; // Register background task at module scope
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { LocationManager } from "@maplibre/maplibre-react-native";
 import { Stack } from "expo-router";
+import { useEffect } from "react";
 import { useColorScheme } from 'react-native';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  // Stop native location updates before JS runtime tears down on reload,
+  // preventing a crash in the MapLibre turbo module event emitter.
+  useEffect(() => {
+    return () => {
+      LocationManager.removeAllListeners();
+    };
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>

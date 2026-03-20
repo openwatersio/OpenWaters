@@ -9,25 +9,24 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		7E4BE9052F6C9BBD00A08EF5 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = 799DA39DA6F96183DBDBE5A4 /* MapLibre */; };
+		6C80D691663608E49745261C /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 485929F4E70858FB288FE0FC /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		D006E190C0F9254B5F4AEC95 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1A38D48FB76C0DCAEBA28D /* ExpoModulesProvider.swift */; };
-		DCC8ECC1DC11D98A3B765996 /* libPods-OpenWaters.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D43335D835F654A9AA9AEBE8 /* libPods-OpenWaters.a */; };
+		DE7D62ED83B317D68D439041 /* libPods-OpenWaters.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B15DFFAFE5A3CF3E0659BB2D /* libPods-OpenWaters.a */; };
+		E3B21BAFC1B97FBD48B64013 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6ABE34FA140FF241FE5D8ABF /* PrivacyInfo.xcprivacy */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		F446994521B4BE71C371AB5D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E9DD5EBF535D6F9F40F430ED /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* OpenWaters.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenWaters.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = OpenWaters/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = OpenWaters/Info.plist; sourceTree = "<group>"; };
-		28A5D47894BA1E4A1761B8FC /* Pods-OpenWaters.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-OpenWaters.release.xcconfig"; path = "Target Support Files/Pods-OpenWaters/Pods-OpenWaters.release.xcconfig"; sourceTree = "<group>"; };
-		7E5EB4CA9B9DCBB048264D31 /* Pods-OpenWaters.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-OpenWaters.debug.xcconfig"; path = "Target Support Files/Pods-OpenWaters/Pods-OpenWaters.debug.xcconfig"; sourceTree = "<group>"; };
+		2291298C565C43C5787BEC4B /* Pods-OpenWaters.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-OpenWaters.release.xcconfig"; path = "Target Support Files/Pods-OpenWaters/Pods-OpenWaters.release.xcconfig"; sourceTree = "<group>"; };
+		485929F4E70858FB288FE0FC /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-OpenWaters/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		6ABE34FA140FF241FE5D8ABF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = OpenWaters/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = OpenWaters/SplashScreen.storyboard; sourceTree = "<group>"; };
-		AC1A38D48FB76C0DCAEBA28D /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-OpenWaters/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		B15DFFAFE5A3CF3E0659BB2D /* libPods-OpenWaters.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-OpenWaters.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		D43335D835F654A9AA9AEBE8 /* libPods-OpenWaters.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-OpenWaters.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		E9DD5EBF535D6F9F40F430ED /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = OpenWaters/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D8D2B87252AE8393C33041D8 /* Pods-OpenWaters.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-OpenWaters.debug.xcconfig"; path = "Target Support Files/Pods-OpenWaters/Pods-OpenWaters.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = OpenWaters/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* OpenWaters-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "OpenWaters-Bridging-Header.h"; path = "OpenWaters/OpenWaters-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -38,14 +37,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7E4BE9052F6C9BBD00A08EF5 /* MapLibre in Frameworks */,
-				DCC8ECC1DC11D98A3B765996 /* libPods-OpenWaters.a in Frameworks */,
+				DE7D62ED83B317D68D439041 /* libPods-OpenWaters.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0A01D9576294A5CF0C104B0C /* OpenWaters */ = {
+			isa = PBXGroup;
+			children = (
+				485929F4E70858FB288FE0FC /* ExpoModulesProvider.swift */,
+			);
+			name = OpenWaters;
+			sourceTree = "<group>";
+		};
 		13B07FAE1A68108700A75B9A /* OpenWaters */ = {
 			isa = PBXGroup;
 			children = (
@@ -55,24 +61,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				E9DD5EBF535D6F9F40F430ED /* PrivacyInfo.xcprivacy */,
-			);
-			name = OpenWaters;
-			sourceTree = "<group>";
-		};
-		2832BBEE75E5606B0A78C4A4 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				7E5EB4CA9B9DCBB048264D31 /* Pods-OpenWaters.debug.xcconfig */,
-				28A5D47894BA1E4A1761B8FC /* Pods-OpenWaters.release.xcconfig */,
-			);
-			path = Pods;
-			sourceTree = "<group>";
-		};
-		2962F5E15F4AF84BADAA7A0D /* OpenWaters */ = {
-			isa = PBXGroup;
-			children = (
-				AC1A38D48FB76C0DCAEBA28D /* ExpoModulesProvider.swift */,
+				6ABE34FA140FF241FE5D8ABF /* PrivacyInfo.xcprivacy */,
 			);
 			name = OpenWaters;
 			sourceTree = "<group>";
@@ -81,9 +70,17 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				D43335D835F654A9AA9AEBE8 /* libPods-OpenWaters.a */,
+				B15DFFAFE5A3CF3E0659BB2D /* libPods-OpenWaters.a */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		4DB11AC5057A7E65F97D80E9 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				0A01D9576294A5CF0C104B0C /* OpenWaters */,
+			);
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -100,8 +97,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				2832BBEE75E5606B0A78C4A4 /* Pods */,
-				C8EB230E465E888BD52517E0 /* ExpoModulesProviders */,
+				E50632A634E8AB7A2D832D32 /* Pods */,
+				4DB11AC5057A7E65F97D80E9 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -125,12 +122,14 @@
 			path = OpenWaters/Supporting;
 			sourceTree = "<group>";
 		};
-		C8EB230E465E888BD52517E0 /* ExpoModulesProviders */ = {
+		E50632A634E8AB7A2D832D32 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				2962F5E15F4AF84BADAA7A0D /* OpenWaters */,
+				D8D2B87252AE8393C33041D8 /* Pods-OpenWaters.debug.xcconfig */,
+				2291298C565C43C5787BEC4B /* Pods-OpenWaters.release.xcconfig */,
 			);
-			name = ExpoModulesProviders;
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -141,15 +140,15 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "OpenWaters" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				5176D7E0E670AAE670A0C91F /* [Expo] Configure project */,
+				04143DD3825B0F639FFACF71 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				FFC30815FEAD45349BC62BD6 /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
-				D6772B23D7FD454AA44CC23C /* Remove signature files (Xcode workaround) */,
-				B31769C7A8A968C49757984A /* [CP] Embed Pods Frameworks */,
+				F963270EFA7B4DD78F4F71F9 /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
+				C7602623A3104CAC8A0B59E2 /* Remove signature files (Xcode workaround) */,
+				AFA2D426A69FF6BE2E7D2D6F /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -157,7 +156,7 @@
 			);
 			name = OpenWaters;
 			packageProductDependencies = (
-				799DA39DA6F96183DBDBE5A4 /* MapLibre */,
+				5926843054C3F92ECA11AB03 /* MapLibre */,
 			);
 			productName = OpenWaters;
 			productReference = 13B07F961A680F5B00A75B9A /* OpenWaters.app */;
@@ -186,7 +185,7 @@
 			);
 			mainGroup = 83CBB9F61A601CBA00E9B192;
 			packageReferences = (
-				7D76072208FFF08E78A90B51 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
+				BB0DBA59B0D2A427C643361C /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
 			);
 			productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
 			projectDirPath = "";
@@ -205,7 +204,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				F446994521B4BE71C371AB5D /* PrivacyInfo.xcprivacy in Resources */,
+				E3B21BAFC1B97FBD48B64013 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -229,29 +228,7 @@
 			shellPath = /bin/sh;
 			shellScript = "if [[ -f \"$PODS_ROOT/../.xcode.env\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env\"\nfi\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\n# The project root by default is one level up from the ios directory\nexport PROJECT_ROOT=\"$PROJECT_DIR\"/..\n\nif [[ \"$CONFIGURATION\" = *Debug* ]]; then\n  export SKIP_BUNDLING=1\nfi\nif [[ -z \"$ENTRY_FILE\" ]]; then\n  # Set the entry JS file using the bundler's entry resolution.\n  export ENTRY_FILE=\"$(\"$NODE_BINARY\" -e \"require('expo/scripts/resolveAppEntry')\" \"$PROJECT_ROOT\" ios absolute | tail -n 1)\"\nfi\n\nif [[ -z \"$CLI_PATH\" ]]; then\n  # Use Expo CLI\n  export CLI_PATH=\"$(\"$NODE_BINARY\" --print \"require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })\")\"\nfi\nif [[ -z \"$BUNDLE_COMMAND\" ]]; then\n  # Default Expo CLI command for bundling\n  export BUNDLE_COMMAND=\"export:embed\"\nfi\n\n# Source .xcode.env.updates if it exists to allow\n# SKIP_BUNDLING to be unset if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.updates\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.updates\"\nfi\n# Source local changes to allow overrides\n# if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\n`\"$NODE_BINARY\" --print \"require('path').dirname(require.resolve('react-native/package.json')) + '/scripts/react-native-xcode.sh'\"`\n\n";
 		};
-		08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-OpenWaters-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		5176D7E0E670AAE670A0C91F /* [Expo] Configure project */ = {
+		04143DD3825B0F639FFACF71 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -274,6 +251,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-OpenWaters/expo-configure-project.sh\"\n";
+		};
+		08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-OpenWaters-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -315,7 +314,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-OpenWaters/Pods-OpenWaters-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		B31769C7A8A968C49757984A /* [CP] Embed Pods Frameworks */ = {
+		AFA2D426A69FF6BE2E7D2D6F /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -337,7 +336,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-OpenWaters/Pods-OpenWaters-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		D6772B23D7FD454AA44CC23C /* Remove signature files (Xcode workaround) */ = {
+		C7602623A3104CAC8A0B59E2 /* Remove signature files (Xcode workaround) */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -351,7 +350,7 @@
 			shellPath = /bin/sh;
 			shellScript = "\n          echo \"Remove signature files (Xcode workaround)\";\n          rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\";\n        ";
 		};
-		FFC30815FEAD45349BC62BD6 /* [Expo Dev Launcher] Strip Local Network Keys for Release */ = {
+		F963270EFA7B4DD78F4F71F9 /* [Expo Dev Launcher] Strip Local Network Keys for Release */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -373,7 +372,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				D006E190C0F9254B5F4AEC95 /* ExpoModulesProvider.swift in Sources */,
+				6C80D691663608E49745261C /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -382,13 +381,13 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 7E5EB4CA9B9DCBB048264D31 /* Pods-OpenWaters.debug.xcconfig */;
+			baseConfigurationReference = D8D2B87252AE8393C33041D8 /* Pods-OpenWaters.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenWaters/OpenWaters.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Z59BQLF5VQ;
+				DEVELOPMENT_TEAM = RYHA8UZK6Y;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -419,13 +418,13 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 28A5D47894BA1E4A1761B8FC /* Pods-OpenWaters.release.xcconfig */;
+			baseConfigurationReference = 2291298C565C43C5787BEC4B /* Pods-OpenWaters.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = OpenWaters/OpenWaters.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = Z59BQLF5VQ;
+				DEVELOPMENT_TEAM = RYHA8UZK6Y;
 				INFOPLIST_FILE = OpenWaters/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -594,7 +593,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		7D76072208FFF08E78A90B51 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */ = {
+		BB0DBA59B0D2A427C643361C /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/maplibre/maplibre-gl-native-distribution";
 			requirement = {
@@ -605,9 +604,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		799DA39DA6F96183DBDBE5A4 /* MapLibre */ = {
+		5926843054C3F92ECA11AB03 /* MapLibre */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7D76072208FFF08E78A90B51 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
+			package = BB0DBA59B0D2A427C643361C /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
 			productName = MapLibre;
 		};
 /* End XCSwiftPackageProductDependency section */
