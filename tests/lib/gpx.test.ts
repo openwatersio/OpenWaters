@@ -111,9 +111,9 @@ const route: Route = {
 };
 
 const routePoints: RoutePoint[] = [
-  { id: 1, route_id: 1, position: 0, latitude: 41.123, longitude: -71.456, name: "Start" },
-  { id: 2, route_id: 1, position: 1, latitude: 41.200, longitude: -71.500, name: null },
-  { id: 3, route_id: 1, position: 2, latitude: 41.300, longitude: -71.550, name: "Destination" },
+  { id: 1, route_id: 1, position: 0, latitude: 41.123, longitude: -71.456 },
+  { id: 2, route_id: 1, position: 1, latitude: 41.200, longitude: -71.500 },
+  { id: 3, route_id: 1, position: 2, latitude: 41.300, longitude: -71.550 },
 ];
 
 describe("routeToGPX", () => {
@@ -133,19 +133,10 @@ describe("routeToGPX", () => {
     expect(gpx).toContain('lat="41.3" lon="-71.55"');
   });
 
-  it("includes waypoint names when present", () => {
+  it("does not include name elements in route points", () => {
     const gpx = routeToGPX(route, routePoints);
 
-    expect(gpx).toContain("<name>Start</name>");
-    expect(gpx).toContain("<name>Destination</name>");
-  });
-
-  it("omits name element for unnamed waypoints", () => {
-    const gpx = routeToGPX(route, [routePoints[1]]);
-
-    // Should have rtept as self-closing (no child elements)
-    expect(gpx).toContain("<rtept");
-    // The rtept should not contain a nested name element
+    // Route-level name exists, but rtept should not have nested name elements
     expect(gpx).not.toMatch(/<rtept[^/]*>[\s\S]*<name>/);
   });
 

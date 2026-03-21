@@ -5,10 +5,9 @@ import {
   deleteRoutePoint,
   getRoute,
   getRoutePoints,
-  insertRoutePoint,
   updateRoute,
   type Route,
-  type RoutePoint,
+  type RoutePoint
 } from "@/lib/database";
 import {
   Button,
@@ -24,13 +23,11 @@ import {
   font,
   foregroundStyle,
   labelStyle,
-  onTapGesture,
   padding,
-  tint,
+  tint
 } from "@expo/ui/swift-ui/modifiers";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Alert } from "react-native";
 
 export default function EditRouteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -52,26 +49,6 @@ export default function EditRouteScreen() {
     loadRoutes();
     router.dismiss();
   }, []);
-
-  const handleAddPoint = useCallback(async () => {
-    // TODO: Tap map to add point — for now prompt for coordinates
-    Alert.prompt(
-      "Add Waypoint",
-      "Enter name (optional)",
-      async (name: string) => {
-        // Add at the end of the route
-        await insertRoutePoint(routeId, {
-          latitude: 0,
-          longitude: 0,
-          name: name.trim() || undefined,
-          position: points.length,
-        });
-        reload();
-      },
-      "plain-text",
-      "",
-    );
-  }, [routeId, points.length, reload]);
 
   const handleDeletePoint = useCallback(
     async (pointId: number) => {
@@ -125,7 +102,7 @@ export default function EditRouteScreen() {
                   {i + 1}
                 </Text>
                 <Text modifiers={[font({ size: 15 })]}>
-                  {point.name || `Waypoint ${i + 1}`}
+                  {`Waypoint ${i + 1}`}
                 </Text>
                 <Spacer />
                 <Button

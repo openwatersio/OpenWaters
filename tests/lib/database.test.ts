@@ -184,7 +184,6 @@ const mockDb = {
         position: args[1],
         latitude: args[2],
         longitude: args[3],
-        name: args[4],
       });
       return { lastInsertRowId: id };
     }
@@ -441,17 +440,6 @@ describe("database", () => {
       expect(points[1].position).toBe(1);
     });
 
-    it("inserts a point with a name", async () => {
-      const { id: routeId } = await insertRoute();
-      const point = await insertRoutePoint(routeId, {
-        latitude: 47.6,
-        longitude: -122.3,
-        name: "Start",
-        position: 0,
-      });
-      expect(point.name).toBe("Start");
-    });
-
     it("updates a route point", async () => {
       const { id: routeId } = await insertRoute();
       const point = await insertRoutePoint(routeId, {
@@ -460,10 +448,9 @@ describe("database", () => {
         position: 0,
       });
 
-      await updateRoutePoint(point.id, { name: "Renamed", latitude: 47.65 });
+      await updateRoutePoint(point.id, { latitude: 47.65 });
 
       const points = await getRoutePoints(routeId);
-      expect(points[0].name).toBe("Renamed");
       expect(points[0].latitude).toBe(47.65);
     });
 

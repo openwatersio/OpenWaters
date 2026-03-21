@@ -3,9 +3,7 @@ import { mapRef } from "@/hooks/useMapRef";
 import { addMarker } from "@/hooks/useMarkers";
 import { usePosition } from "@/hooks/useNavigation";
 import { toDistance } from "@/hooks/usePreferredUnits";
-import { loadRoutes, useRoutes } from "@/hooks/useRoutes";
 import useTheme from "@/hooks/useTheme";
-import { getRoutePoints, insertRoute, insertRoutePoint } from "@/lib/database";
 import { formatBearing } from "@/lib/geo";
 import { getDistance, getGreatCircleBearing } from "geolib";
 import {
@@ -34,7 +32,6 @@ import {
 import { CoordinateFormat } from "coordinate-format";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ActionSheetIOS } from "react-native";
 import { showLocation } from "react-native-map-link";
 
 const coordFormat = new CoordinateFormat("minutes");
@@ -49,11 +46,6 @@ export default function LocationDetail({ id }: { id: string }) {
   const [features, setFeatures] = useState<GeoJSON.Feature[]>([]);
   const position = usePosition();
   const theme = useTheme();
-  const routes = useRoutes((s) => s.routes);
-
-  useEffect(() => {
-    loadRoutes();
-  }, []);
 
   useEffect(() => {
     mapRef.current?.project([lon, lat]).then((point) => {
@@ -149,38 +141,7 @@ export default function LocationDetail({ id }: { id: string }) {
               </Button>
               <Button
                 onPress={() => {
-                  const options = [
-                    ...routes.map((r) => r.name || `Route ${r.id}`),
-                    "New Route",
-                    "Cancel",
-                  ];
-                  ActionSheetIOS.showActionSheetWithOptions(
-                    {
-                      options,
-                      cancelButtonIndex: options.length - 1,
-                    },
-                    async (index) => {
-                      if (index === options.length - 1) return; // Cancel
-
-                      let routeId: number;
-                      if (index === options.length - 2) {
-                        // "New Route"
-                        const route = await insertRoute();
-                        routeId = route.id;
-                      } else {
-                        routeId = routes[index].id;
-                      }
-
-                      const points = await getRoutePoints(routeId);
-                      await insertRoutePoint(routeId, {
-                        latitude: lat,
-                        longitude: lon,
-                        position: points.length,
-                      });
-                      await loadRoutes();
-                      router.replace({ pathname: "/feature/[type]/[id]", params: { type: "route", id: String(routeId) } });
-                    },
-                  );
+                  router.replace({ pathname: "/route/new", params: { to: `${lon},${lat}` } });
                 }}
                 modifiers={[
                   buttonStyle("bordered"),

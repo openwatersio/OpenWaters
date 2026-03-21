@@ -1,5 +1,4 @@
-import { bearingDegrees } from "@/lib/geo";
-import { getDistance } from "geolib";
+import { getDistance, getGreatCircleBearing } from "geolib";
 
 /** Minimum distance threshold (meters) — arrival triggers regardless of VMG */
 const MIN_DISTANCE = 50;
@@ -31,12 +30,7 @@ export function checkWaypointArrival(
   const dist = getDistance(position, waypoint);
 
   // Compute VMG: projection of velocity toward the waypoint
-  const bearingToWpt = bearingDegrees(
-    position.latitude,
-    position.longitude,
-    waypoint.latitude,
-    waypoint.longitude,
-  );
+  const bearingToWpt = getGreatCircleBearing(position, waypoint);
   const angleDiff = ((cog - bearingToWpt + 180) % 360) - 180; // -180 to 180
   const vmg = sog * Math.cos((angleDiff * Math.PI) / 180);
 

@@ -84,7 +84,13 @@ export default function RootLayout() {
           sheetGrabberVisible: true,
           sheetExpandsWhenScrolledToEdge: true,
           title: "Routes",
-          headerLargeTitleEnabled: true,
+        }} />
+        <Stack.Screen name="route/new" options={{
+          presentation: "formSheet",
+          sheetLargestUndimmedDetentIndex: "last",
+          // Updated dynamically by useSheetDetents
+          sheetAllowedDetents: [0.1, 0.5, 1],
+          sheetGrabberVisible: true,
         }} />
         <Stack.Screen name="route/edit" options={{
           presentation: "formSheet",

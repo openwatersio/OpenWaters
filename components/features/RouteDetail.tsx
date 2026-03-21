@@ -4,7 +4,8 @@ import { startNavigation } from "@/hooks/useRouteNavigation";
 import { handleDeleteRoute, handleRenameRoute } from "@/hooks/useRoutes";
 import { getRoute, getRoutePoints, type Route, type RoutePoint } from "@/lib/database";
 import { exportRouteAsGPX } from "@/lib/export";
-import { bearingDegrees, distanceMeters, formatBearing } from "@/lib/geo";
+import { formatBearing } from "@/lib/geo";
+import { getDistance, getGreatCircleBearing } from "geolib";
 import {
   Button,
   Form,
@@ -52,8 +53,8 @@ export default function RouteDetail({ id }: { id: string }) {
     if (points.length < 2) return [];
     return points.slice(1).map((point, i) => {
       const prev = points[i];
-      const dist = distanceMeters(prev.latitude, prev.longitude, point.latitude, point.longitude);
-      const bearing = bearingDegrees(prev.latitude, prev.longitude, point.latitude, point.longitude);
+      const dist = getDistance(prev, point);
+      const bearing = getGreatCircleBearing(prev, point);
       return { from: prev, to: point, dist, bearing };
     });
   }, [points]);
@@ -128,7 +129,7 @@ export default function RouteDetail({ id }: { id: string }) {
                     showLocation({
                       latitude: last.latitude,
                       longitude: last.longitude,
-                      title: last.name || "Destination",
+                      title: "Destination",
                     });
                   }}
                   modifiers={[
@@ -169,7 +170,7 @@ export default function RouteDetail({ id }: { id: string }) {
                         {i + 1}
                       </Text>
                       <Text modifiers={[font({ size: 15, weight: "semibold" })]}>
-                        {point.name || `Waypoint ${i + 1}`}
+                        {`Waypoint ${i + 1}`}
                       </Text>
                       <Spacer />
                     </HStack>

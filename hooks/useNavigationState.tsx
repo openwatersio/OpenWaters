@@ -13,42 +13,37 @@ interface State extends Partial<GeolocationPosition> {
   state: NavigationState;
 }
 
-interface Actions {
+let mooredTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
+
+export const useNavigationState = create<State>()((set) => {
+  LocationManager.addListener(updateLocation);
+
+  return { state: NavigationState.Moored }
+})
+
+function scheduleMoored() {
+  if (mooredTimeout) clearTimeout(mooredTimeout);
+
+  mooredTimeout = setTimeout(() => {
+    mooredTimeout = undefined;
+    useNavigationState.setState({ state: NavigationState.Moored });
+  }, MOORED_TIMEOUT);
 }
 
-export const useNavigationState = create<State & Actions>()((set) => {
-  let mooredTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
+export function updateLocation(location: GeolocationPosition) {
+  // This should not happen, but does when first launching the app.
+  if (!location) return;
 
-  function scheduleMoored() {
-    clearTimeout(mooredTimeout);
-    mooredTimeout = setTimeout(() => {
-      mooredTimeout = undefined;
-      set({ state: NavigationState.Moored });
-    }, MOORED_TIMEOUT);
+  let state = NavigationState.Moored;
+  const speed = location.coords?.speed ?? 0;
+
+  if (speed > SPEED_THRESHOLD) {
+    state = NavigationState.Underway;
   }
 
-  // If no location updates ever arrive, we stay moored (the initial state).
-  // Once updates start, we reset the timeout on every update so that if
-  // updates stop (GPS lost, app backgrounded), we fall back to moored.
-  LocationManager.addListener((location) => {
-    set(location);
+  useNavigationState.setState({ ...location, state });
 
-    const speed = location.coords?.speed ?? 0;
-
-    if (speed > SPEED_THRESHOLD) {
-      clearTimeout(mooredTimeout);
-      mooredTimeout = undefined;
-      set({ state: NavigationState.Underway });
-    } else {
-      set({ state: NavigationState.Moored });
-    }
-
-    // Reset watchdog — if no further updates arrive within the timeout,
-    // we'll fall back to moored (handles GPS loss / backgrounding).
-    scheduleMoored();
-  });
-
-  return {
-    state: NavigationState.Moored,
-  }
-})
+  // Reset watchdog — if no further updates arrive within the timeout,
+  // we'll fall back to moored (handles GPS loss / backgrounding).
+  scheduleMoored();
+}

@@ -317,7 +317,6 @@ export type RoutePoint = {
   position: number;
   latitude: number;
   longitude: number;
-  name: string | null;
 };
 
 export type RouteWithStats = Route & {
@@ -397,17 +396,16 @@ export async function getRoutePoints(routeId: number): Promise<RoutePoint[]> {
 
 export async function insertRoutePoint(
   routeId: number,
-  fields: { latitude: number; longitude: number; name?: string; position: number },
+  fields: { latitude: number; longitude: number; position: number },
 ): Promise<RoutePoint> {
   const db = await getDatabase();
   const result = await db.runAsync(
-    `INSERT INTO route_points (route_id, position, latitude, longitude, name)
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO route_points (route_id, position, latitude, longitude)
+     VALUES (?, ?, ?, ?)`,
     routeId,
     fields.position,
     fields.latitude,
     fields.longitude,
-    fields.name ?? null,
   );
   await db.runAsync(
     "UPDATE routes SET updated_at = ? WHERE id = ?",
@@ -423,13 +421,13 @@ export async function insertRoutePoint(
 
 export async function updateRoutePoint(
   id: number,
-  fields: Partial<Pick<RoutePoint, "latitude" | "longitude" | "name">>,
+  fields: Partial<Pick<RoutePoint, "latitude" | "longitude">>,
 ): Promise<void> {
   const db = await getDatabase();
   const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
   if (entries.length === 0) return;
   const setClauses = entries.map(([k]) => `${k} = ?`).join(", ");
-  const values = entries.map(([, v]) => v);
+  const values = entries.map(([, v]) => v as number);
   await db.runAsync(
     `UPDATE route_points SET ${setClauses} WHERE id = ?`,
     ...values,

@@ -7,9 +7,9 @@ import {
   stopNavigation,
   useRouteNavigation,
 } from "@/hooks/useRouteNavigation";
-import useTheme from "@/hooks/useTheme";
 import { getRoutePoints, type RoutePoint } from "@/lib/database";
-import { bearingDegrees, distanceMeters, formatBearing } from "@/lib/geo";
+import { formatBearing } from "@/lib/geo";
+import { getDistance, getGreatCircleBearing } from "geolib";
 import { checkWaypointArrival, type ArrivalState } from "@/lib/waypointArrival";
 import {
   Button,
@@ -36,7 +36,6 @@ export default function NavigateScreen() {
   const activeRouteId = useRouteNavigation((s) => s.activeRouteId);
   const activePointIndex = useRouteNavigation((s) => s.activePointIndex);
   const nav = useNavigationState();
-  const theme = useTheme();
 
   const [points, setPoints] = useState<RoutePoint[]>([]);
 
@@ -50,18 +49,8 @@ export default function NavigateScreen() {
 
   const navInfo = useMemo(() => {
     if (!nav.coords || !targetPoint) return null;
-    const dist = distanceMeters(
-      nav.coords.latitude,
-      nav.coords.longitude,
-      targetPoint.latitude,
-      targetPoint.longitude,
-    );
-    const bearing = bearingDegrees(
-      nav.coords.latitude,
-      nav.coords.longitude,
-      targetPoint.latitude,
-      targetPoint.longitude,
-    );
+    const dist = getDistance(nav.coords, targetPoint);
+    const bearing = getGreatCircleBearing(nav.coords, targetPoint);
     // ETA based on SOG
     const sog = nav.coords.speed ?? 0;
     const etaSeconds = sog > 0.5 ? dist / sog : null;
@@ -137,7 +126,7 @@ export default function NavigateScreen() {
                 {activePointIndex + 1} of {points.length}
               </Text>
               <Text modifiers={[font({ size: 18, weight: "bold" })]}>
-                {targetPoint?.name || `Waypoint ${activePointIndex + 1}`}
+                {`Waypoint ${activePointIndex + 1}`}
               </Text>
             </VStack>
             <Spacer />

@@ -14,29 +14,29 @@ import { exportRouteAsGPX } from "@/lib/export";
 import {
   Button,
   ContextMenu,
-  HStack,
   Host,
+  HStack,
   List,
-  Picker,
-  Section,
+  Menu,
   Text,
+  Toggle,
   VStack
 } from "@expo/ui/swift-ui";
 import {
+  buttonStyle,
   font,
   foregroundStyle,
-  labelsHidden,
+  labelStyle,
   lineLimit,
   monospacedDigit,
   onTapGesture,
   padding,
-  pickerStyle,
-  tag,
-  tint,
+  tint
 } from "@expo/ui/swift-ui/modifiers";
-import { router } from "expo-router";
+import { router, Stack } from "expo-router";
+import { SymbolView } from "expo-symbols";
 import { useMemo, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, TouchableOpacity } from "react-native";
 
 type SortBy = "recent" | "name" | "distance";
 
@@ -87,33 +87,50 @@ export default function RouteList() {
 
   return (
     <SheetView id="routes">
+      <Stack.Screen options={{
+        headerLeft: () => (
+          <Host matchContents>
+            <Menu
+              systemImage="line.3.horizontal.decrease"
+              label="Sort"
+              modifiers={[
+                tint("primary"),
+                labelStyle("iconOnly"),
+                buttonStyle("borderless"),
+              ]}>
+              <Toggle
+                systemImage="clock"
+                isOn={sort === "recent"}
+                onIsOnChange={(isOn) => isOn && setSort("recent")}
+                label="Recent"
+              />
+              <Toggle
+                systemImage="character"
+                isOn={sort === "name"}
+                onIsOnChange={(isOn) => isOn && setSort("name")}
+                label="Name"
+              />
+              <Toggle
+                systemImage="lines.measurement.vertical"
+                isOn={sort === "distance"}
+                onIsOnChange={(isOn) => isOn && setSort("distance")}
+                label="Distance"
+              />
+            </Menu>
+          </Host>
+        ),
+        headerRight: () => (
+          <TouchableOpacity onPress={async () => {
+            const route = await insertRoute();
+            await loadRoutes();
+            router.push({ pathname: "/route/edit", params: { id: route.id } });
+          }}>
+            <SymbolView name="plus" tintColor={theme.textPrimary} />
+          </TouchableOpacity>
+        )
+      }} />
       <Host style={{ flex: 1 }}>
         <List>
-          <Section>
-            <Button
-              systemImage="plus"
-              label="New Route"
-              modifiers={[tint("primary")]}
-              onPress={async () => {
-                const route = await insertRoute();
-                await loadRoutes();
-                router.push({ pathname: "/route/edit", params: { id: route.id } });
-              }}
-            />
-          </Section>
-
-          <Section>
-            <Picker
-              selection={sort}
-              onSelectionChange={(s) => setSort(s as SortBy)}
-              modifiers={[pickerStyle("segmented"), labelsHidden()]}
-            >
-              <Text modifiers={[tag("recent")]}>Recent</Text>
-              <Text modifiers={[tag("name")]}>Name</Text>
-              <Text modifiers={[tag("distance")]}>Distance</Text>
-            </Picker>
-          </Section>
-
           <List.ForEach>
             {sortedRoutes.map((route) => {
               const isNavigating = activeRouteId === route.id;
@@ -127,6 +144,7 @@ export default function RouteList() {
                       spacing={12}
                       modifiers={[
                         onTapGesture(() => {
+                          router.dismissAll();
                           router.push({ pathname: "/feature/[type]/[id]", params: { type: "route", id: String(route.id) } });
                         }),
                         padding({ vertical: 4 }),
@@ -192,7 +210,7 @@ export default function RouteList() {
             })}
           </List.ForEach>
         </List>
-      </Host>
-    </SheetView>
+      </Host >
+    </SheetView >
   );
 }

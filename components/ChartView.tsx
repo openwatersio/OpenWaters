@@ -1,9 +1,11 @@
 import { mapRef } from "@/hooks/useMapRef";
 import { loadMarkers } from "@/hooks/useMarkers";
+import { addDraftPoint, insertDraftPointAt, useRouteDraft } from "@/hooks/useRouteDraft";
 import { useSelection, useSelectionHandler } from "@/hooks/useSelection";
 import { useSheetOffset } from "@/hooks/useSheetPosition";
 import useTheme from "@/hooks/useTheme";
 import { mapStyles, useViewOptions } from "@/hooks/useViewOptions";
+import { getDistance } from "geolib";
 import { Images, Map } from "@maplibre/maplibre-react-native";
 import { router } from "expo-router";
 import { Fragment, useCallback, useEffect } from "react";
@@ -21,6 +23,43 @@ import { NavigationCamera, handleRegionDidChange, handleRegionIsChanging } from 
 import { NavigationPuck } from "./map/NavigationPuck";
 import TrackRecordButton from "./map/TrackRecordButton";
 
+/**
+ * Find the index of the leg segment closest to a point.
+ * Returns the index to insert at (i.e. after points[index-1], before points[index]),
+ * or null if no leg is within the threshold.
+ */
+function findNearestLegIndex(
+  lat: number,
+  lon: number,
+  points: { latitude: number; longitude: number }[],
+  thresholdMeters: number,
+): number | null {
+  if (points.length < 2) return null;
+
+  let bestDist = Infinity;
+  let bestIndex: number | null = null;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i];
+    const b = points[i + 1];
+    // Project point onto segment using simple lat/lon interpolation
+    const dx = b.longitude - a.longitude;
+    const dy = b.latitude - a.latitude;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) continue;
+    const t = Math.max(0, Math.min(1, ((lon - a.longitude) * dx + (lat - a.latitude) * dy) / lenSq));
+    const projLat = a.latitude + t * dy;
+    const projLon = a.longitude + t * dx;
+    const dist = getDistance({ latitude: lat, longitude: lon }, { latitude: projLat, longitude: projLon });
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIndex = i + 1; // insert after point i
+    }
+  }
+
+  return bestDist <= thresholdMeters ? bestIndex : null;
+}
+
 export default function ChartView() {
   const mapStyleId = useViewOptions((s) => s.mapStyleId);
   const selection = useSelection();
@@ -33,9 +72,26 @@ export default function ChartView() {
   }, []);
 
   const navigate = useSelectionHandler();
+  const draftActive = useRouteDraft((s) => s.points.length > 0);
   const selectedCoords = selection?.type === "location"
     ? selection.id.split(",").map(Number) as [number, number]
     : null;
+
+  const handleLongPress = useCallback((e: { nativeEvent: { lngLat: [number, number] } }) => {
+    const points = useRouteDraft.getState().points;
+    if (points.length === 0) return;
+
+    const [lon, lat] = e.nativeEvent.lngLat;
+
+    // Check if near a leg line — insert between waypoints
+    const insertIndex = findNearestLegIndex(lat, lon, points, 500);
+    if (insertIndex !== null) {
+      insertDraftPointAt(insertIndex, { latitude: lat, longitude: lon });
+    } else {
+      // Append to end
+      addDraftPoint({ latitude: lat, longitude: lon });
+    }
+  }, []);
 
   const handleDragEnd = useCallback(
     (e: { nativeEvent: { lngLat: [number, number] } }) =>
@@ -55,6 +111,7 @@ export default function ChartView() {
       compassPosition={{ top: -2000, right: -2000 }}
       onRegionIsChanging={handleRegionIsChanging}
       onRegionDidChange={handleRegionDidChange}
+      onLongPress={draftActive ? handleLongPress : undefined}
       onPress={(e) => {
         const { lngLat } = e.nativeEvent;
         navigate("location", `${lngLat[0]},${lngLat[1]}`);
