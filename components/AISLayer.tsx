@@ -3,7 +3,7 @@ import { useSelection } from "@/hooks/useSelection";
 import { projectPosition } from "@/lib/geo";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { router } from "expo-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { NativeSyntheticEvent } from "react-native";
 
 type Position = { latitude: number; longitude: number };
@@ -11,6 +11,11 @@ type Position = { latitude: number; longitude: number };
 type ShipTypeStyle = { color: string; icon: string };
 
 const UNKNOWN_STYLE: ShipTypeStyle = { color: "#64748b", icon: "vessel-unknown" };  // slate-500
+
+const STALE_AGE = 6 * 60 * 1000;   // 6 minutes
+const EXPIRED_AGE = 9 * 60 * 1000;  // 9 minutes
+const SOG_THRESHOLD = 0.25;         // m/s (~0.5 knots)
+const COG_PROJECTION_SECONDS = 15 * 60; // 15 minutes
 
 /** AIS ship type code → color and icon for map rendering */
 function shipTypeStyle(code: number | undefined): ShipTypeStyle {
@@ -28,6 +33,15 @@ function shipTypeStyle(code: number | undefined): ShipTypeStyle {
   return UNKNOWN_STYLE;
 }
 
+/** Combined navigation + freshness state */
+function vesselState(vessel: AISVessel): string {
+  const age = Date.now() - vessel.lastSeen;
+  if (age > EXPIRED_AGE) return "expired";
+  if (age > STALE_AGE) return "stale";
+  const sog = vesselSOGmps(vessel);
+  return sog > SOG_THRESHOLD ? "underway" : "moored";
+}
+
 function vesselPosition(vessel: AISVessel): Position | null {
   const pos = vessel.data["navigation.position"]?.value;
   if (pos && typeof pos === "object" && "latitude" in pos) {
@@ -37,7 +51,6 @@ function vesselPosition(vessel: AISVessel): Position | null {
 }
 
 function vesselRotation(vessel: AISVessel): number {
-  // Prefer heading, fall back to COG
   const heading = vessel.data["navigation.headingTrue"]?.value;
   if (typeof heading === "number") return (heading * 180) / Math.PI;
   const cog = vessel.data["navigation.courseOverGroundTrue"]?.value;
@@ -52,7 +65,7 @@ function vesselName(vessel: AISVessel): string {
 
 function vesselSOG(vessel: AISVessel): number {
   const sog = vessel.data["navigation.speedOverGround"]?.value;
-  return typeof sog === "number" ? sog * 1.9438 : 0; // m/s to knots
+  return typeof sog === "number" ? sog * 1.9438 : 0;
 }
 
 function vesselSOGmps(vessel: AISVessel): number {
@@ -65,26 +78,30 @@ function vesselCOGrad(vessel: AISVessel): number | null {
   return typeof cog === "number" ? cog : null;
 }
 
-const COG_PROJECTION_SECONDS = 15 * 60; // 15 minutes
-const MIN_SOG_FOR_VECTOR = 0.25; // m/s (~0.5 knots) — skip stationary vessels
-
-
 function vesselShipType(vessel: AISVessel): number | undefined {
   const t = vessel.data["design.aisShipType"]?.value;
   return typeof t === "number" ? t : undefined;
 }
 
-
 export default function AISLayer() {
   const vessels = useAIS((s) => s.vessels);
 
+  // Tick every 30s to re-evaluate staleness even when vessel data hasn't changed
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const cogLines = useMemo((): GeoJSON.FeatureCollection => {
+    void tick;
     const features: GeoJSON.Feature[] = Object.values(vessels)
       .map((vessel): GeoJSON.Feature | null => {
+        if (vesselState(vessel) !== "underway") return null;
         const pos = vesselPosition(vessel);
         const cog = vesselCOGrad(vessel);
         const sog = vesselSOGmps(vessel);
-        if (!pos || cog === null || sog < MIN_SOG_FOR_VECTOR) return null;
+        if (!pos || cog === null) return null;
         const dist = sog * COG_PROJECTION_SECONDS;
         const end = projectPosition(pos.latitude, pos.longitude, cog, dist);
         return {
@@ -94,22 +111,23 @@ export default function AISLayer() {
           },
           geometry: {
             type: "LineString",
-            coordinates: [
-              [pos.longitude, pos.latitude],
-              end,
-            ],
+            coordinates: [[pos.longitude, pos.latitude], end],
           },
         };
       })
       .filter((f): f is GeoJSON.Feature => f !== null);
     return { type: "FeatureCollection", features };
-  }, [vessels]);
+  }, [vessels, tick]);
 
   const geojson = useMemo((): GeoJSON.FeatureCollection => {
+    void tick;
     const features: GeoJSON.Feature[] = Object.values(vessels)
       .map((vessel): GeoJSON.Feature | null => {
+        const state = vesselState(vessel);
+        if (state === "expired") return null;
         const pos = vesselPosition(vessel);
         if (!pos) return null;
+        const style = shipTypeStyle(vesselShipType(vessel));
         return {
           type: "Feature",
           properties: {
@@ -117,8 +135,9 @@ export default function AISLayer() {
             name: vesselName(vessel),
             rotation: vesselRotation(vessel),
             sog: vesselSOG(vessel),
-            icon: shipTypeStyle(vesselShipType(vessel)).icon,
-            color: shipTypeStyle(vesselShipType(vessel)).color,
+            state,
+            icon: style.icon,
+            color: style.color,
           },
           geometry: {
             type: "Point",
@@ -128,11 +147,8 @@ export default function AISLayer() {
       })
       .filter((f): f is GeoJSON.Feature => f !== null);
 
-    return {
-      type: "FeatureCollection",
-      features,
-    };
-  }, [vessels]);
+    return { type: "FeatureCollection", features };
+  }, [vessels, tick]);
 
   const selection = useSelection();
 
@@ -187,6 +203,7 @@ export default function AISLayer() {
           }}
           paint={{
             "icon-color": ["get", "color"],
+            "icon-opacity": ["match", ["get", "state"], "stale", 0.2, "moored", 0.5, 1.0],
             "icon-halo-color": "rgba(0, 0, 0, 0.5)",
             "icon-halo-width": 1,
           }}
@@ -207,6 +224,7 @@ export default function AISLayer() {
           }}
           paint={{
             "icon-color": ["get", "color"],
+            "icon-opacity": ["match", ["get", "state"], "stale", 0.3, "moored", 0.6, 1.0],
             "icon-halo-color": "rgba(255, 255, 255, 0.8)",
             "icon-halo-width": 2,
           }}

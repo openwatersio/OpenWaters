@@ -175,7 +175,7 @@ function startPruneTimer() {
   const { pruneStaleVessels } = require("@/hooks/useAIS");
   pruneInterval = setInterval(() => {
     pruneStaleVessels();
-  }, 60_000);
+  }, 30_000);
 }
 
 function stopPruneTimer() {

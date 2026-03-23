@@ -43,8 +43,8 @@ export function updateAISVessel(
   });
 }
 
-/** Remove vessels not updated within maxAgeMs (default 10 minutes) */
-export function pruneStaleVessels(maxAgeMs: number = 10 * 60 * 1000) {
+/** Remove vessels not updated within maxAgeMs (default 9 minutes) */
+export function pruneStaleVessels(maxAgeMs: number = 9 * 60 * 1000) {
   const now = Date.now();
   useAIS.setState((s) => ({
     vessels: Object.fromEntries(
