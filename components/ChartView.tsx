@@ -10,6 +10,7 @@ import { useCallback, useEffect } from "react";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AISLayer from "./AISLayer";
+import AtoNLayer from "./AtoNLayer";
 import { MapControls } from "./MapControls";
 import MarkerOverlay from "./MarkerOverlay";
 import NavigationHUD from "./NavigationHUD";
@@ -88,10 +89,16 @@ export default function ChartView() {
         "vessel-fishing": { source: require("@/assets/vessels/png/fishing.png"), sdf: true },
         "vessel-tug": { source: require("@/assets/vessels/png/tug.png"), sdf: true },
         "nav-puck": { source: require("@/assets/vessels/png/puck.png"), sdf: true },
+        "aton-default": { source: require("@/assets/atons/png/default.png"), sdf: true },
+        "aton-buoy": { source: require("@/assets/atons/png/buoy.png"), sdf: true },
+        "aton-beacon": { source: require("@/assets/atons/png/beacon.png"), sdf: true },
+        "aton-lighthouse": { source: require("@/assets/atons/png/lighthouse.png"), sdf: true },
+        "aton-virtual": { source: require("@/assets/atons/png/virtual.png"), sdf: true },
       }} />
       <TrackOverlay />
       <MarkerOverlay />
       <AISLayer />
+      <AtoNLayer />
       <NavigationPuck />
     </Map>
     <SafeAreaView style={{ position: "absolute", top: 0, left: 16, right: 16, alignItems: "center" }}>

@@ -226,6 +226,7 @@ function connectSignalKClient(id: string, wsUrl: string) {
       updateConnectionStatus(id, state);
       if (state === "connected") {
         client.subscribeAIS();
+        client.subscribeAtoN();
       }
     },
     onError: (error) => {
@@ -264,8 +265,10 @@ function disconnectClient(id: string) {
 function startPruneTimer() {
   if (pruneInterval) return;
   const { pruneStaleVessels } = require("@/hooks/useAIS");
+  const { pruneStaleAtoNs } = require("@/hooks/useAtoN");
   pruneInterval = setInterval(() => {
     pruneStaleVessels();
+    pruneStaleAtoNs();
   }, 30_000);
 }
 

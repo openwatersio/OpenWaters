@@ -1,4 +1,5 @@
 import { updateAISVessel } from "@/hooks/useAIS";
+import { updateAtoN } from "@/hooks/useAtoN";
 import { type DataPoint, updatePaths } from "@/hooks/useInstruments";
 import { updateFromSignalK } from "@/hooks/useNavigation";
 
@@ -89,6 +90,20 @@ function extractMMSI(context: string): string | null {
   return null;
 }
 
+/** Extract identifier from a Signal K AtoN context string */
+function extractAtoNId(context: string): string | null {
+  // "atons.urn:mrn:imo:mmsi:993661302" → "993661302"
+  const mmsi = context.match(/^atons\..*mmsi:(\d+)/);
+  if (mmsi) return mmsi[1];
+  // "atons.urn:mrn:signalk:uuid:..." → full URN
+  const uuid = context.match(/^atons\.(urn:.+)$/);
+  if (uuid) return uuid[1];
+  // "atons.993661302" — bare ID
+  const bare = context.match(/^atons\.(.+)$/);
+  if (bare) return bare[1];
+  return null;
+}
+
 /** Convert a Signal K delta value to a DataPoint value */
 function toDataPointValue(value: unknown): DataPoint["value"] {
   if (value === null || value === undefined) return null;
@@ -123,10 +138,12 @@ export function processDelta(
 ) {
   const context = delta.context ?? "vessels.self";
   const isSelf = context === "vessels.self" || context === selfContext;
+  const isAtoN = context.startsWith("atons.");
 
   // Accumulate all updates from this delta before writing to stores
   const selfUpdates: Record<string, DataPoint> = {};
   const aisUpdates: Record<string, Record<string, DataPoint>> = {};
+  const atonUpdates: Record<string, Record<string, DataPoint>> = {};
 
   for (const update of delta.updates) {
     const timestamp = new Date(update.timestamp).getTime() || Date.now();
@@ -145,6 +162,12 @@ export function processDelta(
           };
           if (isSelf) {
             selfUpdates[key] = dp;
+          } else if (isAtoN) {
+            const id = extractAtoNId(context);
+            if (id) {
+              if (!atonUpdates[id]) atonUpdates[id] = {};
+              atonUpdates[id][key] = dp;
+            }
           } else {
             const mmsi = extractMMSI(context);
             if (mmsi) {
@@ -161,6 +184,12 @@ export function processDelta(
         };
         if (isSelf) {
           selfUpdates[path] = dataPoint;
+        } else if (isAtoN) {
+          const id = extractAtoNId(context);
+          if (id) {
+            if (!atonUpdates[id]) atonUpdates[id] = {};
+            atonUpdates[id][path] = dataPoint;
+          }
         } else {
           const mmsi = extractMMSI(context);
           if (mmsi) {
@@ -180,6 +209,10 @@ export function processDelta(
 
   for (const [mmsi, paths] of Object.entries(aisUpdates)) {
     updateAISVessel(mmsi, paths);
+  }
+
+  for (const [id, paths] of Object.entries(atonUpdates)) {
+    updateAtoN(id, paths);
   }
 }
 
@@ -302,6 +335,26 @@ export class SignalKClient {
           },
           // Sensors
           { path: "sensors.ais.class", period: 30000, policy: "fixed" },
+        ],
+      }),
+    );
+  }
+
+  /** Subscribe to AtoN data (position, type, status) */
+  subscribeAtoN() {
+    if (!this.ws || this.state !== "connected") return;
+    this.ws.send(
+      JSON.stringify({
+        context: "atons.*",
+        subscribe: [
+          // Top-level properties (name, mmsi)
+          { path: "", period: 30000, policy: "fixed" },
+          // Position
+          { path: "navigation.position", period: 30000, policy: "fixed" },
+          // AtoN-specific
+          { path: "atonType", period: 60000, policy: "fixed" },
+          { path: "virtual", period: 60000, policy: "fixed" },
+          { path: "offPosition", period: 10000, policy: "fixed" },
         ],
       }),
     );
