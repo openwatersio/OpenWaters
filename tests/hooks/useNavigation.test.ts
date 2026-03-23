@@ -1,17 +1,17 @@
-import { type DataPoint, useInstruments } from "@/hooks/useInstruments";
+import { type DataPoint, resetInstrumentStore, updatePaths } from "@/hooks/useInstruments";
 import {
   NavigationState,
+  flushNavigation,
   updateFromDevice,
   updateFromSignalK,
   useNavigation,
 } from "@/hooks/useNavigation";
 
 const initialState = useNavigation.getState();
-const initialInstruments = useInstruments.getState();
 
 beforeEach(() => {
   useNavigation.setState(initialState, true);
-  useInstruments.setState(initialInstruments, true);
+  resetInstrumentStore();
 });
 
 function deviceLocation(overrides: Partial<{
@@ -64,7 +64,7 @@ function signalkPosition(lat: number, lon: number, opts: { sog?: number; cog?: n
       source: "signalk.test",
     };
   }
-  useInstruments.setState({ data });
+  updatePaths(data);
 }
 
 describe("useNavigation", () => {
@@ -119,6 +119,7 @@ describe("useNavigation", () => {
       // Then set Signal K position
       signalkPosition(48.0, -123.0);
       updateFromSignalK();
+      flushNavigation();
 
       const s = useNavigation.getState();
       expect(s.latitude).toBe(48.0);
@@ -130,6 +131,7 @@ describe("useNavigation", () => {
       updateFromDevice(deviceLocation({ speed: 2.0 }));
       signalkPosition(48.0, -123.0, { sog: 5.0 });
       updateFromSignalK();
+      flushNavigation();
 
       expect(useNavigation.getState().speed).toBe(5.0);
     });
@@ -138,6 +140,7 @@ describe("useNavigation", () => {
       updateFromDevice(deviceLocation({ heading: 90 }));
       signalkPosition(48.0, -123.0, { hdg: Math.PI / 2 }); // 90° in radians
       updateFromSignalK();
+      flushNavigation();
 
       expect(useNavigation.getState().heading).toBeCloseTo(90, 1);
     });
@@ -146,16 +149,15 @@ describe("useNavigation", () => {
       updateFromDevice(deviceLocation({ latitude: 47.6, longitude: -122.3 }));
 
       // Set Signal K with old timestamp
-      useInstruments.setState({
-        data: {
-          "navigation.position": {
-            value: { latitude: 48.0, longitude: -123.0 },
-            timestamp: Date.now() - 10_000, // 10 seconds ago
-            source: "signalk.test",
-          },
+      updatePaths({
+        "navigation.position": {
+          value: { latitude: 48.0, longitude: -123.0 },
+          timestamp: Date.now() - 10_000, // 10 seconds ago
+          source: "signalk.test",
         },
       });
       updateFromSignalK();
+      flushNavigation();
 
       const s = useNavigation.getState();
       expect(s.latitude).toBe(47.6); // device value
@@ -166,6 +168,7 @@ describe("useNavigation", () => {
       updateFromDevice(deviceLocation({ speed: 3.0 }));
       signalkPosition(48.0, -123.0); // no sog
       updateFromSignalK();
+      flushNavigation();
 
       expect(useNavigation.getState().speed).toBe(3.0);
     });
@@ -175,6 +178,7 @@ describe("useNavigation", () => {
     it("goes underway from Signal K speed", () => {
       signalkPosition(48.0, -123.0, { sog: 2.0 });
       updateFromSignalK();
+      flushNavigation();
 
       expect(useNavigation.getState().state).toBe(NavigationState.Underway);
     });

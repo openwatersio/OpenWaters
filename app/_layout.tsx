@@ -115,6 +115,13 @@ export default function RootLayout() {
           sheetInitialDetentIndex: 0,
           sheetGrabberVisible: true,
         }} />
+        <Stack.Screen name="aton/[id]" options={{
+          presentation: "formSheet",
+          sheetLargestUndimmedDetentIndex: "last",
+          sheetAllowedDetents: [0],
+          sheetInitialDetentIndex: 0,
+          sheetGrabberVisible: true,
+        }} />
         <Stack.Screen name="connection/[id]" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",

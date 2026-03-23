@@ -1,4 +1,4 @@
-import { type DataPoint, useInstruments } from "@/hooks/useInstruments";
+import { type DataPoint, useHasInstrumentData, useInstrumentPath } from "@/hooks/useInstruments";
 import { NavigationState, useNavigation } from "@/hooks/useNavigation";
 import { toDepth, toSpeed, toTemperature } from "@/hooks/usePreferredUnits";
 import { useTrackRecording } from "@/hooks/useTrackRecording";
@@ -11,7 +11,7 @@ import OverlayView from "./ui/OverlayView";
 const STALE_THRESHOLD = 10_000; // 10 seconds
 
 function useInstrumentValue(path: string): DataPoint | undefined {
-  return useInstruments((s) => s.data[path]);
+  return useInstrumentPath(path);
 }
 
 function isDataStale(point: DataPoint | undefined): boolean {
@@ -72,7 +72,7 @@ export default function NavigationHUD() {
   const awa = useInstrumentValue("environment.wind.angleApparent");
   const waterTemp = useInstrumentValue("environment.water.temperature");
 
-  const hasInstruments = useInstruments((s) => Object.keys(s.data).length > 0);
+  const hasInstruments = useHasInstrumentData();
   const theme = useTheme();
 
   // Visible when underway, recording, or instrument data exists

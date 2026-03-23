@@ -1,5 +1,6 @@
 import {
   clearAIS,
+  flushAIS,
   pruneStaleVessels,
   updateAISVessel,
   useAIS,
@@ -25,6 +26,7 @@ describe("useAIS", () => {
           source: "test",
         },
       });
+      flushAIS();
 
       const vessel = useAIS.getState().vessels["211234567"];
       expect(vessel).toBeDefined();
@@ -44,6 +46,7 @@ describe("useAIS", () => {
           source: "test",
         },
       });
+      flushAIS();
       const after = Date.now();
 
       const vessel = useAIS.getState().vessels["211234567"];
@@ -66,6 +69,7 @@ describe("useAIS", () => {
           source: "test",
         },
       });
+      flushAIS();
 
       const vessel = useAIS.getState().vessels["211234567"];
       expect(vessel.data["navigation.position"]).toBeDefined();
@@ -87,6 +91,7 @@ describe("useAIS", () => {
           source: "test",
         },
       });
+      flushAIS();
 
       const vessels = useAIS.getState().vessels;
       expect(Object.keys(vessels)).toHaveLength(2);
@@ -97,7 +102,6 @@ describe("useAIS", () => {
 
   describe("pruneStaleVessels", () => {
     it("removes vessels older than maxAge", () => {
-      // Add a "fresh" vessel
       updateAISVessel("211234567", {
         "navigation.position": {
           value: { latitude: 47.6, longitude: -122.3 },
@@ -105,8 +109,6 @@ describe("useAIS", () => {
           source: "test",
         },
       });
-
-      // Add a "stale" vessel by backdating its lastSeen
       updateAISVessel("311234567", {
         "navigation.position": {
           value: { latitude: 48.0, longitude: -123.0 },
@@ -114,6 +116,8 @@ describe("useAIS", () => {
           source: "test",
         },
       });
+      flushAIS();
+
       // Manually backdate
       useAIS.setState((s) => ({
         vessels: {
@@ -140,6 +144,7 @@ describe("useAIS", () => {
           source: "test",
         },
       });
+      flushAIS();
 
       pruneStaleVessels(10 * 60 * 1000);
       expect(Object.keys(useAIS.getState().vessels)).toHaveLength(1);
@@ -155,6 +160,7 @@ describe("useAIS", () => {
           source: "test",
         },
       });
+      flushAIS();
       clearAIS();
       expect(useAIS.getState().vessels).toEqual({});
     });

@@ -13,7 +13,15 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Permission is necessary to display user location",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow Open Waters to record your track while the app is in the background.",
-        "UIBackgroundModes": ["location"]
+        "NSLocalNetworkUsageDescription": "Open Waters discovers marine instruments on your local network to display navigation data.",
+        "NSBonjourServices": [
+          "_signalk-http._tcp",
+          "_signalk-ws._tcp",
+          "_nmea-0183._tcp"
+        ],
+        "UIBackgroundModes": [
+          "location"
+        ]
       },
       "bundleIdentifier": "io.openwaters.mobile"
     },
@@ -53,12 +61,19 @@
     "experiments": {
       "typedRoutes": true
     },
-"extra": {
+    "extra": {
       "router": {},
       "eas": {
         "projectId": "fce58c39-edee-40b0-a1a6-c9e1713cd3f7"
       }
     },
-    "owner": "openwatersio"
+    "owner": "openwatersio",
+    "android": {
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "io.openwaters.mobile"
+    }
   }
 }

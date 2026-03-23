@@ -1,20 +1,21 @@
-import { useAIS } from "@/hooks/useAIS";
-import { useInstruments } from "@/hooks/useInstruments";
+import { flushAIS, useAIS } from "@/hooks/useAIS";
+import { useAtoN } from "@/hooks/useAtoN";
+import { getInstrumentData, resetInstrumentStore } from "@/hooks/useInstruments";
 import {
   type SignalKClientState,
   SignalKClient,
   discoverEndpoints,
-  flushBuffers,
   processDelta,
 } from "@/lib/signalk";
 
 // Reset stores between tests
-const initialInstruments = useInstruments.getState();
 const initialAIS = useAIS.getState();
+const initialAtoN = useAtoN.getState();
 
 beforeEach(() => {
-  useInstruments.setState(initialInstruments, true);
+  resetInstrumentStore();
   useAIS.setState(initialAIS, true);
+  useAtoN.setState(initialAtoN, true);
 });
 
 describe("discoverEndpoints", () => {
@@ -92,9 +93,9 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
 
-    const data = useInstruments.getState().data;
+
+    const data = getInstrumentData();
     expect(data["environment.depth.belowTransducer"]?.value).toBe(8.7);
     expect(data["navigation.speedOverGround"]?.value).toBe(3.5);
     expect(data["environment.depth.belowTransducer"]?.source).toBe(
@@ -116,10 +117,10 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
 
     expect(
-      useInstruments.getState().data["environment.depth.belowTransducer"]
+      getInstrumentData()["environment.depth.belowTransducer"]
         ?.value,
     ).toBe(5.0);
   });
@@ -146,7 +147,10 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
+
+    flushAIS();
+
 
     const vessel = useAIS.getState().vessels["211234567"];
     expect(vessel).toBeDefined();
@@ -173,10 +177,11 @@ describe("processDelta", () => {
       "signalk.test",
       "vessels.urn:mrn:imo:mmsi:123456789",
     );
-    flushBuffers();
+
 
     // Should go to instrument store (self), not AIS store
-    expect(useInstruments.getState().data["navigation.speedOverGround"]?.value).toBe(4.2);
+    expect(getInstrumentData()["navigation.speedOverGround"]?.value).toBe(4.2);
+    flushAIS();
     expect(useAIS.getState().vessels["123456789"]).toBeUndefined();
   });
 
@@ -195,7 +200,10 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
+
+    flushAIS();
+
 
     expect(useAIS.getState().vessels["211234567"]).toBeDefined();
   });
@@ -218,9 +226,9 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
 
-    const pos = useInstruments.getState().data["navigation.position"]?.value;
+
+    const pos = getInstrumentData()["navigation.position"]?.value;
     expect(pos).toEqual({ latitude: 47.6, longitude: -122.3 });
   });
 
@@ -242,7 +250,10 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
+
+    flushAIS();
+
 
     const vessel = useAIS.getState().vessels["211234567"];
     expect(vessel).toBeDefined();
@@ -269,7 +280,10 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
+
+    flushAIS();
+
 
     const vessel = useAIS.getState().vessels["211234567"];
     expect(vessel.data["design.length"]?.value).toBe(18);
@@ -293,7 +307,10 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
+
+    flushAIS();
+
 
     const vessel = useAIS.getState().vessels["211234567"];
     expect(vessel.data["design.aisShipType"]?.value).toBe(36);
@@ -314,12 +331,92 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
 
     expect(
-      useInstruments.getState().data["environment.depth.belowTransducer"]
+      getInstrumentData()["environment.depth.belowTransducer"]
         ?.value,
     ).toBeNull();
+  });
+
+  it("routes atons.* context to AtoN store", () => {
+    processDelta(
+      {
+        context: "atons.urn:mrn:imo:mmsi:993661302",
+        updates: [
+          {
+            timestamp: "2026-03-19T10:30:00.000Z",
+            values: [
+              {
+                path: "navigation.position",
+                value: { latitude: 48.5, longitude: -123.1 },
+              },
+              {
+                path: "atonType",
+                value: 21,
+              },
+            ],
+          },
+        ],
+      },
+      "signalk.test",
+    );
+
+    const aton = useAtoN.getState().atons["993661302"];
+    expect(aton).toBeDefined();
+    expect(aton.data["navigation.position"]?.value).toEqual({
+      latitude: 48.5,
+      longitude: -123.1,
+    });
+    expect(aton.data["atonType"]?.value).toBe(21);
+
+    // Should NOT appear in AIS store
+    flushAIS();
+    expect(useAIS.getState().vessels["993661302"]).toBeUndefined();
+  });
+
+  it("expands empty-path AtoN deltas into individual properties", () => {
+    processDelta(
+      {
+        context: "atons.urn:mrn:imo:mmsi:993661302",
+        updates: [
+          {
+            timestamp: "2026-03-19T10:30:00.000Z",
+            values: [
+              {
+                path: "",
+                value: { name: "SMITH ISLAND BUOY", mmsi: "993661302" },
+              },
+            ],
+          },
+        ],
+      },
+      "signalk.test",
+    );
+
+    const aton = useAtoN.getState().atons["993661302"];
+    expect(aton).toBeDefined();
+    expect(aton.data["name"]?.value).toBe("SMITH ISLAND BUOY");
+    expect(aton.data["mmsi"]?.value).toBe("993661302");
+  });
+
+  it("handles bare AtoN context", () => {
+    processDelta(
+      {
+        context: "atons.993661302",
+        updates: [
+          {
+            timestamp: "2026-03-19T10:30:00.000Z",
+            values: [
+              { path: "atonType", value: 25 },
+            ],
+          },
+        ],
+      },
+      "signalk.test",
+    );
+
+    expect(useAtoN.getState().atons["993661302"]).toBeDefined();
   });
 });
 
@@ -380,9 +477,9 @@ describe("SignalKClient", () => {
       }),
     });
 
-    flushBuffers();
+
     // Hello should not update instrument store
-    expect(Object.keys(useInstruments.getState().data)).toHaveLength(0);
+    expect(Object.keys(getInstrumentData())).toHaveLength(0);
 
     client.disconnect();
   });
@@ -405,10 +502,10 @@ describe("SignalKClient", () => {
         ],
       }),
     });
-    flushBuffers();
+
 
     expect(
-      useInstruments.getState().data["environment.depth.belowTransducer"]
+      getInstrumentData()["environment.depth.belowTransducer"]
         ?.value,
     ).toBe(8.7);
 

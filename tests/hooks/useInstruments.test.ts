@@ -1,20 +1,19 @@
 import {
   clearInstruments,
+  getInstrumentData,
   isStale,
+  resetInstrumentStore,
   updatePath,
   updatePaths,
-  useInstruments,
 } from "@/hooks/useInstruments";
 
-const initialState = useInstruments.getState();
-
 beforeEach(() => {
-  useInstruments.setState(initialState, true);
+  resetInstrumentStore();
 });
 
 describe("useInstruments", () => {
   it("starts with empty data", () => {
-    expect(useInstruments.getState().data).toEqual({});
+    expect(getInstrumentData()).toEqual({});
   });
 
   describe("updatePath", () => {
@@ -25,8 +24,7 @@ describe("useInstruments", () => {
         source: "test",
       });
 
-      const point =
-        useInstruments.getState().data["environment.depth.belowTransducer"];
+      const point = getInstrumentData()["environment.depth.belowTransducer"];
       expect(point).toBeDefined();
       expect(point.value).toBe(8.7);
       expect(point.timestamp).toBe(1000);
@@ -45,8 +43,7 @@ describe("useInstruments", () => {
         source: "test",
       });
 
-      const point =
-        useInstruments.getState().data["environment.depth.belowTransducer"];
+      const point = getInstrumentData()["environment.depth.belowTransducer"];
       expect(point.value).toBe(12.3);
       expect(point.timestamp).toBe(2000);
     });
@@ -63,11 +60,9 @@ describe("useInstruments", () => {
         source: "test",
       });
 
+      expect(getInstrumentData()["navigation.speedOverGround"]).toBeDefined();
       expect(
-        useInstruments.getState().data["navigation.speedOverGround"],
-      ).toBeDefined();
-      expect(
-        useInstruments.getState().data["environment.depth.belowTransducer"],
+        getInstrumentData()["environment.depth.belowTransducer"],
       ).toBeDefined();
     });
 
@@ -79,8 +74,7 @@ describe("useInstruments", () => {
         meta: { sentence: "DBT", talker: "SD" },
       });
 
-      const point =
-        useInstruments.getState().data["environment.depth.belowTransducer"];
+      const point = getInstrumentData()["environment.depth.belowTransducer"];
       expect(point.meta?.sentence).toBe("DBT");
       expect(point.meta?.talker).toBe("SD");
     });
@@ -101,7 +95,7 @@ describe("useInstruments", () => {
         },
       });
 
-      const data = useInstruments.getState().data;
+      const data = getInstrumentData();
       expect(data["navigation.speedOverGround"]?.value).toBe(3.5);
       expect(data["navigation.courseOverGroundTrue"]?.value).toBe(1.57);
     });
@@ -121,8 +115,7 @@ describe("useInstruments", () => {
       });
 
       expect(
-        useInstruments.getState().data["environment.depth.belowTransducer"]
-          ?.value,
+        getInstrumentData()["environment.depth.belowTransducer"]?.value,
       ).toBe(8.7);
     });
   });
@@ -159,7 +152,7 @@ describe("useInstruments", () => {
         source: "test",
       });
       clearInstruments();
-      expect(useInstruments.getState().data).toEqual({});
+      expect(getInstrumentData()).toEqual({});
     });
   });
 });

@@ -1,4 +1,4 @@
-import { useInstruments } from "@/hooks/useInstruments";
+import { getInstrumentData } from "@/hooks/useInstruments";
 import type { GeolocationPosition } from "@maplibre/maplibre-react-native";
 import { LocationManager } from "@maplibre/maplibre-react-native";
 import { create } from "zustand";
@@ -135,9 +135,34 @@ export function updateFromDevice(location: GeolocationPosition) {
   resolve();
 }
 
-/** Called after Signal K flush to update navigation from instrument store */
+const NAV_THROTTLE = 200; // ms
+let navThrottleTimer: ReturnType<typeof setTimeout> | null = null;
+let navDirty = false;
+
+/** Called after instrument data update to resolve navigation from instrument store */
 export function updateFromSignalK() {
-  const data = useInstruments.getState().data;
+  navDirty = true;
+  if (navThrottleTimer) return;
+  navThrottleTimer = setTimeout(() => {
+    navThrottleTimer = null;
+    if (!navDirty) return;
+    navDirty = false;
+    resolveFromInstruments();
+  }, NAV_THROTTLE);
+}
+
+/** Force-resolve navigation from instruments immediately (for tests) */
+export function flushNavigation() {
+  if (navThrottleTimer) {
+    clearTimeout(navThrottleTimer);
+    navThrottleTimer = null;
+  }
+  navDirty = false;
+  resolveFromInstruments();
+}
+
+function resolveFromInstruments() {
+  const data = getInstrumentData();
 
   const pos = data["navigation.position"];
   const sog = data["navigation.speedOverGround"];

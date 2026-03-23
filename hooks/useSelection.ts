@@ -6,6 +6,7 @@ export type Selection =
   | { type: "track"; id: number }
   | { type: "location"; coords: [lng: number, lat: number] }
   | { type: "vessel"; mmsi: string }
+  | { type: "aton"; id: string }
   | null;
 
 /**
@@ -29,6 +30,9 @@ export function useSelection(): Selection {
     }
     if (pathname.startsWith("/vessel/") && params.mmsi) {
       return { type: "vessel", mmsi: params.mmsi };
+    }
+    if (pathname.startsWith("/aton/") && params.id) {
+      return { type: "aton", id: params.id };
     }
     return null;
   }, [pathname, params.id, params.coords, params.mmsi]);

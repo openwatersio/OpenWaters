@@ -1,4 +1,4 @@
-import { type DataPoint, useInstruments } from "@/hooks/useInstruments";
+import { type DataPoint, useHasInstrumentData, useInstrumentPath } from "@/hooks/useInstruments";
 import { toDepth, toSpeed, toTemperature } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
 import { useState } from "react";
@@ -8,7 +8,7 @@ import OverlayView from "./ui/OverlayView";
 const STALE_THRESHOLD = 10_000; // 10 seconds
 
 function useInstrumentValue(path: string): DataPoint | undefined {
-  return useInstruments((s) => s.data[path]);
+  return useInstrumentPath(path);
 }
 
 function isDataStale(point: DataPoint | undefined): boolean {
@@ -70,7 +70,7 @@ function InstrumentCell({ label, value, unit, stale }: CellProps) {
 
 export default function InstrumentHUD() {
   const [expanded, setExpanded] = useState(false);
-  const hasData = useInstruments((s) => Object.keys(s.data).length > 0);
+  const hasData = useHasInstrumentData();
 
   const depthTransducer = useInstrumentValue("environment.depth.belowTransducer");
   const depthSurface = useInstrumentValue("environment.depth.belowSurface");

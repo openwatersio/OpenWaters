@@ -1,4 +1,4 @@
-import { useInstruments } from '@/hooks/useInstruments';
+import { resetInstrumentStore, updatePaths } from '@/hooks/useInstruments';
 import { NavigationState, useNavigation } from '@/hooks/useNavigation';
 import { usePreferredUnits } from '@/hooks/usePreferredUnits';
 import { useTrackRecording } from '@/hooks/useTrackRecording';
@@ -6,13 +6,12 @@ import NavigationHUD from '@/components/NavigationHUD';
 import { render, screen } from '@testing-library/react-native';
 
 const initialNavState = useNavigation.getState();
-const initialInstruments = useInstruments.getState();
 const initialUnitsState = usePreferredUnits.getState();
 const initialTrackState = useTrackRecording.getState();
 
 beforeEach(() => {
   useNavigation.setState(initialNavState, true);
-  useInstruments.setState(initialInstruments, true);
+  resetInstrumentStore();
   usePreferredUnits.setState(initialUnitsState, true);
   useTrackRecording.setState(initialTrackState, true);
 });
@@ -49,13 +48,11 @@ describe('NavigationHUD', () => {
 
   it('is visible when instrument data exists even if moored', () => {
     useNavigation.setState({ state: NavigationState.Moored });
-    useInstruments.setState({
-      data: {
-        "environment.depth.belowTransducer": {
-          value: 8.5,
-          timestamp: Date.now(),
-          source: "signalk.test",
-        },
+    updatePaths({
+      "environment.depth.belowTransducer": {
+        value: 8.5,
+        timestamp: Date.now(),
+        source: "signalk.test",
       },
     });
     render(<NavigationHUD />);
@@ -64,13 +61,11 @@ describe('NavigationHUD', () => {
 
   it('shows depth from instruments when available', () => {
     useNavigation.setState({ state: NavigationState.Underway });
-    useInstruments.setState({
-      data: {
-        "environment.depth.belowTransducer": {
-          value: 8.5,
-          timestamp: Date.now(),
-          source: "signalk.test",
-        },
+    updatePaths({
+      "environment.depth.belowTransducer": {
+        value: 8.5,
+        timestamp: Date.now(),
+        source: "signalk.test",
       },
     });
     render(<NavigationHUD />);
