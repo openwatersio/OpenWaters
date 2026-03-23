@@ -6,11 +6,11 @@ import { subscribeToLocationUpdate, useTrackRecording } from "@/hooks/useTrackRe
 import { getTrackPoints, Track } from "@/lib/database";
 import type { LngLatBounds } from "@maplibre/maplibre-react-native";
 import { getBounds } from "geolib";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TrackLine from "./TrackLine";
 
-type Coord = [longitude: number, latitude: number];
+type Coordinate = [longitude: number, latitude: number];
 
 export default function TrackOverlay() {
   const recording = useTrackRecording((s) => s.track);
@@ -25,29 +25,26 @@ export default function TrackOverlay() {
 
 function ActiveTrackOverlay({ track }: { track: Track }) {
   const theme = useTheme();
-  const coordinates = useRef<Coord[]>([]);
+  const [coordinates, setCoordinates] = useState<Coordinate[]>([]);
 
   // Load historical coordinates from DB on mount/resume
   useEffect(() => {
     console.log("loading track points for active recording:", track.id);
     getTrackPoints(track.id).then((points) => {
-      coordinates.current = points.map((p) => [p.longitude, p.latitude]);
+      setCoordinates(points.map((p) => [p.longitude, p.latitude]));
     });
   }, [track]);
 
   useEffect(() => {
     return subscribeToLocationUpdate((location) => {
-      // Append new points as they arrive
-      coordinates.current.push([location.coords.longitude, location.coords.latitude]);
+      setCoordinates((prev) => [...prev, [location.coords.longitude, location.coords.latitude]]);
     });
   }, [track]);
 
-  const coords = coordinates.current;
-
-  return <TrackLine id="active-track" coords={coords} color={theme.danger} />;
+  return <TrackLine id="active-track" coordinates={coordinates} color={theme.danger} />;
 }
 
-function computeBounds(coords: Coord[]): LngLatBounds | null {
+function computeBounds(coords: Coordinate[]): LngLatBounds | null {
   if (coords.length === 0) return null;
   const { minLng, minLat, maxLng, maxLat } = getBounds(coords);
   return [minLng, minLat, maxLng, maxLat];
@@ -61,7 +58,7 @@ function SelectedTrackOverlay() {
     const entry = s.sheets["track"];
     return entry?.height ?? 0;
   });
-  const [coords, setCoords] = useState<Coord[]>([]);
+  const [coords, setCoords] = useState<Coordinate[]>([]);
   const insets = useSafeAreaInsets();
 
   // Load track points when selection changes
@@ -88,5 +85,5 @@ function SelectedTrackOverlay() {
 
   if (!selectedId) return null;
 
-  return <TrackLine id="selected-track" coords={coords} color={theme.primary} />;
+  return <TrackLine id="selected-track" coordinates={coords} color={theme.primary} />;
 }
