@@ -79,7 +79,9 @@ export default function ConnectionDetail() {
   }
 
   // Get the most recent instrument paths from this connection's source
-  const sourcePrefix = `signalk.${connection.id}`;
+  const sourcePrefix = connection.type === "nmea-tcp"
+    ? `nmea.${connection.id}`
+    : `signalk.${connection.id}`;
   const recentPaths = Object.entries(instrumentData)
     .filter(([, dp]) => dp.source.startsWith(sourcePrefix))
     .sort(([, a], [, b]) => b.timestamp - a.timestamp)
@@ -113,9 +115,11 @@ export default function ConnectionDetail() {
               <Text modifiers={valueMods}>{statusLabel(connection.status)}</Text>
             </LabeledContent>
             <LabeledContent label="Type">
-              <Text modifiers={valueMods}>Signal K</Text>
+              <Text modifiers={valueMods}>
+                {connection.type === "signalk" ? "Signal K" : "NMEA 0183 TCP"}
+              </Text>
             </LabeledContent>
-            <LabeledContent label="URL">
+            <LabeledContent label={connection.type === "nmea-tcp" ? "Host" : "URL"}>
               <Text modifiers={valueMods}>{connection.url}</Text>
             </LabeledContent>
             {connection.error && (

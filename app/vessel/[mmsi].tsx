@@ -107,21 +107,16 @@ export default function VesselScreen() {
   const length = data ? getNumber(data["design.length"]?.value) : undefined;
   const beam = data ? getNumber(data["design.beam"]?.value) : undefined;
   const draft = data ? getNumber(data["design.draft"]?.value) : undefined;
-  const flag = data ? getString(data["flag"]?.value) : undefined;
-  const port = data ? getString(data["port"]?.value) : undefined;
-  const imo = data ? getString(data["registrations"]?.value) : undefined;
+  const imo = data ? getString(data["registrations.imo"]?.value) : undefined;
+  const eta = data ? getString(data["navigation.eta"]?.value) : undefined;
   const sog = data ? getNumber(data["navigation.speedOverGround"]?.value) : undefined;
-  const stw = data ? getNumber(data["navigation.speedThroughWater"]?.value) : undefined;
   const cog = data ? getNumber(data["navigation.courseOverGroundTrue"]?.value) : undefined;
   const heading = data ? getNumber(data["navigation.headingTrue"]?.value) : undefined;
   const rot = data ? getNumber(data["navigation.rateOfTurn"]?.value) : undefined;
   const navState = data ? getString(data["navigation.state"]?.value) : undefined;
   const destination = data ? getString(data["navigation.destination"]?.value) : undefined;
-  const depthBelowKeel = data ? getNumber(data["environment.depth.belowKeel"]?.value) : undefined;
-  const aisClassFromSensor = data ? getString(data["sensors.ais.class"]?.value) : undefined;
 
   const sogFormatted = toSpeed(sog);
-  const stwFormatted = toSpeed(stw);
 
   // Tick every 10s to keep derived values (distance, bearing, CPA) fresh
   const [tick, setTick] = useState(0);
@@ -194,9 +189,6 @@ export default function VesselScreen() {
             <LabeledContent label="SOG">
               <Text modifiers={valueMods}>{sog !== undefined ? `${sogFormatted.value} ${sogFormatted.abbr}` : "—"}</Text>
             </LabeledContent>
-            <LabeledContent label="STW">
-              <Text modifiers={valueMods}>{stw !== undefined ? `${stwFormatted.value} ${stwFormatted.abbr}` : "—"}</Text>
-            </LabeledContent>
             <LabeledContent label="COG">
               <Text modifiers={valueMods}>{radToDeg(cog)}</Text>
             </LabeledContent>
@@ -212,17 +204,14 @@ export default function VesselScreen() {
             <LabeledContent label="Destination">
               <Text modifiers={valueMods}>{destination ?? "—"}</Text>
             </LabeledContent>
-            <LabeledContent label="Depth (Keel)">
-              <Text modifiers={valueMods}>{depthBelowKeel !== undefined ? `${toDepth(depthBelowKeel).value} ${toDepth(depthBelowKeel).abbr}` : "—"}</Text>
+            <LabeledContent label="ETA">
+              <Text modifiers={valueMods}>{eta ?? "—"}</Text>
             </LabeledContent>
           </Section>
 
           <Section title="Vessel">
             <LabeledContent label="Type">
               <Text modifiers={valueMods}>{shipTypeName(shipType)}</Text>
-            </LabeledContent>
-            <LabeledContent label="Flag">
-              <Text modifiers={valueMods}>{flag ?? "—"}</Text>
             </LabeledContent>
             <LabeledContent label="Length">
               <Text modifiers={valueMods}>{length !== undefined ? `${toDepth(length, { decimals: 0 }).value} ${toDepth(length).abbr}` : "—"}</Text>
@@ -237,10 +226,7 @@ export default function VesselScreen() {
               <Text modifiers={valueMods}>{callSign ?? "—"}</Text>
             </LabeledContent>
             <LabeledContent label="AIS Class">
-              <Text modifiers={valueMods}>{aisClassFromSensor ?? aisClass(mmsi)}</Text>
-            </LabeledContent>
-            <LabeledContent label="Home Port">
-              <Text modifiers={valueMods}>{port ?? "—"}</Text>
+              <Text modifiers={valueMods}>{aisClass(mmsi)}</Text>
             </LabeledContent>
             <LabeledContent label="MMSI">
               <Text modifiers={valueMods}>{mmsi}</Text>

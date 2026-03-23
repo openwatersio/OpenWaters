@@ -80,10 +80,13 @@
 	</dict>
 	<key>NSBonjourServices</key>
 	<array>
+		<string>_signalk-http._tcp</string>
+		<string>_signalk-ws._tcp</string>
+		<string>_nmea-0183._tcp</string>
 		<string>_expo._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Expo Dev Launcher uses the local network to discover and connect to development servers running on your computer.</string>
+	<string>Open Waters discovers marine instruments on your local network to display navigation data.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to use your location.</string>
 	<key>NSLocationAlwaysUsageDescription</key>

@@ -1,37 +1,84 @@
 import SheetView from "@/components/ui/SheetView";
 import {
-  addConnection,
+  addNMEAConnection,
+  addSignalKConnection,
   useConnections,
 } from "@/hooks/useConnections";
-import { Button, Host, List, Section, Text, TextField } from "@expo/ui/swift-ui";
-import { tint } from "@expo/ui/swift-ui/modifiers";
+import {
+  type DiscoveredService,
+  startDiscovery,
+  stopDiscovery,
+} from "@/lib/discovery";
+import { Button, Host, LabeledContent, List, Picker, Section, Text, TextField } from "@expo/ui/swift-ui";
+import { foregroundStyle, pickerStyle, tag, tint } from "@expo/ui/swift-ui/modifiers";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-function statusLabel(status: string): string {
-  switch (status) {
-    case "connected":
-      return "Connected";
-    case "connecting":
-      return "Connecting...";
-    default:
-      return "Disconnected";
-  }
+function typeLabel(type: string): string {
+  return type === "signalk" ? "Signal K" : "NMEA";
 }
 
 export default function Connections() {
   const connections = useConnections((s) => s.connections);
-  const [url, setUrl] = useState("");
+  const [discovered, setDiscovered] = useState<DiscoveredService[]>([]);
+  const [addType, setAddType] = useState<"signalk" | "nmea">("signalk");
+  const [signalKUrl, setSignalKUrl] = useState("");
+  const [nmeaHost, setNmeaHost] = useState("");
+  const [nmeaPort, setNmeaPort] = useState("10110");
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
-  async function handleAdd() {
-    if (!url.trim()) return;
+  // Start mDNS discovery when screen is visible
+  useEffect(() => {
+    startDiscovery(
+      (service) =>
+        setDiscovered((prev) =>
+          prev.some((s) => s.id === service.id) ? prev : [...prev, service],
+        ),
+      (id) => setDiscovered((prev) => prev.filter((s) => s.id !== id)),
+    );
+    return () => {
+      stopDiscovery();
+      setDiscovered([]);
+    };
+  }, []);
+
+  // Deduplicate and filter out already-connected services
+  const existingUrls = new Set(connections.map((c) => c.url));
+  const seen = new Set<string>();
+  const availableServices = discovered.filter((s) => {
+    if (seen.has(s.id)) return false;
+    seen.add(s.id);
+    const url = s.type === "signalk" ? `http://${s.host}:${s.port}` : `${s.host}:${s.port}`;
+    return !existingUrls.has(url);
+  });
+
+  const handleAddDiscovered = useCallback(async (service: DiscoveredService) => {
     setAdding(true);
     setError(null);
     try {
-      await addConnection(url.trim());
-      setUrl("");
+      if (service.type === "signalk") {
+        await addSignalKConnection(
+          `http://${service.host}:${service.port}`,
+          service.name,
+        );
+      } else {
+        addNMEAConnection(service.host, service.port, service.name);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Connection failed");
+    } finally {
+      setAdding(false);
+    }
+  }, []);
+
+  async function handleAddSignalK() {
+    if (!signalKUrl.trim()) return;
+    setAdding(true);
+    setError(null);
+    try {
+      await addSignalKConnection(signalKUrl.trim());
+      setSignalKUrl("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Connection failed");
     } finally {
@@ -39,33 +86,102 @@ export default function Connections() {
     }
   }
 
+  function handleAddNMEA() {
+    const host = nmeaHost.trim();
+    if (!host) return;
+    const port = parseInt(nmeaPort, 10) || 10110;
+    addNMEAConnection(host, port);
+    setNmeaHost("");
+    setNmeaPort("10110");
+  }
+
   return (
     <SheetView id="connections">
       <Host style={{ flex: 1 }}>
         <List>
-          <Section title="Add Signal K Server">
-            <TextField
-              placeholder="http://raspberrypi.local:3000"
-              defaultValue={url}
-              onChangeText={setUrl}
-            />
-            {error ? <Text>{error}</Text> : null}
-            <Button
-              modifiers={[tint("primary")]}
-              label={adding ? "Connecting..." : "Add Server"}
-              onPress={handleAdd}
-            />
-          </Section>
+          {availableServices.length > 0 ? (
+            <Section title="Discovered">
+              {availableServices.map((service) => (
+                <Button
+                  key={service.id}
+                  onPress={() => handleAddDiscovered(service)}
+                >
+                  <LabeledContent
+                    modifiers={[foregroundStyle("primary")]}
+                    label={typeLabel(service.type)}
+                  >
+                    <Text>{service.host}:{service.port}</Text>
+                  </LabeledContent>
+                </Button>
+              ))}
+            </Section>
+          ) : null}
 
           {connections.length > 0 ? (
             <Section title="Connections">
               {connections.map((conn) => (
                 <Button
                   key={conn.id}
-                  label={`${conn.name} — ${statusLabel(conn.status)}`}
                   onPress={() => router.push({ pathname: "/connection/[id]", params: { id: conn.id } })}
-                />
+                >
+                  <LabeledContent
+                    modifiers={[foregroundStyle("primary")]}
+                    label={typeLabel(conn.type)}
+                  >
+                    <Text>{conn.host}:{conn.port}</Text>
+                  </LabeledContent>
+
+                </Button>
               ))}
+            </Section>
+          ) : null}
+
+          <Section title="Add Connection">
+            <Picker
+              selection={addType}
+              onSelectionChange={setAddType}
+              modifiers={[pickerStyle("segmented")]}
+            >
+              <Text modifiers={[tag("signalk")]}>Signal K</Text>
+              <Text modifiers={[tag("nmea")]}>NMEA</Text>
+            </Picker>
+            {addType === "signalk" ? (
+              <>
+                <TextField
+                  placeholder="http://raspberrypi.local:3000"
+                  defaultValue={signalKUrl}
+                  onChangeText={setSignalKUrl}
+                />
+                <Button
+                  modifiers={[tint("primary")]}
+                  label={adding ? "Connecting..." : "Add Server"}
+                  onPress={handleAddSignalK}
+                />
+              </>
+            ) : (
+              <>
+                <TextField
+                  placeholder="192.168.1.1"
+                  defaultValue={nmeaHost}
+                  onChangeText={setNmeaHost}
+                />
+                <TextField
+                  placeholder="10110"
+                  defaultValue={nmeaPort}
+                  onChangeText={setNmeaPort}
+                />
+                <Button
+                  modifiers={[tint("primary")]}
+                  label="Add NMEA Source"
+                  onPress={handleAddNMEA}
+                />
+              </>
+            )}
+          </Section>
+
+          {error ? (
+            <Section>
+              <Text>{error}</Text>
             </Section>
           ) : null}
         </List>

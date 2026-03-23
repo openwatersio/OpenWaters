@@ -4,7 +4,6 @@ import {
   type SignalKClientState,
   SignalKClient,
   discoverEndpoints,
-  flushBuffers,
   processDelta,
 } from "@/lib/signalk";
 
@@ -92,7 +91,7 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
 
     const data = useInstruments.getState().data;
     expect(data["environment.depth.belowTransducer"]?.value).toBe(8.7);
@@ -116,7 +115,7 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
 
     expect(
       useInstruments.getState().data["environment.depth.belowTransducer"]
@@ -146,7 +145,7 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
 
     const vessel = useAIS.getState().vessels["211234567"];
     expect(vessel).toBeDefined();
@@ -173,7 +172,7 @@ describe("processDelta", () => {
       "signalk.test",
       "vessels.urn:mrn:imo:mmsi:123456789",
     );
-    flushBuffers();
+
 
     // Should go to instrument store (self), not AIS store
     expect(useInstruments.getState().data["navigation.speedOverGround"]?.value).toBe(4.2);
@@ -195,7 +194,7 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
 
     expect(useAIS.getState().vessels["211234567"]).toBeDefined();
   });
@@ -218,7 +217,7 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
 
     const pos = useInstruments.getState().data["navigation.position"]?.value;
     expect(pos).toEqual({ latitude: 47.6, longitude: -122.3 });
@@ -242,7 +241,7 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
 
     const vessel = useAIS.getState().vessels["211234567"];
     expect(vessel).toBeDefined();
@@ -269,7 +268,7 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
 
     const vessel = useAIS.getState().vessels["211234567"];
     expect(vessel.data["design.length"]?.value).toBe(18);
@@ -293,7 +292,7 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
 
     const vessel = useAIS.getState().vessels["211234567"];
     expect(vessel.data["design.aisShipType"]?.value).toBe(36);
@@ -314,7 +313,7 @@ describe("processDelta", () => {
       },
       "signalk.test",
     );
-    flushBuffers();
+
 
     expect(
       useInstruments.getState().data["environment.depth.belowTransducer"]
@@ -380,7 +379,7 @@ describe("SignalKClient", () => {
       }),
     });
 
-    flushBuffers();
+
     // Hello should not update instrument store
     expect(Object.keys(useInstruments.getState().data)).toHaveLength(0);
 
@@ -405,7 +404,7 @@ describe("SignalKClient", () => {
         ],
       }),
     });
-    flushBuffers();
+
 
     expect(
       useInstruments.getState().data["environment.depth.belowTransducer"]

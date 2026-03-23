@@ -1,5 +1,5 @@
-import { useAIS } from "@/hooks/useAIS";
-import { type DataPoint, useInstruments } from "@/hooks/useInstruments";
+import { updateAISVessel } from "@/hooks/useAIS";
+import { type DataPoint, updatePaths } from "@/hooks/useInstruments";
 import { updateFromSignalK } from "@/hooks/useNavigation";
 
 /** Signal K server endpoint discovery response */
@@ -115,86 +115,7 @@ function toDataPointValue(value: unknown): DataPoint["value"] {
   return null;
 }
 
-/**
- * Buffered update system: incoming deltas write to plain JS objects,
- * then a timer flushes to Zustand stores at a capped rate to avoid
- * triggering hundreds of re-renders per second.
- */
-const FLUSH_INTERVAL = 200; // ms — max 5 store updates/sec
-
-let selfBuffer: Record<string, DataPoint> = {};
-let aisBuffer: Record<
-  string,
-  { paths: Record<string, DataPoint>; lastSeen: number }
-> = {};
-let flushTimer: ReturnType<typeof setInterval> | null = null;
-
-/** Flush buffered data into Zustand stores (single setState each) */
-export function flushBuffers() {
-  const selfUpdates = selfBuffer;
-  const aisUpdates = aisBuffer;
-  selfBuffer = {};
-  aisBuffer = {};
-
-  if (Object.keys(selfUpdates).length > 0) {
-    useInstruments.setState((s) => ({
-      data: { ...s.data, ...selfUpdates },
-    }));
-    updateFromSignalK();
-  }
-
-  if (Object.keys(aisUpdates).length > 0) {
-    useAIS.setState((s) => {
-      const vessels = { ...s.vessels };
-      for (const [mmsi, update] of Object.entries(aisUpdates)) {
-        const existing = vessels[mmsi];
-        vessels[mmsi] = {
-          mmsi,
-          data: { ...(existing?.data ?? {}), ...update.paths },
-          lastSeen: update.lastSeen,
-        };
-      }
-      return { vessels };
-    });
-  }
-}
-
-/** Start the flush timer (idempotent) */
-export function startFlushTimer() {
-  if (flushTimer) return;
-  flushTimer = setInterval(flushBuffers, FLUSH_INTERVAL);
-}
-
-/** Stop the flush timer and do a final flush */
-export function stopFlushTimer() {
-  if (flushTimer) {
-    clearInterval(flushTimer);
-    flushTimer = null;
-  }
-  flushBuffers();
-}
-
-function writeToBuffer(
-  path: string,
-  dataPoint: DataPoint,
-  isSelf: boolean,
-  context: string,
-) {
-  if (isSelf) {
-    selfBuffer[path] = dataPoint;
-  } else {
-    const mmsi = extractMMSI(context);
-    if (mmsi) {
-      if (!aisBuffer[mmsi]) {
-        aisBuffer[mmsi] = { paths: {}, lastSeen: dataPoint.timestamp };
-      }
-      aisBuffer[mmsi].paths[path] = dataPoint;
-      aisBuffer[mmsi].lastSeen = dataPoint.timestamp;
-    }
-  }
-}
-
-/** Process a Signal K delta message into buffers (not directly into stores) */
+/** Process a Signal K delta message and write directly to stores */
 export function processDelta(
   delta: SignalKDelta,
   sourceId: string,
@@ -202,6 +123,10 @@ export function processDelta(
 ) {
   const context = delta.context ?? "vessels.self";
   const isSelf = context === "vessels.self" || context === selfContext;
+
+  // Accumulate all updates from this delta before writing to stores
+  const selfUpdates: Record<string, DataPoint> = {};
+  const aisUpdates: Record<string, Record<string, DataPoint>> = {};
 
   for (const update of delta.updates) {
     const timestamp = new Date(update.timestamp).getTime() || Date.now();
@@ -218,7 +143,15 @@ export function processDelta(
             timestamp,
             source: sourceId,
           };
-          writeToBuffer(key, dp, isSelf, context);
+          if (isSelf) {
+            selfUpdates[key] = dp;
+          } else {
+            const mmsi = extractMMSI(context);
+            if (mmsi) {
+              if (!aisUpdates[mmsi]) aisUpdates[mmsi] = {};
+              aisUpdates[mmsi][key] = dp;
+            }
+          }
         }
       } else {
         const dataPoint: DataPoint = {
@@ -226,9 +159,27 @@ export function processDelta(
           timestamp,
           source: sourceId,
         };
-        writeToBuffer(path, dataPoint, isSelf, context);
+        if (isSelf) {
+          selfUpdates[path] = dataPoint;
+        } else {
+          const mmsi = extractMMSI(context);
+          if (mmsi) {
+            if (!aisUpdates[mmsi]) aisUpdates[mmsi] = {};
+            aisUpdates[mmsi][path] = dataPoint;
+          }
+        }
       }
     }
+  }
+
+  // Write accumulated updates to stores
+  if (Object.keys(selfUpdates).length > 0) {
+    updatePaths(selfUpdates);
+    updateFromSignalK();
+  }
+
+  for (const [mmsi, paths] of Object.entries(aisUpdates)) {
+    updateAISVessel(mmsi, paths);
   }
 }
 
@@ -260,7 +211,6 @@ export class SignalKClient {
   connect() {
     this.shouldReconnect = true;
     this.setState("connecting");
-    startFlushTimer();
 
     const ws = new WebSocket(`${this.wsUrl}?subscribe=none`);
 
@@ -368,7 +318,6 @@ export class SignalKClient {
       this.ws.close();
       this.ws = null;
     }
-    stopFlushTimer();
     this.setState("disconnected");
   }
 
