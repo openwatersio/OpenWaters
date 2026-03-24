@@ -1,5 +1,5 @@
 import { XMLBuilder } from "fast-xml-parser";
-import type { Track, TrackPoint, Marker } from "@/lib/database";
+import type { Track, TrackPoint, Marker, Route, RoutePoint } from "@/lib/database";
 
 const builder = new XMLBuilder({
   ignoreAttributes: false,
@@ -47,6 +47,35 @@ export function toGPX(track: Track, points: TrackPoint[]): string {
         trkseg: {
           trkpt,
         },
+      },
+    },
+  };
+
+  return builder.build(gpxObj);
+}
+
+/** Generate GPX 1.1 XML for a route and its points */
+export function routeToGPX(route: Route, points: RoutePoint[]): string {
+  const name = route.name || `Route ${route.id}`;
+
+  const rtept = points.map((p) => ({
+    "@_lat": p.latitude,
+    "@_lon": p.longitude,
+  }));
+
+  const gpxObj = {
+    "?xml": { "@_version": "1.0", "@_encoding": "UTF-8" },
+    gpx: {
+      "@_version": "1.1",
+      "@_creator": "Open Waters",
+      "@_xmlns": "http://www.topografix.com/GPX/1/1",
+      "@_xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+      "@_xsi:schemaLocation":
+        "http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd",
+      metadata: { name, time: route.created_at },
+      rte: {
+        name,
+        rtept,
       },
     },
   };

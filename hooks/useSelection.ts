@@ -2,7 +2,7 @@ import { useGlobalSearchParams, usePathname } from "expo-router";
 import { router } from "expo-router";
 import { useCallback, useMemo } from "react";
 
-export type FeatureType = "marker" | "track" | "vessel" | "aton" | "location";
+export type FeatureType = "marker" | "track" | "route" | "vessel" | "aton" | "location";
 
 export type Selection = {
   type: FeatureType;

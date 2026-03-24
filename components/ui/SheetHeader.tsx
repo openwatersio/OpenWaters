@@ -29,6 +29,7 @@ export default function SheetHeader({ title, subtitle, headerLeft, headerRight }
           )}
         </View>
       ),
+      headerLeft,
       headerRight: headerRight ?? (() => <CloseButton />),
     }} />
   );

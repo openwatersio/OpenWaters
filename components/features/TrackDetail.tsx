@@ -4,7 +4,7 @@ import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
 import { handleDelete, handleRename, trackDisplayName } from "@/hooks/useTracks";
 import { getTrack, getTrackPoints, TrackPoint, type Track } from "@/lib/database";
-import { exportTrackAsGPX } from "@/lib/exportTrack";
+import { exportTrackAsGPX } from "@/lib/export";
 import { formatDate, formatElapsedTime, formatTime } from "@/lib/format";
 import type { ChartDataPoint } from "@expo/ui/swift-ui";
 import {

@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import AtoNDetail from "@/components/features/AtoNDetail";
 import LocationDetail from "@/components/features/LocationDetail";
 import MarkerDetail from "@/components/features/MarkerDetail";
+import RouteDetail from "@/components/features/RouteDetail";
 import TrackDetail from "@/components/features/TrackDetail";
 import VesselDetail from "@/components/features/VesselDetail";
 
@@ -34,6 +35,8 @@ function FeatureDetail({ type, id }: { type: FeatureType; id: string }) {
       return <MarkerDetail id={id} />;
     case "track":
       return <TrackDetail id={id} />;
+    case "route":
+      return <RouteDetail id={id} />;
     case "vessel":
       return <VesselDetail id={id} />;
     case "aton":

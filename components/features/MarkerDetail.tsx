@@ -3,7 +3,7 @@ import { deleteMarker, useMarkers } from "@/hooks/useMarkers";
 import { usePosition } from "@/hooks/useNavigation";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
-import { exportMarkerAsGPX } from "@/lib/exportTrack";
+import { exportMarkerAsGPX } from "@/lib/export";
 import { formatBearing } from "@/lib/geo";
 import {
   Button,

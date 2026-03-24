@@ -1,8 +1,8 @@
-import { Button, Host } from "@expo/ui/swift-ui";
+import { Button, ButtonProps, Host } from "@expo/ui/swift-ui";
 import { buttonStyle, controlSize, labelStyle, tint } from "@expo/ui/swift-ui/modifiers";
 import { router } from "expo-router";
 
-export default function CloseButton() {
+export default function CloseButton(props: ButtonProps = {}) {
   return (
     <Host matchContents>
       <Button
@@ -15,6 +15,7 @@ export default function CloseButton() {
           controlSize("extraLarge"),
           tint("primary"),
         ]}
+        {...props}
       />
     </Host>
   );

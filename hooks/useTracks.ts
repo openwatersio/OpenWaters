@@ -5,7 +5,7 @@ import {
   type Track,
   type TrackWithStats,
 } from "@/lib/database";
-import { exportTrackAsGPX } from "@/lib/exportTrack";
+import { exportTrackAsGPX } from "@/lib/export";
 import { formatDate, formatDuration } from "@/lib/format";
 import { useEffect } from "react";
 import { create } from "zustand";

@@ -139,6 +139,24 @@ export default function LocationDetail({ id }: { id: string }) {
                   </Text>
                 </VStack>
               </Button>
+              <Button
+                onPress={() => {
+                  router.replace({ pathname: "/route/new", params: { to: `${lon},${lat}` } });
+                }}
+                modifiers={[
+                  buttonStyle("bordered"),
+                  controlSize("large"),
+                  frame({ maxWidth: 9999 }),
+                  tint("primary"),
+                ]}
+              >
+                <VStack alignment="center" spacing={6}>
+                  <Image systemName="point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath.fill" size={20} />
+                  <Text modifiers={[font({ size: 13, weight: "medium" })]}>
+                    Route
+                  </Text>
+                </VStack>
+              </Button>
             </HStack>
 
             {/* Map Features */}

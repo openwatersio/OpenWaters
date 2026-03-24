@@ -23,6 +23,12 @@ export default function MainSheet() {
             />
             <Button
               modifiers={[tint('primary')]}
+              systemImage="point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath.fill"
+              label="Routes"
+              onPress={() => router.push("/routes")}
+            />
+            <Button
+              modifiers={[tint('primary')]}
               systemImage="map"
               label="Charts"
               onPress={() => router.push("/charts")}
