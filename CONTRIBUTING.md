@@ -234,6 +234,12 @@ npm test
 4. **Respect the platform.** Native components for standard UI (`@expo/ui`). Custom only for chart overlays.
 5. **Offline-first.** Every feature works without connectivity. Online is an enhancement.
 
+## Contributor License Agreement
+
+All contributors must sign the [Contributor License Agreement](CLA.md) before their pull request can be merged. The CLA grants Open Water Software, LLC the rights needed to distribute your contributions (including through the iOS App Store) while you retain full copyright ownership of your work.
+
+You will be prompted to sign the CLA automatically when you open your first pull request.
+
 ## Safety
 
 This is navigation software. Incorrect calculations or rendering bugs can put people in danger.
