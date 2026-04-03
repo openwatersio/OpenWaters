@@ -1,5 +1,5 @@
-import { toGPX } from "@/lib/gpx";
-import type { Track, TrackPoint } from "@/lib/database";
+import { toGPX, routeToGPX } from "@/lib/gpx";
+import type { Track, TrackPoint, Route, RoutePoint } from "@/lib/database";
 
 const track: Track = {
   id: 1,
@@ -100,5 +100,50 @@ describe("toGPX", () => {
     const gpx = toGPX(unnamed, points);
 
     expect(gpx).toContain(`<name>Track ${track.started_at}</name>`);
+  });
+});
+
+const route: Route = {
+  id: 1,
+  name: "Harbor to Island",
+  created_at: "2025-06-15T08:00:00Z",
+  updated_at: "2025-06-15T08:00:00Z",
+};
+
+const routePoints: RoutePoint[] = [
+  { id: 1, route_id: 1, position: 0, latitude: 41.123, longitude: -71.456 },
+  { id: 2, route_id: 1, position: 1, latitude: 41.200, longitude: -71.500 },
+  { id: 3, route_id: 1, position: 2, latitude: 41.300, longitude: -71.550 },
+];
+
+describe("routeToGPX", () => {
+  it("produces valid GPX 1.1 XML with rte element", () => {
+    const gpx = routeToGPX(route, routePoints);
+
+    expect(gpx).toContain('<?xml version="1.0"');
+    expect(gpx).toContain('version="1.1"');
+    expect(gpx).toContain("<rte>");
+    expect(gpx).toContain("<name>Harbor to Island</name>");
+  });
+
+  it("includes route points with coordinates", () => {
+    const gpx = routeToGPX(route, routePoints);
+
+    expect(gpx).toContain('lat="41.123" lon="-71.456"');
+    expect(gpx).toContain('lat="41.3" lon="-71.55"');
+  });
+
+  it("does not include name elements in route points", () => {
+    const gpx = routeToGPX(route, routePoints);
+
+    // Route-level name exists, but rtept should not have nested name elements
+    expect(gpx).not.toMatch(/<rtept[^/]*>[\s\S]*<name>/);
+  });
+
+  it("uses route id as fallback name", () => {
+    const unnamed = { ...route, name: null };
+    const gpx = routeToGPX(unnamed, routePoints);
+
+    expect(gpx).toContain("<name>Route 1</name>");
   });
 });
