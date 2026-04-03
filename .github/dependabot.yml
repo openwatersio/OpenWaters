@@ -5,16 +5,29 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 100
+    # Expo manages versions of these packages via `npx expo install --fix`.
+    # Dependabot PRs for them will break compatibility.
+    ignore:
+      - dependency-name: "expo-*"
+      - dependency-name: "@expo/*"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+      - dependency-name: "react-test-renderer"
+      - dependency-name: "@react-native-async-storage/*"
+      - dependency-name: "@react-native-community/*"
+      - dependency-name: "@react-native-masked-view/*"
+      - dependency-name: "@react-native-picker/*"
+      - dependency-name: "@react-native-segmented-control/*"
+      - dependency-name: "@sentry/*"
+      - dependency-name: "@shopify/*"
+      - dependency-name: "@stripe/*"
+      - dependency-name: "jest-expo"
+      - dependency-name: "eslint-config-expo"
+      - dependency-name: "lottie-react-native"
+      - dependency-name: "sentry-expo"
     groups:
-      expo:
-        patterns:
-          - "expo*"
-          - "@expo/*"
-      react:
-        patterns:
-          - "react*"
-          - "@react*"
-          - "@types/react"
       development:
         dependency-type: "development"
   - package-ecosystem: "github-actions"
