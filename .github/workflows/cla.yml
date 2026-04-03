@@ -30,6 +30,7 @@ jobs:
           path-to-document: "https://github.com/${{ github.repository }}/blob/main/CLA.md"
           path-to-signatures: ".cla.json"
           branch: "main"
+          allowlist: "*[bot]"
           custom-notsigned-prcomment: |
             Thank you for this pull request! Before we can accept your contribution, you need to sign our [Contributor License Agreement](https://github.com/${{ github.repository }}/blob/main/CLA.md). [Read more about why this is necessary.](https://github.com/${{ github.repository }}/blob/main/docs/licensin.md)
 
