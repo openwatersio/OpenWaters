@@ -81,7 +81,7 @@ const mockDb = {
       const routeId = args[0];
       return rows.route_points
         .filter((p) => p.route_id === routeId)
-        .sort((a: any, b: any) => a.position - b.position);
+        .sort((a: any, b: any) => a.order - b.order);
     }
     return [];
   }),
@@ -181,7 +181,7 @@ const mockDb = {
       rows.route_points.push({
         id,
         route_id: args[0],
-        position: args[1],
+        order: args[1],
         latitude: args[2],
         longitude: args[3],
       });
@@ -199,9 +199,9 @@ const mockDb = {
       }
       return { changes: route ? 1 : 0 };
     }
-    if (sql.includes("UPDATE route_points SET position") && sql.includes("AND route_id")) {
+    if (sql.includes("UPDATE route_points SET") && sql.includes("order") && sql.includes("AND route_id")) {
       const point = rows.route_points.find((p) => p.id === args[1] && p.route_id === args[2]);
-      if (point) point.position = args[0];
+      if (point) point.order = args[0];
       return { changes: point ? 1 : 0 };
     }
     if (sql.match(/UPDATE route_points SET .+ WHERE id/)) {
@@ -413,7 +413,7 @@ describe("database", () => {
 
     it("deletes a route and its points", async () => {
       const { id } = await insertRoute();
-      await insertRoutePoint(id, { latitude: 47.6, longitude: -122.3, position: 0 });
+      await insertRoutePoint(id, { latitude: 47.6, longitude: -122.3, order: 0 });
 
       await deleteRoute(id);
 
@@ -429,15 +429,15 @@ describe("database", () => {
     it("inserts and retrieves points for a route", async () => {
       const { id: routeId } = await insertRoute();
 
-      await insertRoutePoint(routeId, { latitude: 47.6, longitude: -122.3, position: 0 });
-      await insertRoutePoint(routeId, { latitude: 47.7, longitude: -122.4, position: 1 });
+      await insertRoutePoint(routeId, { latitude: 47.6, longitude: -122.3, order: 0 });
+      await insertRoutePoint(routeId, { latitude: 47.7, longitude: -122.4, order: 1 });
 
       const points = await getRoutePoints(routeId);
       expect(points).toHaveLength(2);
       expect(points[0].latitude).toBe(47.6);
-      expect(points[0].position).toBe(0);
+      expect(points[0].order).toBe(0);
       expect(points[1].latitude).toBe(47.7);
-      expect(points[1].position).toBe(1);
+      expect(points[1].order).toBe(1);
     });
 
     it("updates a route point", async () => {
@@ -445,7 +445,7 @@ describe("database", () => {
       const point = await insertRoutePoint(routeId, {
         latitude: 47.6,
         longitude: -122.3,
-        position: 0,
+        order: 0,
       });
 
       await updateRoutePoint(point.id, { latitude: 47.65 });
@@ -456,8 +456,8 @@ describe("database", () => {
 
     it("deletes a single route point", async () => {
       const { id: routeId } = await insertRoute();
-      const p1 = await insertRoutePoint(routeId, { latitude: 47.6, longitude: -122.3, position: 0 });
-      await insertRoutePoint(routeId, { latitude: 47.7, longitude: -122.4, position: 1 });
+      const p1 = await insertRoutePoint(routeId, { latitude: 47.6, longitude: -122.3, order: 0 });
+      await insertRoutePoint(routeId, { latitude: 47.7, longitude: -122.4, order: 1 });
 
       await deleteRoutePoint(p1.id);
 
@@ -468,19 +468,19 @@ describe("database", () => {
 
     it("reorders route points", async () => {
       const { id: routeId } = await insertRoute();
-      const p1 = await insertRoutePoint(routeId, { latitude: 47.6, longitude: -122.3, position: 0 });
-      const p2 = await insertRoutePoint(routeId, { latitude: 47.7, longitude: -122.4, position: 1 });
-      const p3 = await insertRoutePoint(routeId, { latitude: 47.8, longitude: -122.5, position: 2 });
+      const p1 = await insertRoutePoint(routeId, { latitude: 47.6, longitude: -122.3, order: 0 });
+      const p2 = await insertRoutePoint(routeId, { latitude: 47.7, longitude: -122.4, order: 1 });
+      const p3 = await insertRoutePoint(routeId, { latitude: 47.8, longitude: -122.5, order: 2 });
 
       await reorderRoutePoints(routeId, [p3.id, p1.id, p2.id]);
 
       const points = await getRoutePoints(routeId);
       expect(points[0].id).toBe(p3.id);
-      expect(points[0].position).toBe(0);
+      expect(points[0].order).toBe(0);
       expect(points[1].id).toBe(p1.id);
-      expect(points[1].position).toBe(1);
+      expect(points[1].order).toBe(1);
       expect(points[2].id).toBe(p2.id);
-      expect(points[2].position).toBe(2);
+      expect(points[2].order).toBe(2);
     });
   });
 });

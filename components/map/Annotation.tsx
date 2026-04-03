@@ -1,40 +1,34 @@
 import useTheme from "@/hooks/useTheme";
 import { ViewAnnotation, ViewAnnotationProps } from "@maplibre/maplibre-react-native";
 import { useEffect, useRef } from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { StyleSheet } from "react-native";
 import Animated, {
   interpolate,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import OverlayView from "../ui/OverlayView";
 import { AnnotationIcon, AnnotationIconProps } from "./AnnotationIcon";
 
 const DOT_SIZE = 20;
 const PIN_SIZE = 44;
 const TAIL_HEIGHT = 11; // borderTopWidth(13) - marginTop(2)
 
-// With anchor="bottom", collapsed dot center needs to shift down
-const COLLAPSED_OFFSET = DOT_SIZE / 2;
+// With anchor="bottom", the collapsed dot needs to shift down to sit on the coordinate.
+// When collapsed the tail is invisible but still occupies layout space.
+const COLLAPSED_OFFSET = TAIL_HEIGHT + DOT_SIZE / 2;
 
 const SPRING_CONFIG = { damping: 20, stiffness: 300 };
 
 type AnnotationProps = Omit<ViewAnnotationProps, "children"> & {
   icon: AnnotationIconProps["name"];
   color: string;
-  label?: string;
-  onLabelPress?: () => void;
-  onPress?: () => void;
 };
 
 export function Annotation({
   icon,
   color,
-  label,
-  onLabelPress,
   selected,
-  onPress,
   onDrag,
   onDragStart,
   onDragEnd,
@@ -98,11 +92,6 @@ export function Annotation({
     transform: [{ scaleY: expansion.value }],
   }));
 
-  // Label: fades in
-  const labelStyle = useAnimatedStyle(() => ({
-    opacity: expansion.value,
-  }));
-
   return (
     <ViewAnnotation
       anchor="bottom"
@@ -122,30 +111,18 @@ export function Annotation({
       style={{ zIndex: selected ? 1 : 0 }}
       {...props}
     >
-      <Pressable onPress={onPress} hitSlop={16}>
-        <Animated.View style={containerStyle}>
-          {/* Circle (animates between dot and pin sizes) */}
-          <Animated.View style={[styles.circle, { backgroundColor: color, borderColor: theme.surface }, circleSize]}>
-            <Animated.View style={iconStyle}>
-              <AnnotationIcon name={icon} color="white" size={26} />
-            </Animated.View>
+      <Animated.View style={containerStyle}>
+        {/* Circle (animates between dot and pin sizes) */}
+        <Animated.View style={[styles.circle, { backgroundColor: color, borderColor: theme.surface }, circleSize]}>
+          <Animated.View style={iconStyle}>
+            <AnnotationIcon name={icon} color="white" size={26} />
           </Animated.View>
-
-          {/* Tail (fades in when expanded) */}
-          <Animated.View style={[styles.tail, { borderTopColor: theme.surface }, tailStyle]} />
-
-          {/* Label (fades in when expanded) */}
-          {label && (
-            <Animated.View style={labelStyle}>
-              <Pressable onPress={onLabelPress} disabled={!onLabelPress}>
-                <OverlayView style={styles.labelOverlay}>
-                  <Text style={[styles.label, { color: onLabelPress ? theme.danger : theme.textPrimary }]}>{label}</Text>
-                </OverlayView>
-              </Pressable>
-            </Animated.View>
-          )}
         </Animated.View>
-      </Pressable>
+
+        {/* Tail (fades in when expanded) */}
+        <Animated.View style={[styles.tail, { borderTopColor: theme.surface }, tailStyle]} />
+
+      </Animated.View>
     </ViewAnnotation>
   );
 }
@@ -164,16 +141,5 @@ const styles = StyleSheet.create({
     borderRightColor: "transparent",
     borderTopWidth: TAIL_HEIGHT + 2,
     marginTop: -2,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  labelOverlay: {
-    overflow: "hidden",
-    marginTop: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 30,
   },
 });

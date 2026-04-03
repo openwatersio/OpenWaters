@@ -70,7 +70,7 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
       CREATE TABLE IF NOT EXISTS route_points (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         route_id INTEGER NOT NULL,
-        position INTEGER NOT NULL,
+        "order" INTEGER NOT NULL,
         latitude REAL NOT NULL,
         longitude REAL NOT NULL,
         name TEXT,
@@ -314,14 +314,14 @@ export type Route = {
 export type RoutePoint = {
   id: number;
   route_id: number;
-  position: number;
+  order: number;
   latitude: number;
   longitude: number;
 };
 
 export type RouteWithStats = Route & {
   point_count: number;
-  total_distance: number; // meters, computed from point positions in store
+  total_distance: number; // meters, computed from point order in store
 };
 
 export async function insertRoute(name?: string): Promise<Route> {
@@ -347,9 +347,7 @@ export async function getRoute(id: number): Promise<Route | null> {
 
 export async function getAllRoutes(): Promise<Route[]> {
   const db = await getDatabase();
-  return db.getAllAsync<Route>(
-    "SELECT * FROM routes ORDER BY updated_at DESC",
-  );
+  return db.getAllAsync<Route>("SELECT * FROM routes ORDER BY updated_at DESC");
 }
 
 export async function getAllRoutesWithStats(): Promise<RouteWithStats[]> {
@@ -370,7 +368,10 @@ export async function updateRoute(
   const db = await getDatabase();
   const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
   if (entries.length === 0) return;
-  const setClauses = [...entries.map(([k]) => `${k} = ?`), "updated_at = ?"].join(", ");
+  const setClauses = [
+    ...entries.map(([k]) => `${k} = ?`),
+    "updated_at = ?",
+  ].join(", ");
   const values = entries.map(([, v]) => v);
   await db.runAsync(
     `UPDATE routes SET ${setClauses} WHERE id = ?`,
@@ -389,21 +390,21 @@ export async function deleteRoute(id: number): Promise<void> {
 export async function getRoutePoints(routeId: number): Promise<RoutePoint[]> {
   const db = await getDatabase();
   return db.getAllAsync<RoutePoint>(
-    "SELECT * FROM route_points WHERE route_id = ? ORDER BY position ASC",
+    "SELECT * FROM route_points WHERE route_id = ? ORDER BY \"order\" ASC",
     routeId,
   );
 }
 
 export async function insertRoutePoint(
   routeId: number,
-  fields: { latitude: number; longitude: number; position: number },
+  fields: { latitude: number; longitude: number; order: number },
 ): Promise<RoutePoint> {
   const db = await getDatabase();
   const result = await db.runAsync(
-    `INSERT INTO route_points (route_id, position, latitude, longitude)
+    `INSERT INTO route_points (route_id, "order", latitude, longitude)
      VALUES (?, ?, ?, ?)`,
     routeId,
-    fields.position,
+    fields.order,
     fields.latitude,
     fields.longitude,
   );
@@ -447,7 +448,7 @@ export async function reorderRoutePoints(
   const db = await getDatabase();
   for (let i = 0; i < pointIds.length; i++) {
     await db.runAsync(
-      "UPDATE route_points SET position = ? WHERE id = ? AND route_id = ?",
+      "UPDATE route_points SET \"order\" = ? WHERE id = ? AND route_id = ?",
       i,
       pointIds[i],
       routeId,

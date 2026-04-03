@@ -13,10 +13,12 @@ import { useSheetStore } from "@/hooks/useSheetPosition";
 import useTheme from "@/hooks/useTheme";
 import { getRoutePoints, type RoutePoint } from "@/lib/database";
 import type { LngLatBounds } from "@maplibre/maplibre-react-native";
-import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
+import { GeoJSONSource, Layer, ViewAnnotation } from "@maplibre/maplibre-react-native";
 import { getBounds } from "geolib";
 import { useEffect, useMemo, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import OverlayView from "./ui/OverlayView";
 
 type Coord = [longitude: number, latitude: number];
 
@@ -43,7 +45,7 @@ function DraftRouteOverlay() {
   const points = useRouteDraft((s) => s.points);
   const selectedIndex = useRouteDraft((s) => s.selectedIndex);
   const sheetHeight = useSheetStore((s) => {
-    const entry = s.sheets["route-new"];
+    const entry = s.sheets["route-edit"];
     return entry?.height ?? 0;
   });
   const insets = useSafeAreaInsets();
@@ -283,18 +285,46 @@ function WaypointAnnotation({
   onRemove?: () => void;
   onDragEnd?: (lngLat: [number, number]) => void;
 }) {
+  const theme = useTheme();
+  const lngLat: [number, number] = [point.longitude, point.latitude];
+
   return (
-    <Annotation
-      id={id}
-      lngLat={[point.longitude, point.latitude]}
-      icon="point"
-      color={color}
-      selected={selected}
-      draggable={draggable}
-      onPress={onPress}
-      label={selected && onRemove ? "Remove" : undefined}
-      onLabelPress={onRemove}
-      onDragEnd={onDragEnd ? (e) => onDragEnd(e.nativeEvent.lngLat) : undefined}
-    />
+    <>
+      <Annotation
+        id={id}
+        lngLat={lngLat}
+        icon="point"
+        color={color}
+        selected={selected}
+        draggable={draggable}
+        onPress={onPress}
+        onDragEnd={onDragEnd ? (e) => onDragEnd(e.nativeEvent.lngLat) : undefined}
+      />
+      {selected && onRemove && (
+        <ViewAnnotation
+          id={`${id}-remove`}
+          lngLat={lngLat}
+          anchor="top"
+          offset={[0, 8]}
+          onPress={onRemove}
+        >
+          <TouchableOpacity onPress={onRemove} style={waypointStyles.removeButton}>
+            <OverlayView style={waypointStyles.removeButton}>
+              <Text style={{ color: theme.danger, fontSize: 13, fontWeight: "600" }}>
+                Remove
+              </Text>
+            </OverlayView>
+          </TouchableOpacity>
+        </ViewAnnotation>
+      )}
+    </>
   );
 }
+
+const waypointStyles = StyleSheet.create({
+  removeButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 30,
+  },
+});

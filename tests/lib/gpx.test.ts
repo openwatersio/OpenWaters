@@ -111,9 +111,9 @@ const route: Route = {
 };
 
 const routePoints: RoutePoint[] = [
-  { id: 1, route_id: 1, position: 0, latitude: 41.123, longitude: -71.456 },
-  { id: 2, route_id: 1, position: 1, latitude: 41.200, longitude: -71.500 },
-  { id: 3, route_id: 1, position: 2, latitude: 41.300, longitude: -71.550 },
+  { id: 1, route_id: 1, order: 0, latitude: 41.123, longitude: -71.456 },
+  { id: 2, route_id: 1, order: 1, latitude: 41.200, longitude: -71.500 },
+  { id: 3, route_id: 1, order: 2, latitude: 41.300, longitude: -71.550 },
 ];
 
 describe("routeToGPX", () => {

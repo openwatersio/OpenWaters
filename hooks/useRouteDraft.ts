@@ -1,27 +1,57 @@
+import { getRoute, getRoutePoints } from "@/lib/database";
 import { create } from "zustand";
 
+let nextKey = 0;
+
 export type DraftWaypoint = {
+  key: number;
   latitude: number;
   longitude: number;
 };
 
 type State = {
+  routeId: number | null;
+  name: string | null;
   points: DraftWaypoint[];
   selectedIndex: number | null;
 };
 
 export const useRouteDraft = create<State>()(() => ({
+  routeId: null,
+  name: null,
   points: [],
   selectedIndex: null,
 }));
 
-export function initDraft(points: DraftWaypoint[]) {
-  useRouteDraft.setState({ points, selectedIndex: null });
+export function initDraft(points: Omit<DraftWaypoint, "key">[]) {
+  useRouteDraft.setState({
+    routeId: null,
+    name: null,
+    points: points.map((p) => ({ ...p, key: nextKey++ })),
+    selectedIndex: null,
+  });
 }
 
-export function addDraftPoint(point: DraftWaypoint) {
+export async function initDraftFromRoute(routeId: number) {
+  const [route, points] = await Promise.all([
+    getRoute(routeId),
+    getRoutePoints(routeId),
+  ]);
+  useRouteDraft.setState({
+    routeId,
+    name: route?.name ?? null,
+    points: points.map((p) => ({ key: nextKey++, latitude: p.latitude, longitude: p.longitude })),
+    selectedIndex: null,
+  });
+}
+
+export function setDraftName(name: string | null) {
+  useRouteDraft.setState({ name });
+}
+
+export function addDraftPoint(point: Omit<DraftWaypoint, "key">) {
   useRouteDraft.setState((s) => ({
-    points: [...s.points, point],
+    points: [...s.points, { ...point, key: nextKey++ }],
   }));
 }
 
@@ -34,11 +64,20 @@ export function updateDraftPoint(
   }));
 }
 
-export function insertDraftPointAt(index: number, point: DraftWaypoint) {
+export function insertDraftPointAt(index: number, point: Omit<DraftWaypoint, "key">) {
   useRouteDraft.setState((s) => {
     const pts = [...s.points];
-    pts.splice(index, 0, point);
+    pts.splice(index, 0, { ...point, key: nextKey++ });
     return { points: pts };
+  });
+}
+
+export function moveDraftPoint(fromIndex: number, toIndex: number) {
+  useRouteDraft.setState((s) => {
+    const pts = [...s.points];
+    const [moved] = pts.splice(fromIndex, 1);
+    pts.splice(toIndex, 0, moved);
+    return { points: pts, selectedIndex: null };
   });
 }
 

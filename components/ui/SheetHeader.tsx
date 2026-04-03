@@ -7,11 +7,12 @@ import CloseButton from "./CloseButton";
 type Props = {
   title: string;
   subtitle?: string;
+  onPressTitle?: () => void;
   headerLeft?: () => ReactNode;
   headerRight?: () => ReactNode;
 };
 
-export default function SheetHeader({ title, subtitle, headerLeft, headerRight }: Props) {
+export default function SheetHeader({ title, subtitle, onPressTitle, headerLeft, headerRight }: Props) {
   const theme = useTheme();
   const { width } = Dimensions.get("window");
 
@@ -19,7 +20,11 @@ export default function SheetHeader({ title, subtitle, headerLeft, headerRight }
     <Stack.Screen options={{
       headerTitle: () => (
         <View style={{ gap: 2, width: width - 160, alignItems: "center" }}>
-          <Text numberOfLines={1} style={{ color: theme.textPrimary, fontSize: 20, fontWeight: "700" }}>
+          <Text
+            numberOfLines={1}
+            onPress={onPressTitle}
+            style={{ color: theme.textPrimary, fontSize: 20, fontWeight: "700" }}
+          >
             {title}
           </Text>
           {subtitle != null && (

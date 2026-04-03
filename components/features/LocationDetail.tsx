@@ -141,7 +141,7 @@ export default function LocationDetail({ id }: { id: string }) {
               </Button>
               <Button
                 onPress={() => {
-                  router.replace({ pathname: "/route/new", params: { to: `${lon},${lat}` } });
+                  router.replace({ pathname: "/route/edit", params: { to: `${lon},${lat}` } });
                 }}
                 modifiers={[
                   buttonStyle("bordered"),

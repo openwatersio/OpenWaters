@@ -4,12 +4,11 @@ import { useRouteNavigation } from "@/hooks/useRouteNavigation";
 import {
   handleDeleteRoute,
   handleRenameRoute,
-  loadRoutes,
   useLoadRoutes,
   useRoutes,
 } from "@/hooks/useRoutes";
 import useTheme from "@/hooks/useTheme";
-import { insertRoute, type RouteWithStats } from "@/lib/database";
+import { type RouteWithStats } from "@/lib/database";
 import { exportRouteAsGPX } from "@/lib/export";
 import {
   Button,
@@ -120,10 +119,8 @@ export default function RouteList() {
           </Host>
         ),
         headerRight: () => (
-          <TouchableOpacity onPress={async () => {
-            const route = await insertRoute();
-            await loadRoutes();
-            router.push({ pathname: "/route/edit", params: { id: route.id } });
+          <TouchableOpacity onPress={() => {
+            router.push("/route/edit");
           }}>
             <SymbolView name="plus" tintColor={theme.textPrimary} />
           </TouchableOpacity>
