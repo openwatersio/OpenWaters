@@ -26,7 +26,7 @@
     "@expo/vector-icons": "^15.0.2",
     "@maplibre/maplibre-react-native": "11.0.0-beta.24",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@react-navigation/bottom-tabs": "^7.3.10",
+    "@react-navigation/bottom-tabs": "^7.15.9",
     "@react-navigation/elements": "^2.6.4",
     "@react-navigation/native": "^7.1.6",
     "coordinate-format": "^1.0.0",
