@@ -52,7 +52,7 @@
     "expo-task-manager": "~55.0.12",
     "expo-web-browser": "~55.0.12",
     "fast-xml-parser": "^5.5.10",
-    "geolib": "^3.3.4",
+    "geolib": "^3.3.14",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.4",
