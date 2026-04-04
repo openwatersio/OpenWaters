@@ -2,7 +2,7 @@ import { flyTo } from "@/components/map/NavigationCamera";
 import CloseButton from "@/components/ui/CloseButton";
 import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
-import { useNavigationState } from "@/hooks/useNavigationState";
+import { useNavigation } from "@/hooks/useNavigation";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import {
   addDraftPoint,
@@ -86,9 +86,9 @@ export default function EditRouteScreen() {
     } else {
       initDraft([]);
 
-      const location = useNavigationState.getState();
-      if (location.coords) {
-        addDraftPoint(location.coords);
+      const { latitude, longitude } = useNavigation.getState();
+      if (latitude && longitude) {
+        addDraftPoint({ latitude, longitude });
       }
 
       if (to) {
