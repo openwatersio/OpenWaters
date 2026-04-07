@@ -56,7 +56,15 @@
       "expo-image",
       "expo-sqlite",
       "expo-sharing",
-      "react-native-map-link"
+      "react-native-map-link",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "18.0"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

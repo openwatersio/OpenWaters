@@ -9,7 +9,6 @@ import {
 } from "@maplibre/maplibre-react-native";
 import { memo, useEffect } from "react";
 import Reanimated, {
-  createAnimatedPropAdapter,
   Easing,
   useAnimatedProps,
   useAnimatedStyle,
@@ -30,14 +29,6 @@ const TIMING_CONFIG = { duration: ANIMATION_DURATION, easing: Easing.linear };
 
 const AnimatedMarker = Reanimated.createAnimatedComponent(Marker);
 const AnimatedGeoJSONSource = Reanimated.createAnimatedComponent(GeoJSONSource);
-
-// GeoJSONSource expects `data` as a serialized string on the native side.
-const geoJSONDataAdapter = createAnimatedPropAdapter((props) => {
-  "worklet";
-  if (props.data !== undefined) {
-    props.data = JSON.stringify(props.data);
-  }
-}, ["data"]);
 
 /** Normalize `to` so that (to - from) is the shortest path in [-180, 180]. */
 function shortestRotationTarget(from: number, to: number): number {
@@ -120,62 +111,57 @@ export const NavigationPuck = memo(function NavigationPuck() {
 
   // COG line: compute both segments on the UI thread each frame from animated
   // position, course, and speed. Produces an empty collection when the vessel
-  // is below the speed threshold.
-  const cogAnimatedProps = useAnimatedProps(
-    () => {
-      const lat = latitude.value;
-      const lng = longitude.value;
-      const sog = speed.value;
-      if (sog <= MIN_SOG_FOR_COG_LINE) {
-        return {
-          data: { type: "FeatureCollection" as const, features: [] },
-        };
-      }
-      const courseRad = (courseDeg.value * Math.PI) / 180;
-      const cosLat = Math.cos((lat * Math.PI) / 180);
-      const sinC = Math.sin(courseRad);
-      const cosC = Math.cos(courseRad);
+  // is below the speed threshold. The native GeoJSONSource expects `data` as
+  // a JSON string, so we serialize inside the worklet.
+  const cogAnimatedProps = useAnimatedProps(() => {
+    const lat = latitude.value;
+    const lng = longitude.value;
+    const sog = speed.value;
+    if (sog <= MIN_SOG_FOR_COG_LINE) {
+      return { data: '{"type":"FeatureCollection","features":[]}' };
+    }
+    const courseRad = (courseDeg.value * Math.PI) / 180;
+    const cosLat = Math.cos((lat * Math.PI) / 180);
+    const sinC = Math.sin(courseRad);
+    const cosC = Math.cos(courseRad);
 
-      const projDist = sog * COG_PROJECTION_SECONDS;
-      const projLat = lat + (projDist * cosC) / 110540;
-      const projLng = lng + (projDist * sinC) / (111320 * cosLat);
+    const projDist = sog * COG_PROJECTION_SECONDS;
+    const projLat = lat + (projDist * cosC) / 110540;
+    const projLng = lng + (projDist * sinC) / (111320 * cosLat);
 
-      const extLat = lat + (EXTENDED_DISTANCE_METERS * cosC) / 110540;
-      const extLng = lng + (EXTENDED_DISTANCE_METERS * sinC) / (111320 * cosLat);
+    const extLat = lat + (EXTENDED_DISTANCE_METERS * cosC) / 110540;
+    const extLng = lng + (EXTENDED_DISTANCE_METERS * sinC) / (111320 * cosLat);
 
-      return {
-        data: {
-          type: "FeatureCollection" as const,
-          features: [
-            {
-              type: "Feature" as const,
-              properties: { segment: "extended" },
-              geometry: {
-                type: "LineString" as const,
-                coordinates: [
-                  [projLng, projLat],
-                  [extLng, extLat],
-                ],
-              },
+    return {
+      data: JSON.stringify({
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            properties: { segment: "extended" },
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [projLng, projLat],
+                [extLng, extLat],
+              ],
             },
-            {
-              type: "Feature" as const,
-              properties: { segment: "projected" },
-              geometry: {
-                type: "LineString" as const,
-                coordinates: [
-                  [lng, lat],
-                  [projLng, projLat],
-                ],
-              },
+          },
+          {
+            type: "Feature",
+            properties: { segment: "projected" },
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [lng, lat],
+                [projLng, projLat],
+              ],
             },
-          ],
-        },
-      };
-    },
-    null,
-    geoJSONDataAdapter,
-  );
+          },
+        ],
+      }),
+    };
+  });
 
   if (!hasFix) return null;
 

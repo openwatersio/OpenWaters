@@ -1,4 +1,4 @@
-import { Annotation } from "@/components/map/Annotation";
+import { Annotation, AnnotationProps } from "@/components/map/Annotation";
 import { fitBounds } from "@/components/map/NavigationCamera";
 import {
   removeDraftPoint,
@@ -60,6 +60,8 @@ function DraftRouteOverlay() {
     if (coords.length < 2) return;
     const { minLng, minLat, maxLng, maxLat } = getBounds(coords);
     const routeBounds: LngLatBounds = [minLng, minLat, maxLng, maxLat];
+    // FIXME: this zooms way out and then back in. Figoure out how to make the map movement minimal
+    // FIXME: this should maybe only run on first load, not every coords change
     fitBounds(routeBounds, {
       padding: { top: insets.top + 16, right: 16, bottom: 16 + sheetHeight, left: 16 },
       duration: 300,
@@ -99,13 +101,15 @@ function DraftRouteOverlay() {
           key={i}
           id={`draft-wp-${i}`}
           point={point}
+          index={i}
           color={theme.primary}
           selected={i === selectedIndex}
           draggable
           onPress={() => selectDraftPoint(i === selectedIndex ? null : i)}
           onRemove={points.length > 1 ? () => removeDraftPoint(i) : undefined}
-          onDragEnd={(lngLat) => {
-            updateDraftPoint(i, { latitude: lngLat[1], longitude: lngLat[0] });
+          onDragEnd={(e) => {
+            const [longitude, latitude] = e.nativeEvent.lngLat;
+            updateDraftPoint(i, { latitude, longitude });
           }}
         />
       ))}
@@ -255,6 +259,7 @@ function RouteDisplay({ routeId, isNavigation }: { routeId: number; isNavigation
             key={point.id}
             id={`route-wp-${point.id}`}
             point={point}
+            index={i}
             color={isCompleted ? theme.textTertiary : theme.primary}
             selected={isActive}
           />
@@ -266,37 +271,40 @@ function RouteDisplay({ routeId, isNavigation }: { routeId: number; isNavigation
 
 // --- Shared waypoint annotation ---
 
+type WaypointAnnotationProps = Omit<AnnotationProps, "lngLat"> & {
+  id: string;
+  point: DraftWaypoint | RoutePoint;
+  index: number;
+  onRemove?: () => void;
+}
+
 function WaypointAnnotation({
   id,
   point,
+  index,
   color,
   selected,
   draggable,
   onPress,
   onRemove,
   onDragEnd,
-}: {
-  id: string;
-  point: DraftWaypoint | RoutePoint;
-  color: string;
-  selected?: boolean;
-  draggable?: boolean;
-  onPress?: () => void;
-  onRemove?: () => void;
-  onDragEnd?: (lngLat: [number, number]) => void;
-}) {
+}: WaypointAnnotationProps) {
   const theme = useTheme();
   const lngLat: [number, number] = [point.longitude, point.latitude];
+
+  console.log("Rendering waypoint", { id, lngLat, selected, draggable });
 
   return (
     <>
       <Annotation
         id={id}
         lngLat={lngLat}
-        icon="point"
+        label={String(index + 1)}
         color={color}
         selected={selected}
         draggable={draggable}
+        onDragStart={(e) => console.log("DRAG start", e)}
+        onDrag={(e) => console.log("DRAG", e)}
         onPress={onPress}
         onDragEnd={onDragEnd}
       />

@@ -1,3 +1,6 @@
+import MarkerButton from "@/components/toolbar/MarkerButton";
+import RouteButton from "@/components/toolbar/RouteButton";
+import SheetBottomToolbar from "@/components/toolbar/SheetBottomToolbar";
 import SheetHeader from "@/components/ui/SheetHeader";
 import { useAISVessel } from "@/hooks/useAIS";
 import { useNavigation, usePosition } from "@/hooks/useNavigation";
@@ -89,6 +92,7 @@ export default function VesselDetail({ id }: { id: string }) {
 
   const data = vessel?.data;
   const position = data ? getPosition(data["navigation.position"]?.value) : null;
+
   const name = data ? getString(data["name"]?.value) : undefined;
   const callSign = data ? getString(data["communication.callsignVhf"]?.value) : undefined;
   const shipType = data ? getNumber(data["design.aisShipType"]?.value) : undefined;
@@ -164,6 +168,12 @@ export default function VesselDetail({ id }: { id: string }) {
           distance && bearing && `${toDistance(distance).value} ${toDistance(distance).abbr} @ ${formatBearing(bearing)}`,
         ].filter(Boolean).join(" · ")}
       />
+      {position && (
+        <SheetBottomToolbar>
+          <MarkerButton latitude={position.latitude} longitude={position.longitude} />
+          <RouteButton latitude={position.latitude} longitude={position.longitude} />
+        </SheetBottomToolbar>
+      )}
       <Host style={{ flex: 1 }}>
         <Form>
           <Section title="Navigation">

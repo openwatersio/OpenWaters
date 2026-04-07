@@ -1,0 +1,49 @@
+diff --git a/node_modules/expo-router/ios/Toolbar/RouterToolbarHostView.swift b/node_modules/expo-router/ios/Toolbar/RouterToolbarHostView.swift
+index 3b2a9ad..8b3f0a2 100644
+--- a/node_modules/expo-router/ios/Toolbar/RouterToolbarHostView.swift
++++ b/node_modules/expo-router/ios/Toolbar/RouterToolbarHostView.swift
+@@ -58,8 +58,26 @@ class RouterToolbarHostView: RouterViewWithLogger, LinkPreviewMenuUpdatable {
+   }
+ 
+   private func performToolbarUpdate() {
+-    if let controller = self.findViewController() {
+-      if #available(iOS 18.0, *) {
++    performToolbarUpdate(retriesRemaining: 5)
++  }
++
++  private func performToolbarUpdate(retriesRemaining: Int) {
++    // PATCH: The screen's UIViewController may not yet be inside its
++    // UINavigationController on the first run after a sheet is presented.
++    // In that state setToolbarItems/setToolbarHidden silently no-op and the
++    // bottom toolbar stays empty until something else triggers another update
++    // (e.g. user collapses + re-expands the sheet, firing didMoveToWindow).
++    // Retry briefly until the controller hierarchy is in place.
++    guard let controller = self.findViewController(),
++          controller.navigationController != nil else {
++      if retriesRemaining > 0 {
++        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
++          self?.performToolbarUpdate(retriesRemaining: retriesRemaining - 1)
++        }
++      }
++      return
++    }
++    if #available(iOS 18.0, *) {
+         let items = toolbarItemsArray.compactMap { identifier -> UIBarButtonItem? in
+           if let item = toolbarItemsMap[identifier] {
+             if item.routerHidden {
+@@ -112,11 +130,10 @@ class RouterToolbarHostView: RouterViewWithLogger, LinkPreviewMenuUpdatable {
+           return nil
+         }
+ 
+-        controller.setToolbarItems(items, animated: true)
+-        controller.navigationController?.setToolbarHidden(
+-          false, animated: true)
+-        return
+-      }
++      controller.setToolbarItems(items, animated: true)
++      controller.navigationController?.setToolbarHidden(
++        false, animated: true)
++      return
+     }
+   }
+ 

@@ -1,13 +1,13 @@
+import MarkerButton from "@/components/toolbar/MarkerButton";
+import RouteButton from "@/components/toolbar/RouteButton";
+import SheetBottomToolbar from "@/components/toolbar/SheetBottomToolbar";
 import SheetHeader from "@/components/ui/SheetHeader";
 import { mapRef } from "@/hooks/useMapRef";
-import { addMarker } from "@/hooks/useMarkers";
 import { usePosition } from "@/hooks/useNavigation";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
 import { formatBearing } from "@/lib/geo";
-import { getDistance, getGreatCircleBearing } from "geolib";
 import {
-  Button,
   Host, HStack,
   Image,
   ScrollView,
@@ -17,18 +17,15 @@ import {
 } from "@expo/ui/swift-ui";
 import {
   background,
-  buttonStyle,
-  controlSize,
   cornerRadius,
   font,
   foregroundStyle,
-  frame,
   monospacedDigit,
-  padding,
-  tint
+  padding
 } from "@expo/ui/swift-ui/modifiers";
 import { CoordinateFormat } from "coordinate-format";
-import { router, Stack } from "expo-router";
+import { Stack } from "expo-router";
+import { getDistance, getGreatCircleBearing } from "geolib";
 import { useEffect, useMemo, useState } from "react";
 import { showLocation } from "react-native-map-link";
 
@@ -86,6 +83,10 @@ export default function LocationDetail({ id }: { id: string }) {
           Open In…
         </Stack.Toolbar.Button>
       </Stack.Toolbar>
+      <SheetBottomToolbar>
+        <MarkerButton latitude={lat} longitude={lon} />
+        <RouteButton latitude={lat} longitude={lon} />
+      </SheetBottomToolbar>
       <Host style={{ flex: 1 }}>
         <ScrollView showsIndicators={false}>
           <VStack spacing={16} modifiers={[padding({ horizontal: 20, top: 16 })]}>
@@ -108,47 +109,6 @@ export default function LocationDetail({ id }: { id: string }) {
                 <Spacer />
               </HStack>
             )}
-
-            {/* Action Buttons */}
-            <HStack spacing={10}>
-              <Button
-                onPress={async () => {
-                  const marker = await addMarker({ latitude: lat, longitude: lon });
-                  router.replace({ pathname: "/marker/edit", params: { id: marker.id } });
-                }}
-                modifiers={[
-                  buttonStyle("bordered"),
-                  controlSize("large"),
-                  frame({ maxWidth: 9999 }),
-                  tint("primary"),
-                ]}
-              >
-                <VStack alignment="center" spacing={6}>
-                  <Image systemName="mappin.and.ellipse" size={20} />
-                  <Text modifiers={[font({ size: 13, weight: "medium" })]}>
-                    Marker
-                  </Text>
-                </VStack>
-              </Button>
-              <Button
-                onPress={() => {
-                  router.replace({ pathname: "/route/edit", params: { to: `${lon},${lat}` } });
-                }}
-                modifiers={[
-                  buttonStyle("bordered"),
-                  controlSize("large"),
-                  frame({ maxWidth: 9999 }),
-                  tint("primary"),
-                ]}
-              >
-                <VStack alignment="center" spacing={6}>
-                  <Image systemName="point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath.fill" size={20} />
-                  <Text modifiers={[font({ size: 13, weight: "medium" })]}>
-                    Route
-                  </Text>
-                </VStack>
-              </Button>
-            </HStack>
 
             {/* Map Features */}
             {features.length > 0 && (

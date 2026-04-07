@@ -93,6 +93,7 @@ export default function RootLayout() {
           sheetAllowedDetents: [0.15, 0.4],
           sheetInitialDetentIndex: 0,
           sheetGrabberVisible: true,
+          headerShown: false,
         }} />
         <Stack.Screen name="markers/index" options={{
           presentation: "formSheet",

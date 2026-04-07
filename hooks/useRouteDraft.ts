@@ -32,7 +32,7 @@ export function initDraft(points: Omit<DraftWaypoint, "key">[]) {
   });
 }
 
-export async function initDraftFromRoute(routeId: number) {
+export async function editRoute(routeId: number) {
   const [route, points] = await Promise.all([
     getRoute(routeId),
     getRoutePoints(routeId),
@@ -40,7 +40,11 @@ export async function initDraftFromRoute(routeId: number) {
   useRouteDraft.setState({
     routeId,
     name: route?.name ?? null,
-    points: points.map((p) => ({ key: nextKey++, latitude: p.latitude, longitude: p.longitude })),
+    points: points.map((p) => ({
+      key: nextKey++,
+      latitude: p.latitude,
+      longitude: p.longitude,
+    })),
     selectedIndex: null,
   });
 }
@@ -64,7 +68,10 @@ export function updateDraftPoint(
   }));
 }
 
-export function insertDraftPointAt(index: number, point: Omit<DraftWaypoint, "key">) {
+export function insertDraftPointAt(
+  index: number,
+  point: Omit<DraftWaypoint, "key">,
+) {
   useRouteDraft.setState((s) => {
     const pts = [...s.points];
     pts.splice(index, 0, { ...point, key: nextKey++ });
@@ -84,9 +91,12 @@ export function moveDraftPoint(fromIndex: number, toIndex: number) {
 export function removeDraftPoint(index: number) {
   useRouteDraft.setState((s) => ({
     points: s.points.filter((_, i) => i !== index),
-    selectedIndex: s.selectedIndex === index ? null
-      : s.selectedIndex !== null && s.selectedIndex > index ? s.selectedIndex - 1
-      : s.selectedIndex,
+    selectedIndex:
+      s.selectedIndex === index
+        ? null
+        : s.selectedIndex !== null && s.selectedIndex > index
+          ? s.selectedIndex - 1
+          : s.selectedIndex,
   }));
 }
 
@@ -94,6 +104,6 @@ export function selectDraftPoint(index: number | null) {
   useRouteDraft.setState({ selectedIndex: index });
 }
 
-export function clearDraft() {
+export function clearRouteDraft() {
   useRouteDraft.setState({ points: [], selectedIndex: null });
 }

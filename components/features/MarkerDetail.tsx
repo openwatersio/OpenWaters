@@ -1,28 +1,18 @@
+import DistanceAndBearingText from "@/components/DistanceAndBearingText";
+import RouteButton from "@/components/toolbar/RouteButton";
+import SheetBottomToolbar from "@/components/toolbar/SheetBottomToolbar";
 import SheetHeader from "@/components/ui/SheetHeader";
 import { deleteMarker, useMarkers } from "@/hooks/useMarkers";
-import { usePosition } from "@/hooks/useNavigation";
-import { toDistance } from "@/hooks/usePreferredUnits";
-import useTheme from "@/hooks/useTheme";
 import { exportMarkerAsGPX } from "@/lib/export";
-import { formatBearing } from "@/lib/geo";
 import {
   Button,
   Form,
   Host,
-  HStack,
-  Image,
   Section,
-  Spacer,
   Text
 } from "@expo/ui/swift-ui";
-import {
-  font,
-  foregroundStyle,
-  monospacedDigit
-} from "@expo/ui/swift-ui/modifiers";
 import { CoordinateFormat } from "coordinate-format";
 import { router, Stack } from "expo-router";
-import { getDistance, getGreatCircleBearing } from "geolib";
 import { useCallback, useMemo } from "react";
 import { Alert } from "react-native";
 import { showLocation } from "react-native-map-link";
@@ -36,21 +26,7 @@ function formatCoords(lat: number, lon: number): [string, string] {
 
 export default function MarkerDetail({ id }: { id: string }) {
   const markerId = Number(id);
-
   const marker = useMarkers((s) => s.markers.find((m) => m.id === markerId) ?? null);
-
-  const position = usePosition();
-  const theme = useTheme();
-
-  const distBearing = useMemo(() => {
-    if (!position || !marker) return null;
-    const dist = getDistance(position, marker);
-    const bearing = getGreatCircleBearing(position, marker);
-    return { dist, bearing };
-  }, [marker, position]);
-
-  const distFormatted = distBearing ? toDistance(distBearing.dist) : null;
-  const bearingFormatted = distBearing ? formatBearing(distBearing.bearing) : null;
 
   const [latStr, lonStr] = useMemo(
     () => marker ? formatCoords(marker.latitude, marker.longitude) : ["—", "—"],
@@ -110,19 +86,19 @@ export default function MarkerDetail({ id }: { id: string }) {
           </Stack.Toolbar.MenuAction>
         </Stack.Toolbar.Menu>
       </Stack.Toolbar>
+      {marker && (
+        <SheetBottomToolbar>
+          <RouteButton latitude={marker.latitude} longitude={marker.longitude} />
+        </SheetBottomToolbar>
+      )}
       <Host style={{ flex: 1 }}>
         <Form>
           <Section>
-            {/* Distance & Bearing */}
-            {distBearing && (
-              <HStack spacing={6}>
-                <Spacer />
-                <Image systemName="location.fill" size={14} color={theme.textSecondary} />
-                <Text modifiers={[font({ size: 15, weight: "medium" }), monospacedDigit(), foregroundStyle("secondary")]}>
-                  {`${distFormatted?.value} ${distFormatted?.abbr} at ${bearingFormatted}`}
-                </Text>
-                <Spacer />
-              </HStack>
+            {marker && (
+              <DistanceAndBearingText
+                latitude={marker.latitude}
+                longitude={marker.longitude}
+              />
             )}
             {/* Notes */}
             {marker?.notes && (

@@ -18,13 +18,15 @@ const EXPANDED_CONTENT = PIN_SIZE + TAIL_BORDER - TAIL_OVERLAP; // 55 — total 
 
 const SPRING_CONFIG = { damping: 30, stiffness: 700 };
 
-type AnnotationProps = Omit<ViewAnnotationProps, "children"> & {
-  icon: AnnotationIconProps["name"];
+export type AnnotationProps = Omit<ViewAnnotationProps, "children"> & {
+  icon?: AnnotationIconProps["name"];
+  label?: string;
   color: string;
 };
 
 export function Annotation({
   icon,
+  label,
   color,
   selected,
   draggable,
@@ -142,7 +144,11 @@ export function Annotation({
       <Animated.View style={containerStyle}>
         <Animated.View style={[styles.circle, { backgroundColor: color, borderColor: theme.surface }, circleSize]}>
           <Animated.View style={iconStyle}>
-            <AnnotationIcon name={icon} color="white" size={26} />
+            {label != null ? (
+              <Animated.Text style={styles.label}>{label}</Animated.Text>
+            ) : icon ? (
+              <AnnotationIcon name={icon} color="white" size={26} />
+            ) : null}
           </Animated.View>
         </Animated.View>
         <Animated.View style={[styles.tail, { borderTopColor: theme.surface }, tailStyle]} />
@@ -164,5 +170,12 @@ const styles = StyleSheet.create({
     borderLeftColor: "transparent",
     borderRightWidth: 9,
     borderRightColor: "transparent",
+  },
+  label: {
+    color: "white",
+    fontSize: 22,
+    fontWeight: "900",
+    textAlign: "center",
+    letterSpacing: -0.5,
   },
 });

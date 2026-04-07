@@ -5,9 +5,9 @@ import { useNavigation } from "@/hooks/useNavigation";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import {
   addDraftPoint,
-  clearDraft,
+  clearRouteDraft,
+  editRoute,
   initDraft,
-  initDraftFromRoute,
   moveDraftPoint,
   removeDraftPoint,
   selectDraftPoint,
@@ -65,9 +65,7 @@ export default function EditRouteScreen() {
   const routeId = id ? Number(id) : null;
   const isNew = routeId === null;
 
-  const points = useRouteDraft((s) => s.points);
-  const name = useRouteDraft((s) => s.name);
-  const selectedIndex = useRouteDraft((s) => s.selectedIndex);
+  const { points, name, selectedIndex } = useRouteDraft();
   const headerHeight = useHeaderHeight();
   const { setDetentHeight } = useSheetDetents([0.5, 1]);
 
@@ -75,10 +73,10 @@ export default function EditRouteScreen() {
     setDetentHeight(headerHeight);
   }, [headerHeight, setDetentHeight]);
 
-  // Initialize draft on mount
+  // Initialize draft on mount, clear on unmount
   useEffect(() => {
     if (routeId !== null) {
-      initDraftFromRoute(routeId);
+      editRoute(routeId);
     } else {
       initDraft([]);
 
@@ -93,7 +91,7 @@ export default function EditRouteScreen() {
       }
     }
 
-    return () => clearDraft();
+    return () => clearRouteDraft();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const legs = useMemo(() => {
@@ -132,21 +130,18 @@ export default function EditRouteScreen() {
             text: "Discard",
             style: "destructive",
             onPress: () => {
-              clearDraft();
               router.dismiss();
             },
           },
         ],
       );
     } else {
-      clearDraft();
       router.dismiss();
     }
   }, [points.length, isNew]);
 
   const handleSave = useCallback(async () => {
     if (isNew && points.length === 0) {
-      clearDraft();
       router.dismiss();
       return;
     }
@@ -161,7 +156,7 @@ export default function EditRouteScreen() {
           order: i,
         });
       }
-      clearDraft();
+      // FIXME: only call this where needed
       await loadRoutes();
       router.dismissTo({ pathname: "/feature/[type]/[id]", params: { type: "route", id: route.id } });
     } else {
@@ -180,7 +175,7 @@ export default function EditRouteScreen() {
           order: i,
         });
       }
-      clearDraft();
+      // FIXME: only call this where needed
       await loadRoutes();
       router.dismissTo({ pathname: "/feature/[type]/[id]", params: { type: "route", id: routeId } });
     }

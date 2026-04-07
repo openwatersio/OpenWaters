@@ -33,6 +33,7 @@
     "coordinate-format": "^1.0.0",
     "expo": "~55.0.11",
     "expo-blur": "~55.0.12",
+    "expo-build-properties": "~55.0.12",
     "expo-clipboard": "^55.0.11",
     "expo-constants": "~55.0.7",
     "expo-dev-client": "~55.0.22",

@@ -1,3 +1,6 @@
+import MarkerButton from "@/components/toolbar/MarkerButton";
+import RouteButton from "@/components/toolbar/RouteButton";
+import SheetBottomToolbar from "@/components/toolbar/SheetBottomToolbar";
 import SheetHeader from "@/components/ui/SheetHeader";
 import { useAtoNById } from "@/hooks/useAtoN";
 import { usePosition } from "@/hooks/useNavigation";
@@ -93,6 +96,7 @@ export default function AtoNDetail({ id }: { id: string }) {
 
   const data = aton?.data;
   const position = data ? getPosition(data["navigation.position"]?.value) : null;
+
   const name = data ? getString(data["name"]?.value) : undefined;
   const atonType = data ? getNumber(data["atonType"]?.value) : undefined;
   const isVirtual = data ? getBoolean(data["virtual"]?.value) : undefined;
@@ -134,6 +138,12 @@ export default function AtoNDetail({ id }: { id: string }) {
             `${toDistance(distance).value} ${toDistance(distance).abbr} @ ${formatBearing(bearing)}`,
         ].filter(Boolean).join(" · ")}
       />
+      {position && (
+        <SheetBottomToolbar>
+          <MarkerButton latitude={position.latitude} longitude={position.longitude} />
+          <RouteButton latitude={position.latitude} longitude={position.longitude} />
+        </SheetBottomToolbar>
+      )}
       <Host style={{ flex: 1 }}>
         <Form>
           <Section title="Aid to Navigation">

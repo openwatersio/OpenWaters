@@ -1,11 +1,10 @@
 import SheetHeader from "@/components/ui/SheetHeader";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import { startNavigation } from "@/hooks/useRouteNavigation";
-import { handleDeleteRoute, handleRenameRoute } from "@/hooks/useRoutes";
+import { deleteRoute, renameRoute } from "@/hooks/useRoutes";
 import { getRoute, getRoutePoints, type Route, type RoutePoint } from "@/lib/database";
 import { exportRouteAsGPX } from "@/lib/export";
 import { formatBearing } from "@/lib/geo";
-import { getDistance, getGreatCircleBearing } from "geolib";
 import {
   Button,
   Form,
@@ -26,6 +25,7 @@ import {
   tint,
 } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";
+import { getDistance, getGreatCircleBearing } from "geolib";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 import { showLocation } from "react-native-map-link";
@@ -65,7 +65,7 @@ export default function RouteDetail({ id }: { id: string }) {
       "Rename Route",
       undefined,
       (name: string) => {
-        handleRenameRoute(routeId, name);
+        renameRoute(routeId, name);
         setRoute((r) => r ? { ...r, name } : r);
       },
       "plain-text",
@@ -83,7 +83,7 @@ export default function RouteDetail({ id }: { id: string }) {
           text: "Delete",
           style: "destructive",
           onPress: () => {
-            handleDeleteRoute(routeId);
+            deleteRoute(routeId);
             router.dismiss();
           },
         },
