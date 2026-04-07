@@ -49,10 +49,9 @@ export default function MarkerOverlay() {
             color={marker.color ?? theme.primary}
             selected={isSelected}
             draggable={isSelected}
-            onPress={isSelected ? undefined : () => {
-              navigate("marker", String(marker.id));
-            }}
-            onDragEnd={([longitude, latitude]) => {
+            onPress={() => navigate("marker", String(marker.id))}
+            onDragEnd={(e) => {
+              const [longitude, latitude] = e.nativeEvent.lngLat;
               updateMarker(marker.id, { latitude, longitude });
             }}
           />

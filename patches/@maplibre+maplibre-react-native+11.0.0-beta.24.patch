@@ -1,0 +1,102 @@
+diff --git a/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotation.m b/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotation.m
+index c8d7d98..39e4862 100644
+--- a/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotation.m
++++ b/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotation.m
+@@ -9,6 +9,12 @@ const float CENTER_Y_OFFSET_BASE = -0.5f;
+ 
+ @implementation MLRNPointAnnotation {
+   UITapGestureRecognizer *customViewTap;
++  // Finger-to-anchor offset captured on the first setCenter call of an active drag.
++  // Used to preserve the touch position relative to the annotation's anchor
++  // throughout the drag, matching the behavior of a well-behaved drag gesture
++  // (and matching what MLNAnnotationView does NOT do by default).
++  CGPoint _dragFingerOffset;
++  BOOL _dragFingerOffsetCaptured;
+ }
+ 
+ - (id)init {
+@@ -37,6 +43,24 @@ const float CENTER_Y_OFFSET_BASE = -0.5f;
+ }
+ 
+ - (void)reactSetFrame:(CGRect)frame {
++  // Skip frame updates during any active drag state (Starting, Dragging,
++  // Canceling, Ending). The drag gesture owns the view's position during
++  // the drag, and removing the annotation via the usual remove/re-add path
++  // would null out view.annotation, causing MapLibre to cancel the drag and
++  // crash in MLNAnnotationView's drag state handler.
++  //
++  // This guard must cover Starting (not just Dragging), because Fabric can
++  // commit at any time after the gesture enters Starting — including before
++  // the finger has moved enough to transition to Dragging.
++  //
++  // Safe because: a drag can't start until the initial frame has already
++  // been set (so the annotation is already on the map), and the drag-end
++  // handler updates `coordinate`, which will project correctly on the next
++  // redraw after state returns to None.
++  if (self.dragState != MLNAnnotationViewDragStateNone) {
++    return;
++  }
++
+   if ([_map.annotations containsObject:self]) {
+     [_map removeAnnotation:self];
+   }
+@@ -55,6 +79,45 @@ const float CENTER_Y_OFFSET_BASE = -0.5f;
+   [self _setCenterOffset:self.frame];
+ }
+ 
++- (void)setCenter:(CGPoint)center {
++  // Reset drag offset tracking whenever we're not in a drag. This lets each new
++  // drag start fresh.
++  if (self.dragState == MLNAnnotationViewDragStateNone) {
++    _dragFingerOffsetCaptured = NO;
++    [super setCenter:center];
++    return;
++  }
++
++  if (_map != nil) {
++    CGPoint coordPoint = [_map convertCoordinate:self.coordinate toPointToView:_map];
++
++    // Reject map-redraw resets: MapLibre Native re-projects annotation views from
++    // their `coordinate` on every redraw, which fights the drag gesture by snapping
++    // the view back to the original location. Its reposition path is supposed to
++    // skip dragging annotations but doesn't. Detect these by value — the legit drag
++    // gesture calls setCenter with the finger position, not the coord projection.
++    if (fabs(center.x - coordPoint.x) < 0.5 && fabs(center.y - coordPoint.y) < 0.5) {
++      return;
++    }
++
++    // Capture the finger-to-anchor offset on the first legit drag setCenter call.
++    // MLNAnnotationView's drag implementation snaps view.center directly to the
++    // touch point, losing the offset between where the user grabbed the view and
++    // the annotation's anchor. By subtracting the initial offset from every drag
++    // update, we preserve that relative position — the user grabs the pin where
++    // they grabbed it and the tail tip (anchor) stays the same distance away
++    // throughout the drag.
++    if (!_dragFingerOffsetCaptured) {
++      _dragFingerOffset = CGPointMake(center.x - coordPoint.x, center.y - coordPoint.y);
++      _dragFingerOffsetCaptured = YES;
++    }
++    center.x -= _dragFingerOffset.x;
++    center.y -= _dragFingerOffset.y;
++  }
++
++  [super setCenter:center];
++}
++
+ - (void)setMap:(MLNMapView *)map {
+   if (map == nil) {
+     [_map removeAnnotation:self];
+@@ -151,6 +214,13 @@ const float CENTER_Y_OFFSET_BASE = -0.5f;
+       }
+     }
+     [self addGestureRecognizer:customViewTap];
++    // MLRNPointAnnotation is both MLNAnnotation and MLNAnnotationView. For the
++    // default-pin path MapLibre creates a separate MLNAnnotationView and binds
++    // it to the annotation, but in the custom-view path it returns self and the
++    // annotation property is never set. Native drag (MLNAnnotationView's
++    // setDragState:) dereferences self.annotation and throws an NSException
++    // if it's nil, so we set it explicitly here.
++    self.annotation = self;
+     return self;
+   }
+ }

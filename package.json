@@ -6,7 +6,8 @@
     "start": "expo start",
     "ios": "expo run:ios",
     "lint": "expo lint",
-    "test": "jest"
+    "test": "jest",
+    "postinstall": "patch-package"
   },
   "jest": {
     "preset": "jest-expo",
@@ -79,6 +80,7 @@
     "eslint-config-expo": "~55.0.0",
     "jest": "^29.7.0",
     "jest-expo": "~55.0.13",
+    "patch-package": "^8.0.1",
     "react-test-renderer": "^19.2.0",
     "typescript": "~5.9.2"
   },
