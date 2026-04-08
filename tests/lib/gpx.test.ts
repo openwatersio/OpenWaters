@@ -108,6 +108,7 @@ const route: Route = {
   name: "Harbor to Island",
   created_at: "2025-06-15T08:00:00Z",
   updated_at: "2025-06-15T08:00:00Z",
+  distance: 0,
 };
 
 const routePoints: RoutePoint[] = [

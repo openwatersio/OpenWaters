@@ -1,7 +1,7 @@
 import useTheme from "@/hooks/useTheme";
 import { ViewAnnotation, type ViewAnnotationProps } from "@maplibre/maplibre-react-native";
-import { useCallback, useEffect, useRef } from "react";
-import { StyleSheet } from "react-native";
+import { ReactNode, useCallback, useEffect, useRef } from "react";
+import { StyleSheet, View } from "react-native";
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -15,13 +15,18 @@ const PIN_SIZE = 44;
 const TAIL_BORDER = 13; // borderTopWidth that creates the triangle
 const TAIL_OVERLAP = 2; // negative marginTop overlap with circle
 const EXPANDED_CONTENT = PIN_SIZE + TAIL_BORDER - TAIL_OVERLAP; // 55 — total layout height when expanded
+const ACCESSORY_MIN_WIDTH = 140; // container widens to this when an accessory is showing so absolute-positioned accessory can fill natural width
 
 const SPRING_CONFIG = { damping: 30, stiffness: 700 };
 
-export type AnnotationProps = Omit<ViewAnnotationProps, "children"> & {
+export type AnnotationProps = Omit<ViewAnnotationProps, "children" | "onPress"> & {
   icon?: AnnotationIconProps["name"];
   label?: string;
   color: string;
+  /** Called when the visible pin is tapped. */
+  onPress?: () => void;
+  /** Content rendered below the pin while `selected`. Handles its own touches. */
+  accessory?: ReactNode;
 };
 
 export function Annotation({
@@ -30,8 +35,10 @@ export function Annotation({
   color,
   selected,
   draggable,
+  onDragStart,
   onDragEnd,
   onPress,
+  accessory,
   ...props
 }: AnnotationProps) {
   const theme = useTheme();
@@ -72,6 +79,12 @@ export function Annotation({
   const containerStyle = useAnimatedStyle(() => ({
     alignItems: "center",
     justifyContent: "center",
+    // Widen the container when an accessory is showing so the absolute-
+    // positioned accessory has room to lay out at its natural width. The pin
+    // stays horizontally centered via alignItems:center, and MLRNPointAnnotation's
+    // centerOffset math at anchor=center is width-independent, so widening the
+    // frame doesn't move the coordinate.
+    minWidth: selected && accessory ? ACCESSORY_MIN_WIDTH : undefined,
     paddingBottom: interpolate(expansion.value, [0, 1], [0, EXPANDED_CONTENT]),
     transform: [
       { translateY: entranceY.value + dragLift.value },
@@ -123,7 +136,8 @@ export function Annotation({
   const handleDragStart = useCallback<NonNullable<ViewAnnotationProps["onDragStart"]>>(() => {
     dragLift.value = withSpring(-10, { damping: 12, stiffness: 300 });
     dragScale.value = withSpring(1.15, { damping: 12, stiffness: 300 });
-  }, [dragLift, dragScale]);
+    onDragStart?.(e);
+  }, [onDragStart, dragLift, dragScale]);
 
   const handleDragEnd = useCallback<NonNullable<ViewAnnotationProps["onDragEnd"]>>((e) => {
     dragLift.value = withSpring(0, { damping: 30, stiffness: 350 });
@@ -133,26 +147,33 @@ export function Annotation({
 
   return (
     <ViewAnnotation
+      {...props}
       anchor="center"
       style={{ zIndex: selected ? 1 : 0 }}
       draggable={draggable}
       onPress={wrappedOnPress}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      {...props}
     >
-      <Animated.View style={containerStyle}>
-        <Animated.View style={[styles.circle, { backgroundColor: color, borderColor: theme.surface }, circleSize]}>
-          <Animated.View style={iconStyle}>
-            {label != null ? (
-              <Animated.Text style={styles.label}>{label}</Animated.Text>
-            ) : icon ? (
-              <AnnotationIcon name={icon} color="white" size={26} />
-            ) : null}
+      <>
+        <Animated.View style={containerStyle}>
+          <Animated.View style={[styles.circle, { backgroundColor: color, borderColor: theme.surface }, circleSize]}>
+            <Animated.View style={iconStyle}>
+              {label != null ? (
+                <Animated.Text style={styles.label}>{label}</Animated.Text>
+              ) : icon ? (
+                <AnnotationIcon name={icon} color="white" size={26} />
+              ) : null}
+            </Animated.View>
           </Animated.View>
+          <Animated.View style={[styles.tail, { borderTopColor: theme.surface }, tailStyle]} />
         </Animated.View>
-        <Animated.View style={[styles.tail, { borderTopColor: theme.surface }, tailStyle]} />
-      </Animated.View>
+        {selected && accessory && (
+          <View style={styles.accessory} pointerEvents="box-none">
+            {accessory}
+          </View>
+        )}
+      </>
     </ViewAnnotation>
   );
 }
@@ -162,6 +183,17 @@ const styles = StyleSheet.create({
   circle: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  // With anchor="center", the container's vertical center is the coordinate,
+  // so top:"50%" anchors the accessory's top at the coord point. Absolute
+  // positioning keeps the accessory out of the flex layout that the pin+tail
+  // rely on for centering.
+  accessory: {
+    position: "absolute",
+    top: "50%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
   },
   tail: {
     width: 0,

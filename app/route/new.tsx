@@ -1,0 +1,51 @@
+import RouteEditor from "@/components/features/RouteEditor";
+import SheetView from "@/components/ui/SheetView";
+import { useNavigation } from "@/hooks/useNavigation";
+import { addRouteWaypoint, clearActiveRoute, startRoute } from "@/hooks/useRoutes";
+import { useSheetDetents } from "@/hooks/useSheetDetents";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect } from "react";
+
+/**
+ * Entry point for a new route. Initializes a fresh active route via
+ * `startRoute()`, then optionally seeds it with the current vessel position
+ * and a `to=lon,lat` query param. The body is rendered by `<RouteEditor>`,
+ * which is shared with `/route/[id]`.
+ */
+export default function NewRouteScreen() {
+  const { to } = useLocalSearchParams<{ to?: string }>();
+
+  const headerHeight = useHeaderHeight();
+  const { setDetentHeight } = useSheetDetents([0.5, 1]);
+
+  useEffect(() => {
+    setDetentHeight(headerHeight);
+  }, [headerHeight, setDetentHeight]);
+
+  useEffect(() => {
+    startRoute();
+
+    const { latitude, longitude } = useNavigation.getState();
+    if (latitude != null && longitude != null) {
+      addRouteWaypoint({ latitude, longitude });
+    }
+
+    if (to) {
+      const [toLon, toLat] = to.split(",").map(Number) as [number, number];
+      addRouteWaypoint({ latitude: toLat, longitude: toLon });
+    }
+
+    // Dismissing the sheet (swipe or Cancel) clears the active route.
+    return () => {
+      clearActiveRoute();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <SheetView id="route" style={{ flex: 1 }}>
+      <RouteEditor />
+    </SheetView>
+  );
+}

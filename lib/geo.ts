@@ -73,6 +73,21 @@ export function calculateCPA(a: Vessel, b: Vessel): CPA | null {
 }
 
 /**
+ * Ground distance (meters) represented by one screen pixel in the standard
+ * Web Mercator projection at the given zoom and latitude. Matches the
+ * formula used by MapLibre / Mapbox GL.
+ *
+ * Useful for converting a pixel tolerance (e.g. "40px of slop") into meters
+ * at the current zoom, so hit-test thresholds scale with how zoomed-in the
+ * map is.
+ */
+export function metersPerPixel(zoom: number, latitude: number): number {
+  return (
+    (156543.03392 * Math.cos((latitude * Math.PI) / 180)) / Math.pow(2, zoom)
+  );
+}
+
+/**
  * Find the index of the leg segment closest to a point.
  * Returns the index to insert at (i.e. after points[index-1], before points[index]),
  * or null if no leg is within the threshold.

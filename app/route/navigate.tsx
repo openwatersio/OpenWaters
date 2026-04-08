@@ -4,12 +4,11 @@ import { toDistance } from "@/hooks/usePreferredUnits";
 import {
   advanceToNext,
   goToPrevious,
+  RouteMode,
   stopNavigation,
-  useRouteNavigation,
-} from "@/hooks/useRouteNavigation";
-import { getRoutePoints, type RoutePoint } from "@/lib/database";
+  useActiveRoute,
+} from "@/hooks/useRoutes";
 import { formatBearing } from "@/lib/geo";
-import { getDistance, getGreatCircleBearing } from "geolib";
 import { checkWaypointArrival, type ArrivalState } from "@/lib/waypointArrival";
 import {
   Button,
@@ -30,19 +29,15 @@ import {
 } from "@expo/ui/swift-ui/modifiers";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getDistance, getGreatCircleBearing } from "geolib";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 export default function NavigateScreen() {
-  const activeRouteId = useRouteNavigation((s) => s.activeRouteId);
-  const activePointIndex = useRouteNavigation((s) => s.activePointIndex);
+  const route = useActiveRoute();
+  const activeRouteId = route?.mode === RouteMode.Navigating ? route.id : null;
+  const activePointIndex = route?.activeIndex ?? 0;
+  const points = route?.points ?? [];
   const nav = useNavigationState();
-
-  const [points, setPoints] = useState<RoutePoint[]>([]);
-
-  useEffect(() => {
-    if (!activeRouteId) return;
-    getRoutePoints(activeRouteId).then(setPoints);
-  }, [activeRouteId]);
 
   const targetPoint = points[activePointIndex] ?? null;
   const isLastPoint = activePointIndex >= points.length - 1;

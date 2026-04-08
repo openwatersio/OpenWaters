@@ -1,53 +1,51 @@
 import { Annotation, AnnotationProps } from "@/components/map/Annotation";
 import { fitBounds } from "@/components/map/NavigationCamera";
 import {
-  removeDraftPoint,
-  selectDraftPoint,
-  updateDraftPoint,
-  useRouteDraft,
-  type DraftWaypoint
-} from "@/hooks/useRouteDraft";
-import { useRouteNavigation } from "@/hooks/useRouteNavigation";
-import { useSelection } from "@/hooks/useSelection";
+  removeRouteWaypoint,
+  RouteMode,
+  setActiveIndex,
+  updateRouteWaypoint,
+  useActiveRoute,
+  type ActiveRoute,
+  type ActiveWaypoint
+} from "@/hooks/useRoutes";
 import { useSheetStore } from "@/hooks/useSheetPosition";
 import useTheme from "@/hooks/useTheme";
-import { getRoutePoints, type RoutePoint } from "@/lib/database";
 import type { LngLatBounds } from "@maplibre/maplibre-react-native";
-import { GeoJSONSource, Layer, ViewAnnotation } from "@maplibre/maplibre-react-native";
+import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { getBounds } from "geolib";
-import { useEffect, useMemo, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity } from "react-native";
+import { useEffect, useMemo } from "react";
+import { Pressable, StyleSheet, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import OverlayView from "./ui/OverlayView";
 
 type Coord = [longitude: number, latitude: number];
 
+/**
+ * Renders the active route on the map. Reads from `useActiveRoute()` and
+ * switches rendering based on `mode`:
+ *  - editing   → dashed line + draggable waypoint annotations
+ *  - navigating → completed/active/remaining segments + read-only waypoints
+ */
 export default function RouteOverlay() {
-  const selection = useSelection();
-  const selectedId = selection?.type === "route" ? Number(selection.id) : null;
-  const activeRouteId = useRouteNavigation((s) => s.activeRouteId);
-  const draftPoints = useRouteDraft((s) => s.points);
+  const active = useActiveRoute();
+  if (!active) return null;
 
-  const displayId = selectedId ?? activeRouteId;
-
-  return (
-    <>
-      {displayId && <RouteDisplay routeId={displayId} isNavigation={displayId === activeRouteId} />}
-      {draftPoints.length > 0 && <DraftRouteOverlay />}
-    </>
+  return active.mode === RouteMode.Navigating ? (
+    <NavigatingOverlay active={active} />
+  ) : (
+    <EditingOverlay active={active} />
   );
 }
 
-// --- Draft route overlay (in-memory, not yet saved) ---
+// --- Editing overlay (in-memory, draggable) ---
 
-function DraftRouteOverlay() {
+function EditingOverlay({ active }: { active: ActiveRoute }) {
   const theme = useTheme();
-  const points = useRouteDraft((s) => s.points);
-  const selectedIndex = useRouteDraft((s) => s.selectedIndex);
-  const sheetHeight = useSheetStore((s) => {
-    const entry = s.sheets["route-edit"];
-    return entry?.height ?? 0;
-  });
+  const points = active.points;
+  const activeIndex = active.activeIndex;
+
+  const sheetHeight = useSheetStore((s) => s.sheets["route"]?.height ?? 0);
   const insets = useSafeAreaInsets();
 
   const coords: Coord[] = useMemo(
@@ -55,12 +53,12 @@ function DraftRouteOverlay() {
     [points],
   );
 
-  // Fit camera to draft route bounds
+  // Fit camera to route bounds when the geometry changes.
   useEffect(() => {
     if (coords.length < 2) return;
     const { minLng, minLat, maxLng, maxLat } = getBounds(coords);
     const routeBounds: LngLatBounds = [minLng, minLat, maxLng, maxLat];
-    // FIXME: this zooms way out and then back in. Figoure out how to make the map movement minimal
+    // FIXME: this zooms way out and then back in. Figure out how to make the map movement minimal
     // FIXME: this should maybe only run on first load, not every coords change
     fitBounds(routeBounds, {
       padding: { top: insets.top + 16, right: 16, bottom: 16 + sheetHeight, left: 16 },
@@ -80,15 +78,15 @@ function DraftRouteOverlay() {
   return (
     <>
       {lineData && (
-        <GeoJSONSource id="draft-route-line" data={lineData}>
+        <GeoJSONSource id="route-edit-line" data={lineData}>
           <Layer
-            id="draft-route-line-halo"
+            id="route-edit-line-halo"
             type="line"
             paint={{ "line-width": 7, "line-opacity": 0.5, "line-color": theme.background }}
             layout={{ "line-cap": "round", "line-join": "round" }}
           />
           <Layer
-            id="draft-route-line-dash"
+            id="route-edit-line-dash"
             type="line"
             paint={{ "line-width": 3, "line-opacity": 1, "line-color": theme.primary, "line-dasharray": [2, 2] }}
             layout={{ "line-cap": "round", "line-join": "round" }}
@@ -98,18 +96,18 @@ function DraftRouteOverlay() {
 
       {points.map((point, i) => (
         <WaypointAnnotation
-          key={i}
-          id={`draft-wp-${i}`}
+          key={point.key}
+          id={`route-wp-${point.key}`}
           point={point}
           index={i}
           color={theme.primary}
-          selected={i === selectedIndex}
+          selected={i === activeIndex}
           draggable
-          onPress={() => selectDraftPoint(i === selectedIndex ? null : i)}
-          onRemove={points.length > 1 ? () => removeDraftPoint(i) : undefined}
+          onPress={() => setActiveIndex(i === activeIndex ? null : i)}
+          onRemove={points.length > 1 ? () => removeRouteWaypoint(i) : undefined}
           onDragEnd={(e) => {
             const [longitude, latitude] = e.nativeEvent.lngLat;
-            updateDraftPoint(i, { latitude, longitude });
+            updateRouteWaypoint(i, { latitude, longitude });
           }}
         />
       ))}
@@ -117,98 +115,73 @@ function DraftRouteOverlay() {
   );
 }
 
-// --- Persisted route display ---
+// --- Navigating overlay (segments + read-only waypoints) ---
 
-function RouteDisplay({ routeId, isNavigation }: { routeId: number; isNavigation: boolean }) {
+function NavigatingOverlay({ active }: { active: ActiveRoute }) {
   const theme = useTheme();
-  const activePointIndex = useRouteNavigation((s) => s.activePointIndex);
-  const sheetHeight = useSheetStore((s) => {
-    const entry = s.sheets["feature"] ?? s.sheets["route-navigate"];
-    return entry?.height ?? 0;
-  });
-  const [points, setPoints] = useState<RoutePoint[]>([]);
-  const insets = useSafeAreaInsets();
+  const points = active.points;
+  const activePointIndex = active.activeIndex ?? 0;
 
-  useEffect(() => {
-    getRoutePoints(routeId).then(setPoints);
-  }, [routeId]);
+  const sheetHeight = useSheetStore((s) => s.sheets["route-navigate"]?.height ?? 0);
+  const insets = useSafeAreaInsets();
 
   const coords: Coord[] = useMemo(
     () => points.map((p) => [p.longitude, p.latitude]),
     [points],
   );
 
-  // Fit camera to route bounds (only for selected, not navigation)
+  // Fit bounds once when the route is loaded for navigation.
   useEffect(() => {
-    if (isNavigation || coords.length < 2) return;
+    if (coords.length < 2) return;
     const { minLng, minLat, maxLng, maxLat } = getBounds(coords);
     const routeBounds: LngLatBounds = [minLng, minLat, maxLng, maxLat];
     fitBounds(routeBounds, {
       padding: { top: insets.top + 16, right: 16, bottom: 16 + sheetHeight, left: 16 },
       duration: 300,
     });
-  }, [coords, sheetHeight, insets, isNavigation]);
+  }, [coords, sheetHeight, insets]);
 
-  // Route line data
-  const { completedLineData, activeLineData, remainingLineData, fullLineData } = useMemo(() => {
-    if (coords.length < 2) return { completedLineData: null, activeLineData: null, remainingLineData: null, fullLineData: null };
-
-    if (!isNavigation) {
-      return {
-        completedLineData: null,
-        activeLineData: null,
-        remainingLineData: null,
-        fullLineData: JSON.stringify({
-          type: "Feature",
-          properties: {},
-          geometry: { type: "LineString", coordinates: coords },
-        }),
-      };
+  const { completedLineData, activeLineData, remainingLineData } = useMemo(() => {
+    if (coords.length < 2) {
+      return { completedLineData: null, activeLineData: null, remainingLineData: null };
     }
-
-    const completed = activePointIndex > 0
-      ? coords.slice(0, activePointIndex + 1)
-      : null;
-    const active = activePointIndex > 0
-      ? [coords[activePointIndex - 1], coords[activePointIndex]]
-      : coords.length > 0 ? [coords[0]] : null;
+    const completed = activePointIndex > 0 ? coords.slice(0, activePointIndex + 1) : null;
+    const activeLeg =
+      activePointIndex > 0
+        ? [coords[activePointIndex - 1], coords[activePointIndex]]
+        : null;
     const remaining = coords.slice(activePointIndex);
 
     return {
-      completedLineData: completed && completed.length >= 2
-        ? JSON.stringify({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: completed } })
-        : null,
-      activeLineData: active && active.length >= 2
-        ? JSON.stringify({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: active } })
-        : null,
-      remainingLineData: remaining.length >= 2
-        ? JSON.stringify({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: remaining } })
-        : null,
-      fullLineData: null,
+      completedLineData:
+        completed && completed.length >= 2
+          ? JSON.stringify({
+            type: "Feature",
+            properties: {},
+            geometry: { type: "LineString", coordinates: completed },
+          })
+          : null,
+      activeLineData:
+        activeLeg && activeLeg.length >= 2
+          ? JSON.stringify({
+            type: "Feature",
+            properties: {},
+            geometry: { type: "LineString", coordinates: activeLeg },
+          })
+          : null,
+      remainingLineData:
+        remaining.length >= 2
+          ? JSON.stringify({
+            type: "Feature",
+            properties: {},
+            geometry: { type: "LineString", coordinates: remaining },
+          })
+          : null,
     };
-  }, [coords, isNavigation, activePointIndex]);
+  }, [coords, activePointIndex]);
 
   return (
     <>
-      {/* Full route line (non-navigation) */}
-      {fullLineData && (
-        <GeoJSONSource id="route-line" data={fullLineData}>
-          <Layer
-            id="route-line-halo"
-            type="line"
-            paint={{ "line-width": 7, "line-opacity": 0.5, "line-color": theme.background }}
-            layout={{ "line-cap": "round", "line-join": "round" }}
-          />
-          <Layer
-            id="route-line-dash"
-            type="line"
-            paint={{ "line-width": 3, "line-opacity": 1, "line-color": theme.primary, "line-dasharray": [2, 2] }}
-            layout={{ "line-cap": "round", "line-join": "round" }}
-          />
-        </GeoJSONSource>
-      )}
-
-      {/* Completed legs (dimmed) */}
       {completedLineData && (
         <GeoJSONSource id="route-completed" data={completedLineData}>
           <Layer
@@ -220,7 +193,6 @@ function RouteDisplay({ routeId, isNavigation }: { routeId: number; isNavigation
         </GeoJSONSource>
       )}
 
-      {/* Active leg (solid, bright) */}
       {activeLineData && (
         <GeoJSONSource id="route-active" data={activeLineData}>
           <Layer
@@ -238,7 +210,6 @@ function RouteDisplay({ routeId, isNavigation }: { routeId: number; isNavigation
         </GeoJSONSource>
       )}
 
-      {/* Remaining legs (dashed) */}
       {remainingLineData && (
         <GeoJSONSource id="route-remaining" data={remainingLineData}>
           <Layer
@@ -250,14 +221,13 @@ function RouteDisplay({ routeId, isNavigation }: { routeId: number; isNavigation
         </GeoJSONSource>
       )}
 
-      {/* Waypoint annotations */}
       {points.map((point, i) => {
-        const isActive = isNavigation && i === activePointIndex;
-        const isCompleted = isNavigation && i < activePointIndex;
+        const isActive = i === activePointIndex;
+        const isCompleted = i < activePointIndex;
         return (
           <WaypointAnnotation
-            key={point.id}
-            id={`route-wp-${point.id}`}
+            key={point.key}
+            id={`route-wp-${point.key}`}
             point={point}
             index={i}
             color={isCompleted ? theme.textTertiary : theme.primary}
@@ -271,12 +241,12 @@ function RouteDisplay({ routeId, isNavigation }: { routeId: number; isNavigation
 
 // --- Shared waypoint annotation ---
 
-type WaypointAnnotationProps = Omit<AnnotationProps, "lngLat"> & {
+type WaypointAnnotationProps = Omit<AnnotationProps, "lngLat" | "accessory"> & {
   id: string;
-  point: DraftWaypoint | RoutePoint;
+  point: ActiveWaypoint;
   index: number;
   onRemove?: () => void;
-}
+};
 
 function WaypointAnnotation({
   id,
@@ -292,40 +262,28 @@ function WaypointAnnotation({
   const theme = useTheme();
   const lngLat: [number, number] = [point.longitude, point.latitude];
 
-  console.log("Rendering waypoint", { id, lngLat, selected, draggable });
+  const accessory = onRemove ? (
+    <Pressable onPress={onRemove} style={waypointStyles.removeButton}>
+      <OverlayView style={waypointStyles.removeButton}>
+        <Text style={{ color: theme.danger, fontSize: 13, fontWeight: "600" }}>
+          Remove
+        </Text>
+      </OverlayView>
+    </Pressable>
+  ) : null;
 
   return (
-    <>
-      <Annotation
-        id={id}
-        lngLat={lngLat}
-        label={String(index + 1)}
-        color={color}
-        selected={selected}
-        draggable={draggable}
-        onDragStart={(e) => console.log("DRAG start", e)}
-        onDrag={(e) => console.log("DRAG", e)}
-        onPress={onPress}
-        onDragEnd={onDragEnd}
-      />
-      {selected && onRemove && (
-        <ViewAnnotation
-          id={`${id}-remove`}
-          lngLat={lngLat}
-          anchor="top"
-          offset={[0, 8]}
-          onPress={onRemove}
-        >
-          <TouchableOpacity onPress={onRemove} style={waypointStyles.removeButton}>
-            <OverlayView style={waypointStyles.removeButton}>
-              <Text style={{ color: theme.danger, fontSize: 13, fontWeight: "600" }}>
-                Remove
-              </Text>
-            </OverlayView>
-          </TouchableOpacity>
-        </ViewAnnotation>
-      )}
-    </>
+    <Annotation
+      id={id}
+      lngLat={lngLat}
+      label={String(index + 1)}
+      color={color}
+      selected={selected}
+      draggable={draggable}
+      onPress={onPress}
+      onDragEnd={onDragEnd}
+      accessory={accessory}
+    />
   );
 }
 

@@ -4,7 +4,6 @@ import { useCallback } from "react";
 export type FeatureType =
   | "marker"
   | "track"
-  | "route"
   | "vessel"
   | "aton"
   | "location";

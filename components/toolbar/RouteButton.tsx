@@ -1,4 +1,4 @@
-import { addDraftPoint, useRouteDraft } from "@/hooks/useRouteDraft";
+import { addRouteWaypoint, useActiveRoute } from "@/hooks/useRoutes";
 import useTheme from "@/hooks/useTheme";
 import { router, Stack } from "expo-router";
 
@@ -9,19 +9,19 @@ type Props = {
 
 export default function RouteButton({ latitude, longitude }: Props) {
   const theme = useTheme();
-  const isEditingRoute = useRouteDraft((s) => s.points.length > 0);
+  const hasActiveRoute = useActiveRoute((a) => a != null);
 
   return (
     <Stack.Toolbar.Button
       icon="point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath.fill"
-      tintColor={isEditingRoute ? theme.primary : undefined}
+      tintColor={hasActiveRoute ? theme.primary : undefined}
       onPress={() => {
-        if (isEditingRoute) {
-          addDraftPoint({ latitude, longitude });
+        if (hasActiveRoute) {
+          addRouteWaypoint({ latitude, longitude });
           router.back();
         } else {
           router.replace({
-            pathname: "/route/edit",
+            pathname: "/route/new",
             params: { to: `${longitude},${latitude}` },
           });
         }

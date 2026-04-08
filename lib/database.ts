@@ -83,6 +83,14 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
       PRAGMA user_version = 2;
     `);
   }
+
+  if (currentVersion < 4) {
+    await db.execAsync(`
+      ALTER TABLE routes ADD COLUMN distance REAL NOT NULL DEFAULT 0;
+      ALTER TABLE route_points DROP COLUMN name;
+      PRAGMA user_version = 4;
+    `);
+  }
 }
 
 // -- Track operations --
@@ -309,6 +317,7 @@ export type Route = {
   name: string | null;
   created_at: string;
   updated_at: string;
+  distance: number; // meters
 };
 
 export type RoutePoint = {
@@ -319,9 +328,12 @@ export type RoutePoint = {
   longitude: number;
 };
 
-export type RouteWithStats = Route & {
-  point_count: number;
-  total_distance: number; // meters, computed from point order in store
+export type RoutesOrder = "recent" | "name" | "distance";
+
+const ROUTES_ORDER_BY: Record<RoutesOrder, string> = {
+  recent: "updated_at DESC",
+  name: "name COLLATE NOCASE ASC",
+  distance: "distance DESC",
 };
 
 export async function insertRoute(name?: string): Promise<Route> {
@@ -345,25 +357,18 @@ export async function getRoute(id: number): Promise<Route | null> {
   return db.getFirstAsync<Route>("SELECT * FROM routes WHERE id = ?", id);
 }
 
-export async function getAllRoutes(): Promise<Route[]> {
+export async function getAllRoutes(
+  order: RoutesOrder = "recent",
+): Promise<Route[]> {
   const db = await getDatabase();
-  return db.getAllAsync<Route>("SELECT * FROM routes ORDER BY updated_at DESC");
-}
-
-export async function getAllRoutesWithStats(): Promise<RouteWithStats[]> {
-  const db = await getDatabase();
-  return db.getAllAsync<RouteWithStats>(`
-    SELECT r.*, COUNT(rp.id) as point_count, 0 as total_distance
-    FROM routes r
-    LEFT JOIN route_points rp ON rp.route_id = r.id
-    GROUP BY r.id
-    ORDER BY r.updated_at DESC
-  `);
+  return db.getAllAsync<Route>(
+    `SELECT * FROM routes ORDER BY ${ROUTES_ORDER_BY[order]}`,
+  );
 }
 
 export async function updateRoute(
   id: number,
-  fields: Partial<Pick<Route, "name">>,
+  fields: Partial<Pick<Route, "name" | "distance">>,
 ): Promise<void> {
   const db = await getDatabase();
   const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
@@ -390,75 +395,38 @@ export async function deleteRoute(id: number): Promise<void> {
 export async function getRoutePoints(routeId: number): Promise<RoutePoint[]> {
   const db = await getDatabase();
   return db.getAllAsync<RoutePoint>(
-    "SELECT * FROM route_points WHERE route_id = ? ORDER BY \"order\" ASC",
+    'SELECT * FROM route_points WHERE route_id = ? ORDER BY "order" ASC',
     routeId,
   );
 }
 
-export async function insertRoutePoint(
+/**
+ * Replaces all points for a route in a single transaction. Deletes existing
+ * points and bulk-inserts the new set, then bumps `routes.updated_at`.
+ */
+export async function replaceRoutePoints(
   routeId: number,
-  fields: { latitude: number; longitude: number; order: number },
-): Promise<RoutePoint> {
-  const db = await getDatabase();
-  const result = await db.runAsync(
-    `INSERT INTO route_points (route_id, "order", latitude, longitude)
-     VALUES (?, ?, ?, ?)`,
-    routeId,
-    fields.order,
-    fields.latitude,
-    fields.longitude,
-  );
-  await db.runAsync(
-    "UPDATE routes SET updated_at = ? WHERE id = ?",
-    new Date().toISOString(),
-    routeId,
-  );
-  const point = await db.getFirstAsync<RoutePoint>(
-    "SELECT * FROM route_points WHERE id = ?",
-    result.lastInsertRowId,
-  );
-  return point!;
-}
-
-export async function updateRoutePoint(
-  id: number,
-  fields: Partial<Pick<RoutePoint, "latitude" | "longitude">>,
+  points: { latitude: number; longitude: number }[],
 ): Promise<void> {
   const db = await getDatabase();
-  const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
-  if (entries.length === 0) return;
-  const setClauses = entries.map(([k]) => `${k} = ?`).join(", ");
-  const values = entries.map(([, v]) => v as number);
-  await db.runAsync(
-    `UPDATE route_points SET ${setClauses} WHERE id = ?`,
-    ...values,
-    id,
-  );
-}
-
-export async function deleteRoutePoint(id: number): Promise<void> {
-  const db = await getDatabase();
-  await db.runAsync("DELETE FROM route_points WHERE id = ?", id);
-}
-
-export async function reorderRoutePoints(
-  routeId: number,
-  pointIds: number[],
-): Promise<void> {
-  const db = await getDatabase();
-  for (let i = 0; i < pointIds.length; i++) {
+  await db.withTransactionAsync(async () => {
+    await db.runAsync("DELETE FROM route_points WHERE route_id = ?", routeId);
+    for (let i = 0; i < points.length; i++) {
+      await db.runAsync(
+        `INSERT INTO route_points (route_id, "order", latitude, longitude)
+         VALUES (?, ?, ?, ?)`,
+        routeId,
+        i,
+        points[i].latitude,
+        points[i].longitude,
+      );
+    }
     await db.runAsync(
-      "UPDATE route_points SET \"order\" = ? WHERE id = ? AND route_id = ?",
-      i,
-      pointIds[i],
+      "UPDATE routes SET updated_at = ? WHERE id = ?",
+      new Date().toISOString(),
       routeId,
     );
-  }
-  await db.runAsync(
-    "UPDATE routes SET updated_at = ? WHERE id = ?",
-    new Date().toISOString(),
-    routeId,
-  );
+  });
 }
 
 export async function getAllTimeSpeedStats(): Promise<SpeedStats> {

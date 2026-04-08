@@ -1,17 +1,24 @@
+import { useCameraPosition } from "@/hooks/useCameraPosition";
 import { mapRef } from "@/hooks/useMapRef";
-import { addDraftPoint, insertDraftPointAt, useRouteDraft } from "@/hooks/useRouteDraft";
+import {
+  addRouteWaypoint,
+  getActiveRoute,
+  RouteMode,
+  setActiveIndex,
+} from "@/hooks/useRoutes";
 import { useSelectionHandler } from "@/hooks/useSelection";
 import { useMapStyle } from "@/hooks/useViewOptions";
-import { findNearestLegIndex } from "@/lib/geo";
-import { Images, Map } from "@maplibre/maplibre-react-native";
+import { findNearestLegIndex, metersPerPixel } from "@/lib/geo";
+import { Images, Map, PressEvent } from "@maplibre/maplibre-react-native";
 import { useCallback } from "react";
+import { NativeSyntheticEvent } from "react-native";
 import AISLayer from "./AISLayer";
 import AtoNLayer from "./AtoNLayer";
 import MapOverlay from "./MapOverlay";
 import MarkerOverlay from "./MarkerOverlay";
 import RouteOverlay from "./RouteOverlay";
 import TrackOverlay from "./TrackOverlay";
-import { NavigationCamera, handleRegionDidChange, handleRegionIsChanging } from "./map/NavigationCamera";
+import { handleRegionDidChange, handleRegionIsChanging, NavigationCamera } from "./map/NavigationCamera";
 import { NavigationPuck } from "./map/NavigationPuck";
 import SelectedLocationAnnotation from "./map/SelectedLocationAnnotation";
 
@@ -19,19 +26,29 @@ export default function ChartView() {
   const mapStyle = useMapStyle();
   const navigate = useSelectionHandler();
 
-  const handleLongPress = useCallback((e: { nativeEvent: { lngLat: [number, number] } }) => {
-    const points = useRouteDraft.getState().points;
+  const handlePress = useCallback((e: NativeSyntheticEvent<PressEvent>) => {
+    const { lngLat } = e.nativeEvent;
+    setActiveIndex(null);
+    navigate("location", lngLat.join(','));
+  }, [navigate]);
 
+  const handleLongPress = useCallback((e: NativeSyntheticEvent<PressEvent>) => {
     const [lon, lat] = e.nativeEvent.lngLat;
 
-    // Check if near a leg line — insert between waypoints
-    const insertIndex = findNearestLegIndex(lat, lon, points, 500);
-    if (insertIndex !== null) {
-      insertDraftPointAt(insertIndex, { latitude: lat, longitude: lon });
-    } else {
-      // Append to end
-      addDraftPoint({ latitude: lat, longitude: lon });
-    }
+    // Only add waypoints when a route is loaded (not while navigating).
+    // `addRouteWaypoint` flips mode to "editing" implicitly.
+    const active = getActiveRoute();
+    if (!active || active.mode === RouteMode.Navigating) return;
+
+    // Scale the leg-hit threshold with zoom so it's always ~LEG_HIT_PIXELS
+    // of screen slop regardless of how zoomed in/out the map is.
+    const LEG_HIT_PIXELS = 44;
+    const zoom = useCameraPosition.getState().zoom ?? 10;
+    const thresholdMeters = metersPerPixel(zoom, lat) * LEG_HIT_PIXELS;
+
+    // Check if near a leg line — insert between waypoints, otherwise append
+    const insertIndex = findNearestLegIndex(lat, lon, active.points, thresholdMeters);
+    addRouteWaypoint({ latitude: lat, longitude: lon }, insertIndex ?? undefined);
   }, []);
 
   return <>
@@ -47,18 +64,7 @@ export default function ChartView() {
       onRegionIsChanging={handleRegionIsChanging}
       onRegionDidChange={handleRegionDidChange}
       onLongPress={handleLongPress}
-      onPress={(e) => {
-        const { lngLat } = e.nativeEvent;
-
-        const { points } = useRouteDraft.getState();
-        if (points.length > 0) {
-          // const [lon, lat] = lngLat;
-          // addDraftPoint({ latitude: lat, longitude: lon });
-          return;
-        }
-
-        navigate("location", lngLat.join(','));
-      }}
+      onPress={handlePress}
       logo={false}
     >
       <NavigationCamera />

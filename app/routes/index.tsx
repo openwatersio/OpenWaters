@@ -1,70 +1,123 @@
 import SheetView from "@/components/ui/SheetView";
 import { toDistance } from "@/hooks/usePreferredUnits";
-import { useRouteNavigation } from "@/hooks/useRouteNavigation";
 import {
+  getActiveRoute,
   handleDeleteRoute,
   handleRenameRoute,
-  useLoadRoutes,
+  RouteMode,
+  useActiveRoute,
   useRoutes,
 } from "@/hooks/useRoutes";
 import useTheme from "@/hooks/useTheme";
-import { type RouteWithStats } from "@/lib/database";
+import { type Route, type RoutesOrder } from "@/lib/database";
 import { exportRouteAsGPX } from "@/lib/export";
 import {
   Button,
   ContextMenu,
   Host,
   HStack,
+  Label,
   List,
+  Picker, Section,
   Text,
-  VStack
+  Toggle,
+  VStack,
 } from "@expo/ui/swift-ui";
 import {
+  animation,
+  Animation,
+  environment,
   font,
   foregroundStyle,
   lineLimit,
   listStyle,
+  type ListStyle,
   monospacedDigit,
   onTapGesture,
-  padding
+  padding,
+  pickerStyle,
+  refreshable,
+  tag,
 } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack, StackToolbarMenuActionProps } from "expo-router";
-import { useMemo, useState } from "react";
+import type { SFSymbol } from 'expo-symbols';
+import * as React from 'react';
+import { useState } from "react";
 import { Alert } from "react-native";
 
-type SortBy = "recent" | "name" | "distance";
-
-export function routeDisplayName(route: RouteWithStats): string {
+export function routeDisplayName(route: Route): string {
   return route.name || `Route ${route.id}`;
 }
 
 export default function RouteList() {
-  const routes = useRoutes((s) => s.routes);
-  useLoadRoutes();
-  const activeRouteId = useRouteNavigation((s) => s.activeRouteId);
+  const [sort, setSort] = useState<RoutesOrder>("recent");
+  const routes = useRoutes({ order: sort });
+  const activeRouteId = useActiveRoute((a) => (a?.mode === RouteMode.Navigating ? a.id : null));
   const theme = useTheme();
-  const [sort, setSort] = useState<SortBy>("recent");
 
-  const sortOptions: Array<{ label: string, value: SortBy, icon: StackToolbarMenuActionProps["icon"] }> = [
-    { label: "Recent", value: "recent", icon: "clock" },
-    { label: "Name", value: "name", icon: "character" },
-    { label: "Distance", value: "distance", icon: "lines.measurement.vertical" },
-  ]
+  const sortOptions: Array<{
+    label: string;
+    value: RoutesOrder;
+    icon: StackToolbarMenuActionProps["icon"];
+  }> = [
+      { label: "Recent", value: "recent", icon: "clock" },
+      { label: "Name", value: "name", icon: "character" },
+      { label: "Distance", value: "distance", icon: "lines.measurement.vertical" },
+    ];
 
-  const sortedRoutes = useMemo(() => {
-    return [...routes].sort((a, b) => {
-      switch (sort) {
-        case "name":
-          return (a.name ?? "").localeCompare(b.name ?? "");
-        case "distance":
-          return b.total_distance - a.total_distance;
-        default:
-          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-      }
-    });
-  }, [routes, sort]);
+  /**
+   * Open a route, prompting if there's already an active route in the store.
+   * Custom destructive copy if the active route has unsaved edits.
+   */
+  function openRoute(route: Route) {
+    console.log("Opening route", route.id);
+    const active = getActiveRoute();
+    const targetPath = { pathname: "/route/[id]" as const, params: { id: String(route.id) } };
 
-  function confirmDelete(route: RouteWithStats) {
+    if (!active || active.id === route.id) {
+      router.dismissAll();
+      router.push(targetPath);
+      return;
+    }
+
+    const activeName = active.name || (active.id != null ? `Route ${active.id}` : "the new route");
+    const newName = routeDisplayName(route);
+
+    if (active.mode === RouteMode.Editing) {
+      Alert.alert(
+        "Discard Changes?",
+        `You have unsaved changes to "${activeName}". Discard and open "${newName}"?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Discard",
+            style: "destructive",
+            onPress: () => {
+              router.dismissAll();
+              router.push(targetPath);
+            },
+          },
+        ],
+      );
+    } else {
+      Alert.alert(
+        "Replace Route?",
+        `Replace the currently open route ("${activeName}")?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Open",
+            onPress: () => {
+              router.dismissAll();
+              router.push(targetPath);
+            },
+          },
+        ],
+      );
+    }
+  }
+
+  function confirmDelete(route: Route) {
     Alert.alert(
       "Delete Route",
       `Delete "${routeDisplayName(route)}"?`,
@@ -75,7 +128,7 @@ export default function RouteList() {
     );
   }
 
-  function promptRename(route: RouteWithStats) {
+  function promptRename(route: Route) {
     Alert.prompt(
       "Rename Route",
       undefined,
@@ -109,9 +162,9 @@ export default function RouteList() {
       <Host style={{ flex: 1 }}>
         <List modifiers={[listStyle("plain")]}>
           <List.ForEach>
-            {sortedRoutes.map((route) => {
+            {routes.map((route) => {
               const isNavigating = activeRouteId === route.id;
-              const dist = route.total_distance > 0 ? toDistance(route.total_distance) : null;
+              const dist = route.distance > 0 ? toDistance(route.distance) : null;
 
               return (
                 <ContextMenu key={route.id}>
@@ -120,10 +173,7 @@ export default function RouteList() {
                       alignment="center"
                       spacing={12}
                       modifiers={[
-                        onTapGesture(() => {
-                          router.dismissAll();
-                          router.push({ pathname: "/feature/[type]/[id]", params: { type: "route", id: String(route.id) } });
-                        }),
+                        onTapGesture(() => openRoute(route)),
                         padding({ vertical: 4 }),
                       ]}
                     >
@@ -138,7 +188,7 @@ export default function RouteList() {
                             </Text>
                           )}
                         </HStack>
-                        <HStack spacing={6}>
+                        {dist && (
                           <Text
                             modifiers={[
                               font({ size: 13 }),
@@ -146,20 +196,9 @@ export default function RouteList() {
                               foregroundStyle("secondary"),
                             ]}
                           >
-                            {route.point_count} {route.point_count === 1 ? "waypoint" : "waypoints"}
+                            {dist.value} {dist.abbr}
                           </Text>
-                          {dist && (
-                            <Text
-                              modifiers={[
-                                font({ size: 13 }),
-                                monospacedDigit(),
-                                foregroundStyle("secondary"),
-                              ]}
-                            >
-                              · {dist.value} {dist.abbr}
-                            </Text>
-                          )}
-                        </HStack>
+                        )}
                       </VStack>
                     </HStack>
                   </ContextMenu.Trigger>
@@ -189,5 +228,116 @@ export default function RouteList() {
         </List>
       </Host >
     </SheetView >
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+type ListItem = {
+  id: string;
+  title: string;
+  icon: SFSymbol;
+};
+
+const INITIAL_ITEMS: ListItem[] = [
+  { id: '1', title: 'Sun', icon: 'sun.max.fill' },
+  { id: '2', title: 'Moon', icon: 'moon.fill' },
+  { id: '3', title: 'Star', icon: 'star.fill' },
+  { id: '4', title: 'Cloud', icon: 'cloud.fill' },
+  { id: '5', title: 'Rain', icon: 'cloud.rain.fill' },
+];
+
+const LIST_STYLES: ListStyle[] = [
+  'automatic',
+  'plain',
+  'inset',
+  'insetGrouped',
+  'grouped',
+  'sidebar',
+];
+
+function ListScreen() {
+  const [items, setItems] = React.useState<ListItem[]>(INITIAL_ITEMS);
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+  const [editMode, setEditMode] = React.useState(false);
+  const [listStyleIndex, setListStyleIndex] = React.useState(0);
+
+  const handleDelete = (indices: number[]) => {
+    setItems((prev) => prev.filter((_, i) => !indices.includes(i)));
+  };
+
+  const handleMove = (sourceIndices: number[], destination: number) => {
+    setItems((prev) => {
+      const newItems = [...prev];
+      const [removed] = newItems.splice(sourceIndices[0], 1);
+      const adjustedDest = sourceIndices[0] < destination ? destination - 1 : destination;
+      newItems.splice(adjustedDest, 0, removed);
+      return newItems;
+    });
+  };
+
+  const handleRefresh = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    setItems(INITIAL_ITEMS);
+  };
+
+  const resetItems = () => setItems(INITIAL_ITEMS);
+  const clearSelection = () => setSelectedIds([]);
+
+  return (
+    <Host style={{ flex: 1 }}>
+      <List
+        selection={selectedIds}
+        onSelectionChange={(ids) => setSelectedIds(ids.map((id) => id.toString()))}
+        modifiers={[
+          listStyle(LIST_STYLES[listStyleIndex]),
+          refreshable(handleRefresh),
+          animation(Animation.default, editMode),
+          environment('editMode', editMode ? 'active' : 'inactive'),
+        ]}>
+        <Section title="Settings">
+          <Toggle label="Edit Mode" isOn={editMode} onIsOnChange={setEditMode} />
+          <Picker
+            label="List Style"
+            selection={listStyleIndex}
+            onSelectionChange={setListStyleIndex}
+            modifiers={[pickerStyle('menu')]}>
+            {LIST_STYLES.map((style, i) => (
+              <Text key={style} modifiers={[tag(i)]}>
+                {style}
+              </Text>
+            ))}
+          </Picker>
+          <Button label="Reset Items" onPress={resetItems} />
+          <Button label="Clear Selection" onPress={clearSelection} />
+        </Section>
+
+        <Section title="Items" footer={<Text>Swipe to delete, drag to reorder</Text>}>
+          <List.ForEach
+            onDelete={handleDelete}
+            onMove={handleMove}
+            modifiers={[animation(Animation.default, editMode)]}>
+            {items.map((item) => (
+              <Label
+                key={item.id}
+                title={item.title}
+                systemImage={item.icon}
+                modifiers={[tag(item.id)]}
+              />
+            ))}
+          </List.ForEach>
+        </Section>
+      </List>
+    </Host>
   );
 }
