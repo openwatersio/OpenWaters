@@ -1,193 +1,212 @@
 import { useNavigation } from "@/hooks/useNavigation";
 import useTheme from "@/hooks/useTheme";
 import { projectPosition } from "@/lib/geo";
-import type { LngLat } from "@maplibre/maplibre-react-native";
-import { GeoJSONSource, Layer, LayerAnnotation } from "@maplibre/maplibre-react-native";
-import { memo, useEffect, useRef, useState } from "react";
-import { Animated, Easing } from "react-native";
+import { Layer, Animated as MLAnimated } from "@maplibre/maplibre-react-native";
+import { memo, useEffect, useMemo, useRef } from "react";
+import { Easing, Animated as RNAnimated } from "react-native";
 
-const PUCK_ID = "current-location";
-const COG_PROJECTION_SECONDS = 5 * 60; // 5 minutes
+const COG_PROJECTION_SECONDS = 15 * 60; // 5 minutes
 const MIN_SOG_FOR_COG_LINE = 0.25; // m/s (~0.5 knots)
+const EXTENDED_DISTANCE_METERS = 400 * 1852; // 400 nm
 // Slightly longer than the GPS update interval (~1s) so animations overlap
-// rather than completing and pausing before the next update
+// rather than completing and pausing before the next update.
 const ANIMATION_DURATION = 1500;
 const EASING = Easing.linear;
 
-/** Normalize an angle delta to [-180, 180] for shortest-path rotation */
+/** Choose the shortest-path target for a heading animation (handles 359°→0° wrap). */
 function shortestRotation(from: number, to: number): number {
-  const delta = ((to - from) % 360 + 540) % 360 - 180;
+  const delta = (((to - from) % 360) + 540) % 360 - 180;
   return from + delta;
 }
 
 /**
- * Animated angle value that always rotates the shortest direction.
- * Returns the current interpolated value in degrees.
+ * Animated vessel puck with course-over-ground projection line.
+ *
+ * All per-frame work happens inside maplibre-react-native's Animated pipeline:
+ * persistent `AnimatedPoint` / `AnimatedCoordinatesArray` / `Animated.Value`
+ * instances are embedded in `AnimatedGeoJSON` trees, which feed into
+ * `Animated.GeoJSONSource`. Each GPS update kicks off a parallel `timing`
+ * animation against these stable animated nodes; the React tree here renders
+ * only once per GPS fix.
+ *
+ * Heading rotation is carried as a feature property and read on the native
+ * side via `icon-rotate: ["get", "heading"]`, so the symbol layer itself is
+ * static — no layout-spec churn per frame.
  */
-function useAnimatedAngle(targetDeg: number | null): number {
-  const animValue = useRef(new Animated.Value(targetDeg ?? 0)).current;
-  const currentRef = useRef(targetDeg ?? 0);
-  const [display, setDisplay] = useState(targetDeg ?? 0);
-
-  useEffect(() => {
-    if (targetDeg === null) return;
-    const resolvedTarget = shortestRotation(currentRef.current, targetDeg);
-    currentRef.current = resolvedTarget;
-    Animated.timing(animValue, {
-      toValue: resolvedTarget,
-      duration: ANIMATION_DURATION,
-      easing: EASING,
-      useNativeDriver: false,
-    }).start();
-  }, [targetDeg, animValue]);
-
-  useEffect(() => {
-    const id = animValue.addListener(({ value }) => setDisplay(value));
-    return () => animValue.removeListener(id);
-  }, [animValue]);
-
-  return display;
-}
-
-/**
- * Animated position that interpolates longitude/latitude smoothly.
- * Returns the current interpolated position.
- */
-function useAnimatedPosition(
-  longitude: number | null,
-  latitude: number | null,
-): { longitude: number; latitude: number } | null {
-  const longitudeAnim = useRef(new Animated.Value(longitude ?? 0)).current;
-  const latitudeAnim = useRef(new Animated.Value(latitude ?? 0)).current;
-  const [display, setDisplay] = useState(
-    longitude !== null && latitude !== null ? { longitude, latitude } : null,
-  );
-
-  useEffect(() => {
-    if (longitude === null || latitude === null) return;
-    Animated.parallel([
-      Animated.timing(longitudeAnim, {
-        toValue: longitude,
-        duration: ANIMATION_DURATION,
-        easing: EASING,
-        useNativeDriver: false,
-      }),
-      Animated.timing(latitudeAnim, {
-        toValue: latitude,
-        duration: ANIMATION_DURATION,
-        easing: EASING,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  }, [longitude, latitude, longitudeAnim, latitudeAnim]);
-
-  useEffect(() => {
-    let currentLongitude = longitude ?? 0;
-    let currentLatitude = latitude ?? 0;
-    const longitudeId = longitudeAnim.addListener(({ value }) => {
-      currentLongitude = value;
-      setDisplay({ longitude: currentLongitude, latitude: currentLatitude });
-    });
-    const latitudeId = latitudeAnim.addListener(({ value }) => {
-      currentLatitude = value;
-      setDisplay({ longitude: currentLongitude, latitude: currentLatitude });
-    });
-    return () => {
-      longitudeAnim.removeListener(longitudeId);
-      latitudeAnim.removeListener(latitudeId);
-    };
-  }, [longitudeAnim, latitudeAnim, longitude, latitude]);
-
-  return display;
-}
-
 export const NavigationPuck = memo(function NavigationPuck() {
-  const latitude = useNavigation((s) => s.latitude);
-  const longitude = useNavigation((s) => s.longitude);
-  const heading = useNavigation((s) => s.heading);
-  const course = useNavigation((s) => s.course);
-  const speed = useNavigation((s) => s.speed);
+  const { latitude, longitude, heading, course, speed } = useNavigation();
   const theme = useTheme();
 
-  // Smooth heading rotation for the arrow icon
-  const displayHeading = useAnimatedAngle(heading);
+  // --- Persistent animated nodes (created once, never replaced) ---
+  // These hold native bindings through AnimatedGeoJSON's __attach, so they
+  // must have stable identity for the lifetime of the component.
 
-  // Smooth course rotation for the COG line
-  const courseDeg = course !== null ? (course * 180) / Math.PI : null;
-  const displayCourseDeg = useAnimatedAngle(courseDeg);
-  const displayCourseRad = (displayCourseDeg * Math.PI) / 180;
+  const puckPoint = useMemo(
+    () => new MLAnimated.Point({ type: "Point", coordinates: [0, 0] }),
+    [],
+  );
+  const projCoords = useMemo(
+    () => new MLAnimated.CoordinatesArray([[0, 0], [0, 0]]),
+    [],
+  );
+  const extCoords = useMemo(
+    () => new MLAnimated.CoordinatesArray([[0, 0], [0, 0]]),
+    [],
+  );
+  const headingValue = useMemo(() => new RNAnimated.Value(0), []);
 
-  // Smooth position for the COG line start point (tracks the puck's animated position)
-  const animPos = useAnimatedPosition(longitude, latitude);
+  // Cumulative (unwrapped) heading so the arrow never spins the long way.
+  const cumulativeHeadingRef = useRef(0);
+  // First fix snaps instantly instead of sweeping from [0,0].
+  const isFirstFixRef = useRef(true);
 
-  if (latitude === null || longitude === null || !animPos) return null;
+  // --- AnimatedGeoJSON trees (built once) ---
 
-  const lngLat: LngLat = [longitude, latitude];
-  const showCogLine = course !== null && (speed ?? 0) > MIN_SOG_FOR_COG_LINE;
+  const puckData = useMemo(
+    () =>
+      new MLAnimated.GeoJSON({
+        // The TS signature for AnimatedGeoJSON only admits bare Point / LineString, but the runtime walker
+        // handles arbitrarystructures — including animated values nested in feature properties, which is
+        // what lets us carry `heading` through to a `["get","heading"]` expression.
+        // @ts-expect-error
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            properties: { heading: headingValue },
+            // AnimatedPoint slots in at `geometry`, not `coordinates`:
+            // its __getValue() returns `{type:"Point", coordinates:[...]}`,
+            // a full geometry object.
+            geometry: puckPoint,
+          },
+        ],
+      }),
+    [puckPoint, headingValue],
+  );
 
-  // COG line: projected segment (where vessel will be) + extended line (indefinite heading)
-  const cogLineData: GeoJSON.FeatureCollection = (() => {
-    if (!showCogLine || speed === null) {
-      return { type: "FeatureCollection", features: [] };
+  const projData = useMemo(
+    () =>
+      new MLAnimated.GeoJSON({
+        type: "LineString",
+        coordinates: projCoords,
+      }),
+    [projCoords],
+  );
+
+  const extData = useMemo(
+    () =>
+      new MLAnimated.GeoJSON({
+        type: "LineString",
+        coordinates: extCoords,
+      }),
+    [extCoords],
+  );
+
+  // --- Drive animations when GPS state changes ---
+  useEffect(() => {
+    if (latitude == null || longitude == null) return;
+
+    const duration = isFirstFixRef.current ? 0 : ANIMATION_DURATION;
+    isFirstFixRef.current = false;
+
+    const animations: RNAnimated.CompositeAnimation[] = [];
+
+    // Puck position
+    puckPoint.stopAnimation();
+    animations.push(
+      puckPoint.timing({
+        toValue: { type: "Point", coordinates: [longitude, latitude] },
+        duration,
+        easing: EASING,
+      }),
+    );
+
+    // Heading (shortest path against a cumulative/unwrapped target)
+    if (heading != null) {
+      const target = shortestRotation(cumulativeHeadingRef.current, heading);
+      cumulativeHeadingRef.current = target;
+      headingValue.stopAnimation();
+      animations.push(
+        RNAnimated.timing(headingValue, {
+          toValue: target,
+          duration,
+          easing: EASING,
+          useNativeDriver: false,
+        }),
+      );
     }
-    const projectedDist = speed * COG_PROJECTION_SECONDS;
-    const projectedEnd = projectPosition(animPos.latitude, animPos.longitude, displayCourseRad, projectedDist);
-    const extendedEnd = projectPosition(animPos.latitude, animPos.longitude, displayCourseRad, 400 * 1852); // 400 nm
-    return {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          properties: { segment: "extended" },
-          geometry: {
-            type: "LineString",
-            coordinates: [projectedEnd, extendedEnd],
-          },
-        },
-        {
-          type: "Feature",
-          properties: { segment: "projected" },
-          geometry: {
-            type: "LineString",
-            coordinates: [[animPos.longitude, animPos.latitude], projectedEnd],
-          },
-        },
-      ],
-    };
-  })();
+
+    // COG line endpoints — projected (5 min) and extended (400 nm).
+    // When speed drops below threshold, collapse both segments onto the puck
+    // so the line visually disappears without a pop.
+    const showCog = course != null && (speed ?? 0) > MIN_SOG_FOR_COG_LINE;
+    const projectedEnd: [number, number] = showCog
+      ? projectPosition(latitude, longitude, course!, speed! * COG_PROJECTION_SECONDS)
+      : [longitude, latitude];
+    const extendedEnd: [number, number] = showCog
+      ? projectPosition(latitude, longitude, course!, EXTENDED_DISTANCE_METERS)
+      : [longitude, latitude];
+
+    // AnimatedCoordinatesArray auto-stops any in-flight animation when a new
+    // one starts (see AbstractAnimatedCoordinates.onAnimationStart), so no
+    // explicit stop is needed — and it doesn't expose one.
+    animations.push(
+      projCoords.timing({
+        toValue: [[longitude, latitude], projectedEnd],
+        duration,
+        easing: EASING,
+      }) as unknown as RNAnimated.CompositeAnimation,
+      extCoords.timing({
+        toValue: [projectedEnd, extendedEnd],
+        duration,
+        easing: EASING,
+      }) as unknown as RNAnimated.CompositeAnimation,
+    );
+
+    RNAnimated.parallel(animations).start();
+  }, [latitude, longitude, heading, course, speed, puckPoint, projCoords, extCoords, headingValue]);
+
+  if (latitude == null || longitude == null) return null;
 
   return (
     <>
-      {/* COG projection line */}
-      <GeoJSONSource id="nav-puck-cog" data={cogLineData}>
+      {/* Extended COG — faint far segment */}
+      <MLAnimated.GeoJSONSource id="nav-puck-cog-ext" data={extData}>
         <Layer
-          id="nav-puck-cog-line"
+          id="nav-puck-cog-ext-line"
           type="line"
           paint={{
             "line-color": theme.userLocation,
             "line-width": 3,
-            "line-opacity": ["match", ["get", "segment"], "projected", 0.75, "extended", 0.25, 0.5],
+            "line-opacity": 0.25,
           }}
-          layout={{
-            "line-cap": "round",
-          }}
+          layout={{ "line-cap": "round" }}
         />
-      </GeoJSONSource>
-      {/* Puck arrow */}
-      <LayerAnnotation
-        id={PUCK_ID}
-        lngLat={lngLat}
-        animated
-        animationDuration={ANIMATION_DURATION}
-        animationEasingFunction={EASING}
-      >
+      </MLAnimated.GeoJSONSource>
+
+      {/* Projected COG — prominent 5-minute look-ahead */}
+      <MLAnimated.GeoJSONSource id="nav-puck-cog-proj" data={projData}>
         <Layer
-          type="symbol"
+          id="nav-puck-cog-proj-line"
+          type="line"
+          paint={{
+            "line-color": theme.userLocation,
+            "line-width": 3,
+            "line-opacity": 0.75,
+          }}
+          layout={{ "line-cap": "round" }}
+        />
+      </MLAnimated.GeoJSONSource>
+
+      {/* Puck arrow — rotation read natively from feature properties */}
+      <MLAnimated.GeoJSONSource id="nav-puck" data={puckData}>
+        <Layer
           id="nav-puck-arrow"
+          type="symbol"
           layout={{
             "icon-image": "nav-puck",
             "icon-size": 0.5,
-            "icon-rotate": displayHeading,
+            "icon-rotate": ["get", "heading"],
             "icon-rotation-alignment": "map",
             "icon-pitch-alignment": "map",
             "icon-allow-overlap": true,
@@ -199,7 +218,7 @@ export const NavigationPuck = memo(function NavigationPuck() {
             "icon-halo-width": 1.5,
           }}
         />
-      </LayerAnnotation>
+      </MLAnimated.GeoJSONSource>
     </>
   );
 });
