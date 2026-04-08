@@ -17,13 +17,12 @@ import {
 } from "@/hooks/useRoutes";
 import useTheme from "@/hooks/useTheme";
 import { exportRouteAsGPX } from "@/lib/export";
-import { formatBearing } from "@/lib/geo";
+import { calculateRouteLegs, formatBearing } from "@/lib/geo";
 import {
   Button,
   Host,
   HStack,
   List,
-  RNHostView,
   Section,
   Spacer,
   Text,
@@ -40,9 +39,9 @@ import {
 } from "@expo/ui/swift-ui/modifiers";
 import { CoordinateFormat } from "coordinate-format";
 import { router, Stack } from "expo-router";
-import { getDistance, getGreatCircleBearing } from "geolib";
 import { useCallback, useMemo } from "react";
-import { Alert, Text as RNText, StyleSheet, View } from "react-native";
+import { Alert } from "react-native";
+import WaypointBadge from "../routes/WaypointBadge";
 
 const coordFormat = new CoordinateFormat("minutes");
 
@@ -77,21 +76,10 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
   const isEditing = mode === RouteMode.Editing;
   const theme = useTheme();
 
-  const legs = useMemo(() => {
-    if (points.length < 2) return [];
-    return points.slice(1).map((point, i) => {
-      const prev = points[i];
-      return {
-        from: prev,
-        to: point,
-        dist: getDistance(prev, point),
-        bearing: getGreatCircleBearing(prev, point),
-      };
-    });
-  }, [points]);
+  const legs = useMemo(() => calculateRouteLegs(points), [points]);
 
   const totalDistance = useMemo(
-    () => legs.reduce((sum, leg) => sum + leg.dist, 0),
+    () => legs.reduce((sum, leg) => sum + leg.distance, 0),
     [legs],
   );
 
@@ -242,7 +230,7 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
             >
               {points.map((point, i) => {
                 const leg = i > 0 ? legs[i - 1] : null;
-                const legDist = leg ? toDistance(leg.dist) : null;
+                const legDist = leg ? toDistance(leg.distance) : null;
                 const legBearing = leg ? formatBearing(leg.bearing) : null;
 
                 return (
@@ -254,19 +242,7 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
                       onTapGesture(() => handleSelect(i, point)),
                     ]}
                   >
-                    <RNHostView matchContents>
-                      <View
-                        style={[
-                          waypointBadgeStyles.circle,
-                          {
-                            backgroundColor: theme.primary,
-                            borderColor: theme.surface,
-                          },
-                        ]}
-                      >
-                        <RNText style={waypointBadgeStyles.label}>{i + 1}</RNText>
-                      </View>
-                    </RNHostView>
+                    <WaypointBadge index={i} last={i === points.length - 1} />
                     {leg ? (
                       <>
                         <Text>
@@ -315,26 +291,3 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
     </>
   );
 }
-
-const waypointBadgeStyles = StyleSheet.create({
-  circle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  circleSelected: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-  },
-  label: {
-    color: "white",
-    fontSize: 13,
-    fontWeight: "800",
-    textAlign: "center",
-    letterSpacing: -0.3,
-  },
-});

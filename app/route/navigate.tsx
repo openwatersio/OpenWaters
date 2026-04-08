@@ -1,14 +1,20 @@
+import WaypointBadge from "@/components/routes/WaypointBadge";
 import SheetView from "@/components/ui/SheetView";
 import { useNavigationState } from "@/hooks/useNavigationState";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import {
   advanceToNext,
+  clearActiveRoute,
   goToPrevious,
   RouteMode,
   stopNavigation,
   useActiveRoute,
 } from "@/hooks/useRoutes";
-import { formatBearing } from "@/lib/geo";
+import {
+  calculateDestinationProgress,
+  calculateWaypointProgress,
+  formatBearing,
+} from "@/lib/geo";
 import { checkWaypointArrival, type ArrivalState } from "@/lib/waypointArrival";
 import {
   Button,
@@ -16,7 +22,7 @@ import {
   HStack,
   Spacer,
   Text,
-  VStack,
+  VStack
 } from "@expo/ui/swift-ui";
 import {
   disabled,
@@ -29,7 +35,6 @@ import {
 } from "@expo/ui/swift-ui/modifiers";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { getDistance, getGreatCircleBearing } from "geolib";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 export default function NavigateScreen() {
@@ -39,18 +44,32 @@ export default function NavigateScreen() {
   const points = route?.points ?? [];
   const nav = useNavigationState();
 
+  // FIXME: require confirmation for stopping navigation
+  useEffect(() => {
+    // Ensure navigation is stopped if user leaves screen mid-route
+    return clearActiveRoute
+  }, []);
+
   const targetPoint = points[activePointIndex] ?? null;
   const isLastPoint = activePointIndex >= points.length - 1;
 
-  const navInfo = useMemo(() => {
+  const waypointProgress = useMemo(() => {
     if (!nav.coords || !targetPoint) return null;
-    const dist = getDistance(nav.coords, targetPoint);
-    const bearing = getGreatCircleBearing(nav.coords, targetPoint);
-    // ETA based on SOG
     const sog = nav.coords.speed ?? 0;
-    const etaSeconds = sog > 0.5 ? dist / sog : null;
-    return { dist, bearing, etaSeconds };
+    const cog = nav.coords.heading ?? 0;
+    return calculateWaypointProgress(nav.coords, sog, cog, targetPoint);
   }, [nav.coords, targetPoint]);
+
+  const destinationProgress = useMemo(() => {
+    if (!waypointProgress || !nav.coords) return null;
+    const sog = nav.coords.speed ?? 0;
+    return calculateDestinationProgress(
+      waypointProgress,
+      points,
+      activePointIndex,
+      sog,
+    );
+  }, [waypointProgress, nav.coords, points, activePointIndex]);
 
   // Auto-advance via VMG-based waypoint arrival detection
   const prevArrival = useRef<ArrivalState | null>(null);
@@ -83,12 +102,12 @@ export default function NavigateScreen() {
     }
   }, [nav.coords, targetPoint, isLastPoint]);
 
-  const distFormatted = navInfo ? toDistance(navInfo.dist) : null;
-  const bearingFormatted = navInfo ? formatBearing(navInfo.bearing) : null;
+  const distFormatted = waypointProgress ? toDistance(waypointProgress.distance) : null;
+  const bearingFormatted = waypointProgress ? formatBearing(waypointProgress.bearing) : null;
 
   const handleStop = useCallback(() => {
     stopNavigation();
-    router.dismiss();
+    router.replace({ pathname: "/route/[id]", params: { id: activeRouteId! } });
   }, []);
 
   const handleNext = useCallback(() => {
@@ -111,43 +130,104 @@ export default function NavigateScreen() {
   if (!activeRouteId) return null;
 
   return (
+
+    // Track: elapsed time, distance, avg speed
+    // SOG
+
     <SheetView id="route-navigate" style={{ flex: 1 }}>
-      <Host style={{ flex: 1 }}>
-        <VStack spacing={12} modifiers={[padding({ horizontal: 20, top: 12 })]}>
-          {/* Compact: waypoint name, bearing, distance */}
-          <HStack alignment="center" spacing={8}>
-            <VStack alignment="leading" spacing={2}>
-              <Text modifiers={[font({ size: 13 }), foregroundStyle("secondary")]}>
-                {activePointIndex + 1} of {points.length}
-              </Text>
-              <Text modifiers={[font({ size: 18, weight: "bold" })]}>
-                {`Waypoint ${activePointIndex + 1}`}
-              </Text>
-            </VStack>
+      <Host matchContents={{ vertical: true }}
+        style={{ width: "100%" }}
+      >
+        <VStack spacing={12} modifiers={[padding({ horizontal: 20, top: 20 })]}>
+          {/* Compact: waSypoint name, bearing, distance */}
+          {/* <Text modifiers={[font({ size: 13 }), foregroundStyle("secondary")]}>
+              {activePointIndex + 1} of {points.length}
+            </Text> */}
+          <HStack>
+            <WaypointBadge index={activePointIndex} />
             <Spacer />
-            {distFormatted && (
-              <VStack alignment="trailing" spacing={2}>
-                <Text modifiers={[font({ size: 22, weight: "bold" }), monospacedDigit()]}>
+            {distFormatted &&
+              <VStack>
+                <Text modifiers={[
+                  font({ size: 13 }),
+                  foregroundStyle("secondary")
+                ]}>
+                  Distance
+                </Text>
+                <Text modifiers={[
+                  font({ size: 18, weight: "bold" }),
+                  monospacedDigit()
+                ]}>
                   {distFormatted.value} {distFormatted.abbr}
                 </Text>
-                <Text modifiers={[font({ size: 14 }), monospacedDigit(), foregroundStyle("secondary")]}>
+              </VStack>
+            }
+            <Spacer />
+            {bearingFormatted &&
+              <VStack>
+                <Text modifiers={[
+                  font({ size: 13 }),
+                  foregroundStyle("secondary")
+                ]}>
+                  Bearing
+                </Text>
+                <Text modifiers={[
+                  font({ size: 18, weight: "bold" }),
+                  monospacedDigit()
+                ]}>
                   {bearingFormatted}
+                </Text>
+              </VStack>
+            }
+            <Spacer />
+            {waypointProgress?.eta != null && (
+              <VStack>
+                <Text modifiers={[font({ size: 13 }), foregroundStyle("secondary")]}>
+                  ETA
+                </Text>
+                <Text modifiers={[font({ size: 18, weight: "bold" }), monospacedDigit()]}>
+                  {formatETA(waypointProgress.eta)}
                 </Text>
               </VStack>
             )}
           </HStack>
 
-          {/* Expanded: ETA, controls */}
-          {navInfo?.etaSeconds != null && (
-            <HStack spacing={8}>
-              <Text modifiers={[font({ size: 14 }), foregroundStyle("secondary")]}>
-                ETA
-              </Text>
-              <Text modifiers={[font({ size: 14, weight: "medium" }), monospacedDigit()]}>
-                {formatETA(navInfo.etaSeconds)}
-              </Text>
-            </HStack>
-          )}
+          {/* Statistics to destination */}
+          <HStack>
+            <WaypointBadge last />
+            <Spacer />
+            {destinationProgress && (() => {
+              const destDist = toDistance(destinationProgress.distance);
+              return (
+                <VStack>
+                  <Text modifiers={[
+                    font({ size: 13 }),
+                    foregroundStyle("secondary")
+                  ]}>
+                    Distance
+                  </Text>
+                  <Text modifiers={[
+                    font({ size: 18, weight: "bold" }),
+                    monospacedDigit()
+                  ]}>
+                    {destDist.value} {destDist.abbr}
+                  </Text>
+                </VStack>
+              );
+            })()}
+            <Spacer />
+            {destinationProgress?.eta != null && (
+              <VStack>
+                <Text modifiers={[font({ size: 13 }), foregroundStyle("secondary")]}>
+                  ETA
+                </Text>
+                <Text modifiers={[font({ size: 18, weight: "bold" }), monospacedDigit()]}>
+                  {formatETA(destinationProgress.eta)}
+                </Text>
+              </VStack>
+            )}
+          </HStack>
+
 
           <HStack spacing={12}>
             <Button
@@ -179,6 +259,6 @@ export default function NavigateScreen() {
           />
         </VStack>
       </Host>
-    </SheetView>
+    </SheetView >
   );
 }

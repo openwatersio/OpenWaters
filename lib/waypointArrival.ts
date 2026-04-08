@@ -1,4 +1,4 @@
-import { getDistance, getGreatCircleBearing } from "geolib";
+import { calculateWaypointProgress } from "@/lib/geo";
 
 /** Minimum distance threshold (meters) — arrival triggers regardless of VMG */
 const MIN_DISTANCE = 50;
@@ -27,25 +27,23 @@ export function checkWaypointArrival(
   waypoint: { latitude: number; longitude: number },
   previous: ArrivalState | null,
 ): ArrivalState {
-  const dist = getDistance(position, waypoint);
-
-  // Compute VMG: projection of velocity toward the waypoint
-  const bearingToWpt = getGreatCircleBearing(position, waypoint);
-  const angleDiff = ((cog - bearingToWpt + 180) % 360) - 180; // -180 to 180
-  const vmg = sog * Math.cos((angleDiff * Math.PI) / 180);
-
-  const eta = vmg > 0.5 ? dist / vmg : null;
+  const { distance, vmg, eta } = calculateWaypointProgress(
+    position,
+    sog,
+    cog,
+    waypoint,
+  );
 
   let arrived = false;
 
   // Safety floor: close enough regardless of heading
-  if (dist < MIN_DISTANCE) {
+  if (distance < MIN_DISTANCE) {
     arrived = true;
   }
   // VMG transition: was closing, now opening — vessel passed CPA
-  else if (previous && previous.vmg > 0 && vmg <= 0 && dist < 200) {
+  else if (previous && previous.vmg > 0 && vmg <= 0 && distance < 200) {
     arrived = true;
   }
 
-  return { distanceToWaypoint: dist, vmg, eta, arrived };
+  return { distanceToWaypoint: distance, vmg, eta, arrived };
 }
