@@ -1,190 +1,281 @@
-import { checkWaypointArrival, type ArrivalState } from "@/lib/waypointArrival";
+import { checkWaypointArrival } from "@/lib/waypointArrival";
 
-// Waypoint at a known location (off the coast of Rhode Island)
-const waypoint = { latitude: 41.5, longitude: -71.3 };
+// Waypoint B at a known location (off the coast of Rhode Island).
+const B = { latitude: 41.5, longitude: -71.3 };
+
+// Helper: approximate lat/lon offset from a point (local flat-earth, OK for
+// a few hundred meters). +north / +east in meters.
+function offset(
+  point: { latitude: number; longitude: number },
+  northMeters: number,
+  eastMeters: number,
+) {
+  const latRad = (point.latitude * Math.PI) / 180;
+  return {
+    latitude: point.latitude + northMeters / 110540,
+    longitude: point.longitude + eastMeters / (111320 * Math.cos(latRad)),
+  };
+}
 
 describe("checkWaypointArrival", () => {
-  describe("vessel approaching head-on", () => {
-    it("reports positive VMG and ETA when closing", () => {
-      // Position south of waypoint, heading north
-      const result = checkWaypointArrival(
-        { latitude: 41.49, longitude: -71.3 },
-        5, // 5 m/s SOG
-        0, // heading north
-        waypoint,
-        null,
-      );
+  describe("arrival circle", () => {
+    it("fires when inside the default 50m radius regardless of heading", () => {
+      // 20m north of B, heading north (away from the approach).
+      const result = checkWaypointArrival({
+        position: offset(B, 20, 0),
+        previousWaypoint: offset(B, -1000, 0), // 1 km south
+        activeWaypoint: B,
+        nextWaypoint: null,
+      });
+      expect(result.arrived).toBe(true);
+      expect(result.trigger).toBe("circle");
+    });
 
-      expect(result.vmg).toBeGreaterThan(0);
-      expect(result.vmg).toBeCloseTo(5, 0); // VMG ≈ SOG for head-on
-      expect(result.eta).toBeGreaterThan(0);
+    it("does not fire when outside the radius", () => {
+      const result = checkWaypointArrival({
+        position: offset(B, -500, 0), // 500m south, still approaching
+        previousWaypoint: offset(B, -1000, 0),
+        activeWaypoint: B,
+        nextWaypoint: null,
+      });
+      expect(result.arrived).toBe(false);
+    });
+
+    it("caps the effective radius at 10% of leg length", () => {
+      // Leg is only 200m long, so effective radius should be 20m, not 50m.
+      // Position 30m before B along the leg → NOT inside 20m but would be inside 50m.
+      const A = offset(B, -200, 0);
+      const result = checkWaypointArrival({
+        position: offset(B, -30, 0),
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: null,
+      });
+      expect(result.effectiveRadius).toBeCloseTo(20, 0);
+      expect(result.arrived).toBe(false);
+    });
+
+    it("honors a custom arrival radius", () => {
+      const result = checkWaypointArrival({
+        position: offset(B, -80, 0),
+        previousWaypoint: offset(B, -5000, 0), // long leg, no cap
+        activeWaypoint: B,
+        nextWaypoint: null,
+        arrivalRadius: 100,
+      });
+      expect(result.arrived).toBe(true);
+      expect(result.trigger).toBe("circle");
+    });
+  });
+
+  describe("perpendicular (terminal leg, no next waypoint)", () => {
+    const A = offset(B, -1000, 0); // 1 km south of B
+
+    it("fires when the vessel has crossed the plane at B on-track", () => {
+      // 80 m north of B, still on the A→B line (no lateral offset).
+      const result = checkWaypointArrival({
+        position: offset(B, 80, 0),
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: null,
+      });
+      expect(result.arrived).toBe(true);
+      expect(result.trigger).toBe("perpendicular");
+    });
+
+    it("does not fire before crossing the plane", () => {
+      const result = checkWaypointArrival({
+        position: offset(B, -300, 0), // still south of B
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: null,
+      });
+      expect(result.arrived).toBe(false);
+    });
+
+    it("does not fire when the vessel passes wide (cross-track gate)", () => {
+      // 80 m past B but 500 m east (wide miss).
+      const result = checkWaypointArrival({
+        position: offset(B, 80, 500),
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: null,
+      });
       expect(result.arrived).toBe(false);
     });
   });
 
-  describe("vessel approaching at an angle", () => {
-    it("reports VMG less than SOG", () => {
-      // Position south-west of waypoint, heading northeast (roughly toward it)
-      const result = checkWaypointArrival(
-        { latitude: 41.49, longitude: -71.31 },
-        5, // 5 m/s SOG
-        45, // heading NE
-        waypoint,
-        null,
-      );
+  describe("bisector (interior waypoints)", () => {
+    // 90° right turn at B: A is 1 km south, C is 1 km east.
+    const A = offset(B, -1000, 0);
+    const C = offset(B, 0, 1000);
 
-      expect(result.vmg).toBeGreaterThan(0);
-      expect(result.vmg).toBeLessThan(5); // less than SOG due to angle
+    it("fires on the bisector before reaching B", () => {
+      // Vessel rounding the corner: 50 m before B along AB, 100 m east.
+      // Projection onto the 45° bisector direction is positive → past the
+      // arrival line. Not yet past B on the AB axis.
+      const result = checkWaypointArrival({
+        position: offset(B, -50, 100),
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: C,
+      });
+      expect(result.arrived).toBe(true);
+      expect(result.trigger).toBe("bisector");
+    });
+
+    it("does not fire before the bisector", () => {
+      // 200 m before B, only slightly toward C.
+      const result = checkWaypointArrival({
+        position: offset(B, -200, 20),
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: C,
+      });
+      expect(result.arrived).toBe(false);
+    });
+
+    it("does not fire when cross-track is too wide", () => {
+      // Past the bisector but 500 m off-track.
+      const result = checkWaypointArrival({
+        position: offset(B, -50, 500),
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: C,
+      });
       expect(result.arrived).toBe(false);
     });
   });
 
-  describe("vessel passing abeam", () => {
-    it("detects arrival when VMG crosses from positive to negative within 200m", () => {
-      // Previous state: was closing
-      const previous: ArrivalState = {
-        distanceToWaypoint: 120,
-        vmg: 2.0,
-        eta: 60,
-        arrived: false,
-      };
+  describe("straight route (bisector ≈ perpendicular)", () => {
+    const A = offset(B, -1000, 0);
+    const C = offset(B, 1000, 0); // same bearing — essentially straight
 
-      // Now: very close but has passed, heading away from waypoint
-      // Position just north of waypoint, heading further north (away)
-      const result = checkWaypointArrival(
-        { latitude: 41.5005, longitude: -71.3 },
-        5,
-        0, // heading north (away from waypoint which is south)
-        waypoint,
-        previous,
-      );
-
-      expect(result.vmg).toBeLessThanOrEqual(0);
+    it("behaves like perpendicular", () => {
+      const result = checkWaypointArrival({
+        position: offset(B, 80, 0),
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: C,
+      });
       expect(result.arrived).toBe(true);
     });
-
-    it("does not trigger arrival if distance > 200m", () => {
-      const previous: ArrivalState = {
-        distanceToWaypoint: 300,
-        vmg: 2.0,
-        eta: 150,
-        arrived: false,
-      };
-
-      // Far away, VMG transitions to negative
-      const result = checkWaypointArrival(
-        { latitude: 41.51, longitude: -71.3 }, // ~1100m north
-        5,
-        0, // heading north (away)
-        waypoint,
-        previous,
-      );
-
-      // Distance > 200m, so no arrival even with VMG transition
-      if (result.distanceToWaypoint > 200) {
-        expect(result.arrived).toBe(false);
-      }
-    });
   });
 
-  describe("vessel moving away", () => {
-    it("reports negative VMG and no arrival", () => {
-      // Position north of waypoint, heading further north
-      const result = checkWaypointArrival(
-        { latitude: 41.51, longitude: -71.3 },
-        5,
-        0, // heading north (away)
-        waypoint,
-        null, // no previous state (first sample)
-      );
+  describe("U-turn at B", () => {
+    const A = offset(B, -1000, 0); // south
+    const C = offset(B, -1000, 10); // also south (near U-turn)
 
-      expect(result.vmg).toBeLessThan(0);
-      expect(result.eta).toBeNull();
+    it("falls back to circle only — does not fire on overshoot", () => {
+      // 80 m past B on the AB line: perpendicular would fire, but U-turn
+      // should suppress it.
+      const result = checkWaypointArrival({
+        position: offset(B, 80, 0),
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: C,
+      });
       expect(result.arrived).toBe(false);
     });
-  });
 
-  describe("vessel stationary", () => {
-    it("reports zero VMG and no ETA when SOG is near zero", () => {
-      const result = checkWaypointArrival(
-        { latitude: 41.49, longitude: -71.3 },
-        0.1, // barely moving
-        0,
-        waypoint,
-        null,
-      );
-
-      expect(result.vmg).toBeCloseTo(0.1, 1);
-      // ETA requires vmg > 0.5 threshold
-      expect(result.eta).toBeNull();
-      expect(result.arrived).toBe(false);
-    });
-  });
-
-  describe("minimum distance threshold", () => {
-    it("triggers arrival when within 50m regardless of VMG", () => {
-      // Position very close to waypoint but heading away
-      const result = checkWaypointArrival(
-        { latitude: 41.5002, longitude: -71.3 }, // ~22m north
-        5,
-        0, // heading north (away)
-        waypoint,
-        null,
-      );
-
-      expect(result.distanceToWaypoint).toBeLessThan(50);
+    it("still fires on the arrival circle", () => {
+      const result = checkWaypointArrival({
+        position: offset(B, 20, 0),
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: C,
+      });
       expect(result.arrived).toBe(true);
+      expect(result.trigger).toBe("circle");
     });
   });
 
-  describe("no previous state", () => {
-    it("does not trigger VMG transition arrival on first sample", () => {
-      // Close but heading away, no previous state
-      const result = checkWaypointArrival(
-        { latitude: 41.501, longitude: -71.3 }, // ~110m north
-        5,
-        0, // heading north (away)
-        waypoint,
-        null,
-      );
+  describe("first leg (no previous waypoint)", () => {
+    it("only the circle can trigger", () => {
+      // 80 m past B with no previous — perpendicular would fire if it could.
+      const result = checkWaypointArrival({
+        position: offset(B, 80, 0),
+        previousWaypoint: null,
+        activeWaypoint: B,
+        nextWaypoint: offset(B, 1000, 0),
+      });
+      expect(result.arrived).toBe(false);
+    });
 
-      // Distance > 50m and no previous state for VMG transition
-      if (result.distanceToWaypoint > 50) {
-        expect(result.arrived).toBe(false);
-      }
+    it("fires inside the circle", () => {
+      const result = checkWaypointArrival({
+        position: offset(B, 20, 0),
+        previousWaypoint: null,
+        activeWaypoint: B,
+        nextWaypoint: offset(B, 1000, 0),
+      });
+      expect(result.arrived).toBe(true);
+      expect(result.trigger).toBe("circle");
     });
   });
 
-  describe("ETA calculation", () => {
-    it("computes reasonable ETA for direct approach", () => {
-      const result = checkWaypointArrival(
-        { latitude: 41.49, longitude: -71.3 }, // ~1100m south
-        5,
-        0, // heading north (toward)
-        waypoint,
-        null,
-      );
+  describe("arriveOnCircleOnly", () => {
+    const A = offset(B, -1000, 0);
+    const C = offset(B, 0, 1000);
 
-      expect(result.eta).not.toBeNull();
-      // ~1100m at ~5 m/s ≈ 220 seconds
-      expect(result.eta!).toBeGreaterThan(100);
-      expect(result.eta!).toBeLessThan(400);
+    it("suppresses the bisector trigger", () => {
+      const result = checkWaypointArrival({
+        position: offset(B, -100, 100), // would fire bisector normally
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: C,
+        arriveOnCircleOnly: true,
+      });
+      expect(result.arrived).toBe(false);
     });
 
-    it("returns null ETA when VMG is too low", () => {
-      // Heading perpendicular — VMG near zero
-      const result = checkWaypointArrival(
-        { latitude: 41.49, longitude: -71.3 },
-        5,
-        90, // heading east (perpendicular)
-        waypoint,
-        null,
-      );
+    it("suppresses the perpendicular trigger", () => {
+      const result = checkWaypointArrival({
+        position: offset(B, 80, 0),
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: null,
+        arriveOnCircleOnly: true,
+      });
+      expect(result.arrived).toBe(false);
+    });
 
-      // VMG should be near zero for perpendicular heading
-      if (Math.abs(result.vmg) < 0.5) {
-        expect(result.eta).toBeNull();
-      }
+    it("still fires on the circle", () => {
+      const result = checkWaypointArrival({
+        position: offset(B, 20, 0),
+        previousWaypoint: A,
+        activeWaypoint: B,
+        nextWaypoint: C,
+        arriveOnCircleOnly: true,
+      });
+      expect(result.arrived).toBe(true);
+      expect(result.trigger).toBe("circle");
+    });
+  });
+
+  describe("geometry output", () => {
+    it("returns null along/cross-track on the first leg", () => {
+      const result = checkWaypointArrival({
+        position: offset(B, -500, 0),
+        previousWaypoint: null,
+        activeWaypoint: B,
+        nextWaypoint: null,
+      });
+      expect(result.geometry.alongTrackPastB).toBeNull();
+      expect(result.geometry.crossTrack).toBeNull();
+      expect(result.geometry.rangeToB).toBeGreaterThan(400);
+    });
+
+    it("returns along/cross-track when a previous waypoint is given", () => {
+      const result = checkWaypointArrival({
+        position: offset(B, -500, 100),
+        previousWaypoint: offset(B, -1000, 0),
+        activeWaypoint: B,
+        nextWaypoint: null,
+      });
+      expect(result.geometry.alongTrackPastB).not.toBeNull();
+      expect(result.geometry.crossTrack).not.toBeNull();
+      expect(Math.abs(result.geometry.crossTrack!)).toBeGreaterThan(50);
     });
   });
 });

@@ -10,6 +10,7 @@ import {
   type Route,
   type RoutesOrder,
 } from "@/lib/database";
+import { findNearestLegIndex } from "@/lib/geo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getDistance } from "geolib";
 import { useCallback, useEffect } from "react";
@@ -192,18 +193,41 @@ export function clearActiveRoute() {
 }
 
 export function setRouteName(name: string | null) {
-  mutateActive((a) => ({ ...a, name, mode: RouteMode.Editing }));
+  updateActiveRoute({ name });
+}
+
+/**
+ * Helper for mutations that modify the waypoint list. Provides a shallow
+ * copy of `points` so callers can mutate it in-place with splice/push/etc.
+ * without touching the store's original array.
+ *
+ * The callback can:
+ * - Just mutate `points` and return nothing (void) — the new array is
+ *   written back automatically.
+ * - Return additional route fields (e.g. `{ activeIndex }`) to update
+ *   alongside the points change.
+ */
+function updateRouteWaypoints(
+  callback: (route: ActiveRoute) => Partial<ActiveRoute> | void,
+) {
+  updateActiveRoute((route) => {
+    const { points: oldPoints, ...rest } = route;
+    // Create a new points array to trigger updates.
+    const points = [...oldPoints];
+    return {
+      points,
+      ...(callback({ ...rest, points }) ?? {}),
+    };
+  });
 }
 
 export function addRouteWaypoint(
   point: { latitude: number; longitude: number },
   index?: number,
 ) {
-  mutateActive((a) => {
-    const points = [...a.points];
+  updateRouteWaypoints(({ points }) => {
     const insertAt = index ?? points.length;
     points.splice(insertAt, 0, { ...point, key: nextWaypointKey++ });
-    return { ...a, points, mode: RouteMode.Editing };
   });
 }
 
@@ -211,44 +235,59 @@ export function updateRouteWaypoint(
   index: number,
   fields: Partial<Pick<ActiveWaypoint, "latitude" | "longitude">>,
 ) {
-  mutateActive((a) => ({
-    ...a,
-    points: a.points.map((p, i) => (i === index ? { ...p, ...fields } : p)),
-    mode: RouteMode.Editing,
-  }));
+  updateRouteWaypoints(({ points }) => {
+    points.splice(index, 1, { ...points[index], ...fields });
+  });
 }
 
 export function moveRouteWaypoint(fromIndex: number, toIndex: number) {
-  mutateActive((a) => {
-    const points = [...a.points];
+  updateRouteWaypoints(({ points, activeIndex }) => {
     const [moved] = points.splice(fromIndex, 1);
     points.splice(toIndex, 0, moved);
-    return { ...a, points, activeIndex: null, mode: RouteMode.Editing };
+
+    if (activeIndex === fromIndex) {
+      activeIndex = toIndex;
+    } else if (activeIndex !== null) {
+      // Shift activeIndex to account for the removal and insertion
+      if (activeIndex > fromIndex) activeIndex--;
+      if (activeIndex >= toIndex) activeIndex++;
+    }
+
+    return { points, activeIndex };
   });
 }
 
 export function removeRouteWaypoint(index: number) {
-  mutateActive((a) => {
-    const points = a.points.filter((_, i) => i !== index);
-    let activeIndex = a.activeIndex;
+  updateRouteWaypoints(({ points, activeIndex }) => {
+    points.splice(index, 1);
     if (activeIndex === index) {
       activeIndex = null;
     } else if (activeIndex !== null && activeIndex > index) {
       activeIndex = activeIndex - 1;
     }
-    return { ...a, points, activeIndex, mode: RouteMode.Editing };
+    return { points, activeIndex };
   });
 }
 
 export function setActiveIndex(index: number | null) {
-  mutateActive((a) => ({ ...a, activeIndex: index }));
+  updateActiveRoute({ activeIndex: index });
 }
 
 /** Internal: apply a mutation to the active route. */
-function mutateActive(fn: (active: ActiveRoute) => ActiveRoute) {
-  const current = getActiveRoute();
-  if (!current) return;
-  setStore(fn(current));
+function updateActiveRoute(
+  mutation:
+    | Partial<ActiveRoute>
+    | ((current: ActiveRoute) => Partial<ActiveRoute>),
+) {
+  // Single setState call to avoid intermediate renders where mode has
+  // flipped to Editing but the mutation hasn't been applied yet.
+  useActiveRoute.setState((state) => {
+    if (!state) return state;
+    const delta = typeof mutation === "function" ? mutation(state) : mutation;
+    // Any mutation flips to editing mode by default,
+    // but can be overridden by the mutator if needed.
+    return { mode: RouteMode.Editing, ...delta };
+  });
 }
 
 // -- Save --
@@ -314,19 +353,59 @@ function computeTotalDistance(points: ActiveWaypoint[]): number {
 
 // -- Navigation mutators --
 
+/** Maximum distance (m) from a route that still counts as "on the route"
+ *  when snapping to the nearest leg at the start of navigation. */
+const START_NAV_SNAP_THRESHOLD_M = 5000;
+
+export type StartNavigationOptions = {
+  /** Explicit starting waypoint index. Used if `from` is omitted or snap fails. */
+  startIndex?: number;
+  /** Current vessel position. When provided, snaps the active waypoint to
+   *  the end of the nearest leg (within ~5 km). Falls back to `startIndex`
+   *  or the first waypoint if the position is too far from the route. */
+  from?: { latitude: number; longitude: number };
+};
+
 /**
  * Begin navigating the given route. Loads the route into the active store
- * if it isn't already, then sets `mode = "navigating"` and the starting
- * waypoint.
+ * if it isn't already, then sets `mode = "navigating"` and picks the
+ * starting waypoint.
+ *
+ * If `from` is provided, snaps the active waypoint to the end of the leg
+ * the vessel is currently on — so resuming mid-route picks up where you
+ * actually are, not at the first waypoint.
  */
-export async function startNavigation(routeId: number, startIndex = 0) {
-  const current = getActiveRoute();
-  if (current?.id !== routeId) {
+export async function startNavigation(
+  routeId: number,
+  options: StartNavigationOptions = {},
+) {
+  let route = getActiveRoute();
+  if (route?.id !== routeId) {
     await setActiveRoute(routeId);
+    route = getActiveRoute();
   }
-  const latest = getActiveRoute();
-  if (!latest) return;
-  setStore({ ...latest, mode: RouteMode.Navigating, activeIndex: startIndex });
+  if (!route) return;
+
+  let activeIndex = options.startIndex ?? 0;
+  if (options.from && route.points.length >= 2) {
+    const snapped = findNearestLegIndex(
+      options.from.latitude,
+      options.from.longitude,
+      route.points,
+      START_NAV_SNAP_THRESHOLD_M,
+    );
+    if (snapped != null) {
+      activeIndex = snapped;
+    }
+  }
+  // Clamp to valid range.
+  if (route.points.length > 0) {
+    activeIndex = Math.max(0, Math.min(activeIndex, route.points.length - 1));
+  } else {
+    activeIndex = 0;
+  }
+
+  setStore({ ...route, mode: RouteMode.Navigating, activeIndex });
 }
 
 export function advanceToNext() {

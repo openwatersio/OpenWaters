@@ -32,6 +32,18 @@ export function formatDuration(
 }
 
 /**
+ * Format seconds remaining as an ETA: "<1 min", "5 min", or "2h 15m"
+ */
+export function formatETA(seconds: number): string {
+  if (seconds < 60) return "<1 min";
+  const mins = Math.round(seconds / 60);
+  if (mins < 60) return `${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  const rem = mins % 60;
+  return `${hrs}h ${rem}m`;
+}
+
+/**
  * Format an ISO date string as a localized date: "March 15, 2026"
  */
 export function formatDate(iso: string): string {

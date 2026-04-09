@@ -1,5 +1,6 @@
 import { flyTo } from "@/components/map/NavigationCamera";
 import SheetHeader from "@/components/ui/SheetHeader";
+import { useNavigationState } from "@/hooks/useNavigationState";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import {
   clearActiveRoute,
@@ -168,8 +169,15 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
 
   const handleNavigate = useCallback(async () => {
     if (id == null) return;
-    await startNavigation(id);
-    router.replace("/route/navigate");
+    // Snap the starting waypoint to the leg the vessel is currently on, so
+    // resuming mid-route picks up where you actually are.
+    const coords = useNavigationState.getState().coords;
+    const from =
+      coords?.latitude != null && coords?.longitude != null
+        ? { latitude: coords.latitude, longitude: coords.longitude }
+        : undefined;
+    router.dismiss();
+    await startNavigation(id, { from });
   }, [id]);
 
   const dist = toDistance(totalDistance);

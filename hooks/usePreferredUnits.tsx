@@ -36,11 +36,21 @@ const temperatureUnitDefs: Record<TemperatureUnit, UnitInfo> = {
   'F': { abbr: '°F', singular: 'Fahrenheit', plural: 'Fahrenheit' },
 };
 
+/** Allowed arrival radius values (meters). Matches OpenCPN's presets. */
+export const ARRIVAL_RADIUS_OPTIONS = [25, 50, 100, 200] as const;
+export type ArrivalRadius = (typeof ARRIVAL_RADIUS_OPTIONS)[number];
+
 interface State {
   speed: SpeedUnit;
   distance: DistanceUnit;
   depth: DepthUnit;
   temperature: TemperatureUnit;
+  /** Waypoint arrival circle radius in meters. */
+  arrivalRadius: ArrivalRadius;
+  /** When true, route navigation only auto-advances on the arrival circle
+   *  (no perpendicular/bisector). Use this for sailing upwind when you
+   *  can't lay the mark. */
+  arriveOnCircleOnly: boolean;
 }
 
 export const usePreferredUnits = create<State>()(
@@ -50,10 +60,12 @@ export const usePreferredUnits = create<State>()(
       distance: 'nm',
       depth: 'm',
       temperature: 'C',
+      arrivalRadius: 50,
+      arriveOnCircleOnly: false,
     }),
     {
       name: "preferred-units",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
       migrate(persisted, version) {
         const state = persisted as Record<string, unknown>;
@@ -61,6 +73,11 @@ export const usePreferredUnits = create<State>()(
           // Map old convert-units keys to new keys
           if (state.distance === 'nMi') state.distance = 'nm';
           if (state.speed === 'm/s') state.speed = 'knot';
+        }
+        if (version < 2) {
+          // v2 adds navigation preferences.
+          if (state.arrivalRadius == null) state.arrivalRadius = 50;
+          if (state.arriveOnCircleOnly == null) state.arriveOnCircleOnly = false;
         }
         return state as unknown as State;
       },

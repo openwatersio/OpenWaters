@@ -159,35 +159,151 @@ export type WaypointProgress = {
   distance: number;
   /** Bearing to waypoint in degrees true */
   bearing: number;
-  /** Velocity made good toward waypoint in m/s (positive = closing) */
+  /** Velocity made good toward waypoint in m/s (positive = closing).
+   *  This is the textbook VMG: SOG projected onto bearing(P → waypoint). */
   vmg: number;
-  /** ETA in seconds, or null if not making meaningful progress */
+  /** Leg-aligned VMG: SOG projected onto the incoming leg bearing A→B.
+   *  Null when no previous waypoint is provided. */
+  legVmg: number | null;
+  /** ETA in seconds, or null if not making meaningful progress.
+   *  Uses `legVmg` when a previous waypoint is provided, otherwise `vmg`. */
   eta: number | null;
 };
 
 /**
  * Compute navigation progress toward a waypoint: distance, bearing, VMG, ETA.
  *
- * ETA is based on VMG rather than raw SOG, so sailing off-course correctly
- * extends the estimate — and becomes null when the vessel isn't actually
- * closing on the target.
+ * When `previous` is provided, ETA is computed from **leg-aligned VMG** —
+ * SOG projected onto the leg bearing A→B — rather than the instantaneous
+ * bearing P→B. This gives a much more stable ETA on a layline or any
+ * off-axis approach, because the leg axis doesn't swing as the vessel
+ * closes on B. The trade-off: on an unfavored tack (COG nearly perpendicular
+ * to the leg), `legVmg` falls below `MIN_VMG_FOR_ETA` and ETA becomes null.
+ * That's intentional — an oscillating number is worse than a blank.
+ *
+ * On the first leg (no previous waypoint), there is no leg axis, so ETA
+ * falls back to the bearing-to-mark VMG.
  *
  * @param position Current position
  * @param sog Speed over ground in m/s
  * @param cog Course over ground in degrees true
- * @param waypoint Target waypoint
+ * @param waypoint Target waypoint (B)
+ * @param previous Previous waypoint (A). When provided, ETA uses leg-aligned VMG.
  */
 export function calculateWaypointProgress(
   position: { latitude: number; longitude: number },
   sog: number,
   cog: number,
   waypoint: { latitude: number; longitude: number },
+  previous?: { latitude: number; longitude: number } | null,
 ): WaypointProgress {
   const distance = getDistance(position, waypoint);
   const bearing = getGreatCircleBearing(position, waypoint);
   const vmg = calculateVMG(sog, cog, bearing);
-  const eta = vmg > MIN_VMG_FOR_ETA ? distance / vmg : null;
-  return { distance, bearing, vmg, eta };
+
+  let legVmg: number | null = null;
+  let eta: number | null;
+  if (previous) {
+    const legBearing = getGreatCircleBearing(previous, waypoint);
+    legVmg = calculateVMG(sog, cog, legBearing);
+    eta = legVmg > MIN_VMG_FOR_ETA ? distance / legVmg : null;
+  } else {
+    eta = vmg > MIN_VMG_FOR_ETA ? distance / vmg : null;
+  }
+
+  return { distance, bearing, vmg, legVmg, eta };
+}
+
+/** Earth mean radius in meters (same value geolib uses internally). */
+const EARTH_RADIUS_M = 6371008.8;
+
+const toRad = (deg: number) => (deg * Math.PI) / 180;
+
+export type LegProgress = {
+  /** Distance remaining from position to B (leg end), meters. */
+  rangeToB: number;
+  /** Signed distance past B along the leg direction (A→B), meters.
+   *  Negative: still before B. Positive: crossed the perpendicular plane at B. */
+  alongTrackPastB: number;
+  /** Signed cross-track distance from the A→B great-circle line, meters.
+   *  Positive = right of track, negative = left (right-hand convention). */
+  crossTrack: number;
+  /** Initial bearing A→B in degrees true. */
+  legBearing: number;
+  /** Length of leg A→B in meters. */
+  legLength: number;
+};
+
+/**
+ * Compute along-track / cross-track progress of a position P relative to a
+ * leg from A to B. Uses the standard spherical along/cross-track formulas
+ * (Ed Williams / Chris Veness).
+ *
+ * `alongTrackPastB` going from negative to positive is the "crossed the
+ * perpendicular at B" signal used for waypoint arrival; `crossTrack` is the
+ * miss distance and is used to gate that trigger against wide passes.
+ */
+export function legProgress(
+  A: { latitude: number; longitude: number },
+  B: { latitude: number; longitude: number },
+  P: { latitude: number; longitude: number },
+): LegProgress {
+  const legLength = getDistance(A, B);
+  const legBearing = getGreatCircleBearing(A, B);
+  const rangeToB = getDistance(P, B);
+
+  // Degenerate leg (A == B): no meaningful along/cross-track.
+  if (legLength === 0) {
+    return {
+      rangeToB,
+      alongTrackPastB: -rangeToB,
+      crossTrack: 0,
+      legBearing,
+      legLength,
+    };
+  }
+
+  const distAP = getDistance(A, P);
+  if (distAP === 0) {
+    return {
+      rangeToB,
+      alongTrackPastB: -legLength,
+      crossTrack: 0,
+      legBearing,
+      legLength,
+    };
+  }
+
+  const bearingAP = getGreatCircleBearing(A, P);
+
+  const delta13 = distAP / EARTH_RADIUS_M; // angular distance A→P
+  const theta13 = toRad(bearingAP);
+  const theta12 = toRad(legBearing);
+
+  const crossTrackAngular = Math.asin(
+    Math.sin(delta13) * Math.sin(theta13 - theta12),
+  );
+  const crossTrack = crossTrackAngular * EARTH_RADIUS_M;
+
+  // Guard the acos domain for very short legs / near-collinear geometry.
+  const acosArg = Math.min(
+    1,
+    Math.max(-1, Math.cos(delta13) / Math.cos(crossTrackAngular)),
+  );
+  const alongTrackFromA = Math.acos(acosArg) * EARTH_RADIUS_M;
+
+  // acos is always ≥ 0, so recover sign from the angle between A→P and A→B.
+  const angleDiff = ((bearingAP - legBearing + 540) % 360) - 180; // -180..180
+  const sign = Math.abs(angleDiff) <= 90 ? 1 : -1;
+  const signedAlongTrackFromA = sign * alongTrackFromA;
+
+  return {
+    rangeToB,
+    alongTrackPastB: signedAlongTrackFromA - legLength,
+    crossTrack,
+    legBearing,
+    legLength,
+  };
 }
 
 export type RouteLeg = {
@@ -265,5 +381,5 @@ export function calculateDestinationProgress(
 /** Format bearing as three-digit true bearing, e.g. "045°T" */
 export function formatBearing(degrees: number): string {
   const rounded = Math.round(((degrees % 360) + 360) % 360);
-  return `${String(rounded).padStart(3, "0")}°`;
+  return `${rounded}°`;
 }

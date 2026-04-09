@@ -6,7 +6,21 @@ import {
   calculateWaypointProgress,
   formatBearing,
   headingDelta,
+  legProgress,
 } from "@/lib/geo";
+
+// Local flat-earth offset helper used by legProgress tests.
+function offsetPoint(
+  point: { latitude: number; longitude: number },
+  northMeters: number,
+  eastMeters: number,
+) {
+  const latRad = (point.latitude * Math.PI) / 180;
+  return {
+    latitude: point.latitude + northMeters / 110540,
+    longitude: point.longitude + eastMeters / (111320 * Math.cos(latRad)),
+  };
+}
 
 describe("headingDelta", () => {
   it("returns 0 for equal headings", () => {
@@ -170,6 +184,74 @@ describe("calculateWaypointProgress", () => {
     expect(result.vmg).toBeCloseTo(0.5, 5);
     expect(result.eta).toBeNull();
   });
+
+  describe("with previous waypoint (leg-aligned VMG)", () => {
+    // Leg: previous 1 km south of position, waypoint 1 km north of position.
+    // Leg bearing is due north (0°).
+    const previous = { latitude: 47.591, longitude: -122.3 };
+
+    it("legVmg is null when no previous waypoint is provided", () => {
+      const result = calculateWaypointProgress(position, 5, 0, waypointNorth);
+      expect(result.legVmg).toBeNull();
+    });
+
+    it("legVmg equals SOG when heading along the leg", () => {
+      const result = calculateWaypointProgress(position, 5, 0, waypointNorth, previous);
+      expect(result.legVmg).not.toBeNull();
+      expect(result.legVmg!).toBeCloseTo(5, 1);
+    });
+
+    it("direct approach: leg-aligned ETA matches bearing-to-mark ETA", () => {
+      const withLeg = calculateWaypointProgress(position, 5, 0, waypointNorth, previous);
+      const withoutLeg = calculateWaypointProgress(position, 5, 0, waypointNorth);
+      expect(withLeg.eta).not.toBeNull();
+      expect(withoutLeg.eta).not.toBeNull();
+      expect(withLeg.eta!).toBeCloseTo(withoutLeg.eta!, 0);
+    });
+
+    it("layline: leg-aligned ETA is lower (more realistic) than bearing-to-mark ETA", () => {
+      // Position sits 200m east of the A→B line; COG is still due north
+      // (sailing parallel to the leg, a classic layline). Bearing P→B points
+      // northwest, so bearing-to-mark VMG underestimates progress — ETA too
+      // high. Leg-aligned VMG is SOG · cos(0°) = SOG — honest.
+      const offsetLat = 47.6;
+      const offsetLon = -122.3 + 200 / (111320 * Math.cos((offsetLat * Math.PI) / 180));
+      const laylinePos = { latitude: offsetLat, longitude: offsetLon };
+
+      const legAligned = calculateWaypointProgress(laylinePos, 5, 0, waypointNorth, previous);
+      const markAligned = calculateWaypointProgress(laylinePos, 5, 0, waypointNorth);
+
+      expect(legAligned.eta).not.toBeNull();
+      expect(markAligned.eta).not.toBeNull();
+      expect(legAligned.eta!).toBeLessThan(markAligned.eta!);
+      // Expected ≈ distance / 5 (cos 0 = 1)
+      expect(legAligned.eta!).toBeCloseTo(legAligned.distance / 5, 0);
+    });
+
+    it("unfavored tack: legVmg near zero → ETA is null", () => {
+      // COG 90° (east) against a due-north leg: legVmg = 5 · cos(90°) = 0.
+      const result = calculateWaypointProgress(position, 5, 90, waypointNorth, previous);
+      expect(Math.abs(result.legVmg!)).toBeLessThan(0.5);
+      expect(result.eta).toBeNull();
+    });
+
+    it("favored tack: legVmg ≈ SOG · cos(45°), ETA ≈ distance / legVmg", () => {
+      // COG 45° to a due-north leg → legVmg = 5 · cos(45°) ≈ 3.535
+      const result = calculateWaypointProgress(position, 5, 45, waypointNorth, previous);
+      expect(result.legVmg).not.toBeNull();
+      expect(result.legVmg!).toBeCloseTo(5 * Math.cos(Math.PI / 4), 2);
+      expect(result.eta).not.toBeNull();
+      expect(result.eta!).toBeCloseTo(result.distance / result.legVmg!, 0);
+    });
+
+    it("first leg (previous = null) still uses bearing-to-mark VMG", () => {
+      // Sanity: no regression for the first-leg code path.
+      const result = calculateWaypointProgress(position, 5, 0, waypointNorth, null);
+      expect(result.legVmg).toBeNull();
+      expect(result.eta).not.toBeNull();
+      expect(result.eta!).toBeCloseTo(result.distance / 5, 2);
+    });
+  });
 });
 
 describe("calculateRouteLegs", () => {
@@ -278,5 +360,71 @@ describe("formatBearing", () => {
 
   it("normalizes 360 to 000", () => {
     expect(formatBearing(360)).toBe("000°");
+  });
+});
+
+describe("legProgress", () => {
+  // Leg from A (south) to B (north), 1 km long, off Rhode Island.
+  const B = { latitude: 41.5, longitude: -71.3 };
+  const A = offsetPoint(B, -1000, 0);
+
+  it("returns legLength ≈ d(A,B) and legBearing ≈ 000° for a northbound leg", () => {
+    const p = legProgress(A, B, A);
+    // offsetPoint is flat-earth, geolib is spherical → ~1% discrepancy.
+    expect(p.legLength).toBeGreaterThan(990);
+    expect(p.legLength).toBeLessThan(1020);
+    expect(p.legBearing).toBeCloseTo(0, 0);
+  });
+
+  it("P at A → alongTrackPastB ≈ -legLength, crossTrack ≈ 0", () => {
+    const p = legProgress(A, B, A);
+    expect(p.alongTrackPastB).toBeCloseTo(-p.legLength, 0);
+    expect(Math.abs(p.crossTrack)).toBeLessThan(1);
+  });
+
+  it("P at B → alongTrackPastB ≈ 0, rangeToB ≈ 0", () => {
+    const p = legProgress(A, B, B);
+    expect(p.alongTrackPastB).toBeCloseTo(0, -1);
+    expect(p.rangeToB).toBeLessThan(1);
+    expect(Math.abs(p.crossTrack)).toBeLessThan(1);
+  });
+
+  it("P past B on the same bearing → alongTrackPastB > 0, crossTrack ≈ 0", () => {
+    const p = legProgress(A, B, offsetPoint(B, 200, 0));
+    expect(p.alongTrackPastB).toBeGreaterThan(150);
+    expect(p.alongTrackPastB).toBeLessThan(250);
+    expect(Math.abs(p.crossTrack)).toBeLessThan(1);
+  });
+
+  it("P at the midpoint, offset 100 m east → along ≈ legLength/2, cross ≈ +100", () => {
+    const midpoint = offsetPoint(A, 500, 0);
+    const p = legProgress(A, B, offsetPoint(midpoint, 0, 100));
+    // along-track from A is ~500m, so alongTrackPastB ≈ 500 - 1000 = -500.
+    expect(p.alongTrackPastB).toBeCloseTo(-500, -1);
+    expect(p.crossTrack).toBeGreaterThan(90);
+    expect(p.crossTrack).toBeLessThan(110);
+  });
+
+  it("cross-track sign: right of track is positive, left is negative", () => {
+    const right = legProgress(A, B, offsetPoint(B, -500, 100));
+    const left = legProgress(A, B, offsetPoint(B, -500, -100));
+    expect(right.crossTrack).toBeGreaterThan(0);
+    expect(left.crossTrack).toBeLessThan(0);
+  });
+
+  it("degenerate leg (A == B) returns sane values without NaN", () => {
+    const p = legProgress(B, B, offsetPoint(B, 50, 0));
+    expect(Number.isFinite(p.rangeToB)).toBe(true);
+    expect(Number.isFinite(p.alongTrackPastB)).toBe(true);
+    expect(Number.isFinite(p.crossTrack)).toBe(true);
+    expect(p.legLength).toBe(0);
+  });
+
+  it("very short leg does not produce NaN", () => {
+    const near = offsetPoint(B, -30, 0);
+    const p = legProgress(near, B, offsetPoint(B, -10, 5));
+    expect(Number.isFinite(p.rangeToB)).toBe(true);
+    expect(Number.isFinite(p.alongTrackPastB)).toBe(true);
+    expect(Number.isFinite(p.crossTrack)).toBe(true);
   });
 });

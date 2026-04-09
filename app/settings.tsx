@@ -1,6 +1,6 @@
 import SheetView from "@/components/ui/SheetView";
-import { describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits } from "@/hooks/usePreferredUnits";
-import { Host, List, Picker, Section, Text, VStack } from "@expo/ui/swift-ui";
+import { ARRIVAL_RADIUS_OPTIONS, describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits, type ArrivalRadius } from "@/hooks/usePreferredUnits";
+import { Host, List, Picker, Section, Text, Toggle, VStack } from "@expo/ui/swift-ui";
 import { tag } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";
 
@@ -9,6 +9,8 @@ export default function Settings() {
   const distance = usePreferredUnits((s) => s.distance);
   const depth = usePreferredUnits((s) => s.depth);
   const temperature = usePreferredUnits((s) => s.temperature);
+  const arrivalRadius = usePreferredUnits((s) => s.arrivalRadius);
+  const arriveOnCircleOnly = usePreferredUnits((s) => s.arriveOnCircleOnly);
 
   return (
     <SheetView id="settings">
@@ -65,6 +67,28 @@ export default function Settings() {
                   </Text>
                 ))}
               </Picker>
+            </Section>
+            <Section title="Routes">
+              <Picker
+                label="Arrival radius"
+                selection={String(arrivalRadius)}
+                onSelectionChange={(value) =>
+                  setPreferredUnits({ arrivalRadius: Number(value) as ArrivalRadius })
+                }
+              >
+                {ARRIVAL_RADIUS_OPTIONS.map((meters) => (
+                  <Text key={meters} modifiers={[tag(String(meters))]}>
+                    {meters} m
+                  </Text>
+                ))}
+              </Picker>
+              <Toggle
+                label="Advance on arrival circle only"
+                isOn={arriveOnCircleOnly}
+                onIsOnChange={(value) =>
+                  setPreferredUnits({ arriveOnCircleOnly: value })
+                }
+              />
             </Section>
           </List>
         </VStack>
