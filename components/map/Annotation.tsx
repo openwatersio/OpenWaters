@@ -130,10 +130,10 @@ export function Annotation({
   // annotation doesn't also fire the map's location-sheet handler.
   const wrappedOnPress = useCallback<NonNullable<ViewAnnotationProps["onPress"]>>((e) => {
     e.stopPropagation();
-    onPress?.(e);
+    onPress?.();
   }, [onPress]);
 
-  const handleDragStart = useCallback<NonNullable<ViewAnnotationProps["onDragStart"]>>(() => {
+  const handleDragStart = useCallback<NonNullable<ViewAnnotationProps["onDragStart"]>>((e) => {
     dragLift.value = withSpring(-10, { damping: 12, stiffness: 300 });
     dragScale.value = withSpring(1.15, { damping: 12, stiffness: 300 });
     onDragStart?.(e);

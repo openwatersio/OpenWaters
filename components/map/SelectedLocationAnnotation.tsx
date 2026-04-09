@@ -1,5 +1,6 @@
 import { useSelection } from "@/hooks/useSelection";
 import useTheme from "@/hooks/useTheme";
+import type { ViewAnnotationProps } from "@maplibre/maplibre-react-native";
 import { router } from "expo-router";
 import { useCallback } from "react";
 import { Annotation } from "./Annotation";
@@ -12,9 +13,9 @@ export default function SelectedLocationAnnotation() {
     ? selection.id.split(",").map(Number) as [number, number]
     : null;
 
-  const handleDragEnd = useCallback(
-    (lngLat: [number, number]) =>
-      router.setParams({ id: lngLat.join(',') }),
+  const handleDragEnd = useCallback<NonNullable<ViewAnnotationProps["onDragEnd"]>>(
+    (e) =>
+      router.setParams({ id: e.nativeEvent.lngLat.join(',') }),
     []
   );
 
