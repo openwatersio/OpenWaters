@@ -97,8 +97,8 @@ export default function RootLayout() {
         <Stack.Screen name="route/navigate" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: "fitToContents",
-          sheetInitialDetentIndex: 0,
+          // Updated dynamically by DetentProvider
+          sheetAllowedDetents: [0],
           sheetGrabberVisible: true,
           headerShown: false,
         }} />

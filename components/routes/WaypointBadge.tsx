@@ -1,16 +1,25 @@
+import { ActiveWaypoint } from "@/hooks/useRoutes";
 import useTheme from "@/hooks/useTheme";
 import { Image, Text } from "@expo/ui/swift-ui";
-import { background, font, foregroundStyle, frame, padding, shapes } from "@expo/ui/swift-ui/modifiers";
+import { background, font, foregroundStyle, frame, shapes } from "@expo/ui/swift-ui/modifiers";
 
-export default function WaypointBadge({ index = 0, last = false }: { index?: number, last?: boolean }) {
+export type WaypointBadgeProps = {
+  index?: number,
+  last?: boolean,
+  points?: ActiveWaypoint[]
+};
+
+export default function WaypointBadge({
+  index = 0,
+  points = [],
+  last = points.length - 1 === index
+}: WaypointBadgeProps) {
   const theme = useTheme();
   const modifiers = [
     font({ size: 12, weight: "black" as const }),
-    foregroundStyle(theme.surface),
+    foregroundStyle("white"),
     frame({ width: 24, height: 24 }),
     background(theme.primary, shapes.circle()),  // inner fill
-    padding({ all: 2 }),                          // grow bounds by 2pt
-    background(theme.surface, shapes.circle()),  // outer ring color
   ];
 
   if (index === 0 || last) {
@@ -18,7 +27,7 @@ export default function WaypointBadge({ index = 0, last = false }: { index?: num
       <Image
         systemName={last ? "flag.pattern.checkered" : "flag.fill"}
         size={12}
-        color={theme.surface}
+        color={"white"}
         modifiers={modifiers}
       />
     );

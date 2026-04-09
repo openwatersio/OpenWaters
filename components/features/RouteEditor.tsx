@@ -176,15 +176,11 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
       coords?.latitude != null && coords?.longitude != null
         ? { latitude: coords.latitude, longitude: coords.longitude }
         : undefined;
-    router.dismiss();
     await startNavigation(id, { from });
   }, [id]);
 
   const dist = toDistance(totalDistance);
-  const subtitle =
-    points.length > 0
-      ? `${points.length} ${points.length === 1 ? "waypoint" : "waypoints"} · ${dist.value} ${dist.abbr}`
-      : undefined;
+  const subtitle = `${dist.value} ${dist.abbr}`
 
   return (
     <>
