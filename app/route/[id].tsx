@@ -1,12 +1,7 @@
 import RouteEditor from "@/components/features/RouteEditor";
 import SheetView from "@/components/ui/SheetView";
 import { useRoute } from "@/hooks/useRoutes";
-import { useSheetDetents } from "@/hooks/useSheetDetents";
-import { useHeaderHeight } from "@react-navigation/elements";
 import { useLocalSearchParams } from "expo-router";
-import { useEffect } from "react";
-
-const DETENTS = [0.5, 1];
 
 /**
  * Unified view + edit screen for an existing route. Loads the route into
@@ -19,15 +14,8 @@ export default function RouteScreen() {
 
   useRoute(routeId);
 
-  const headerHeight = useHeaderHeight();
-  const { setDetentHeight } = useSheetDetents(DETENTS);
-
-  useEffect(() => {
-    setDetentHeight(headerHeight);
-  }, [headerHeight, setDetentHeight]);
-
   return (
-    <SheetView id="route" style={{ flex: 1 }}>
+    <SheetView id="route" style={{ flex: 1 }} headerDetent additionalDetents={[0.5, 1]}>
       <RouteEditor />
     </SheetView>
   );

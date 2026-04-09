@@ -31,8 +31,7 @@ export default function RootLayout() {
         <Stack.Screen name="track/record" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
-          // Updated dynamically,
-          sheetAllowedDetents: [0],
+          sheetAllowedDetents: "fitToContents",
           sheetGrabberVisible: true,
           headerShown: false,
         }} />
@@ -83,14 +82,14 @@ export default function RootLayout() {
         <Stack.Screen name="route/[id]" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
-          // Updated dynamically by useSheetDetents
+          // Updated dynamically by DetentProvider
           sheetAllowedDetents: [0.1, 0.5, 1],
           sheetGrabberVisible: true,
         }} />
         <Stack.Screen name="route/new" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
-          // Updated dynamically by useSheetDetents
+          // Updated dynamically by DetentProvider
           sheetAllowedDetents: [0.1, 0.5, 1],
           sheetGrabberVisible: true,
         }} />

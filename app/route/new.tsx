@@ -2,8 +2,6 @@ import RouteEditor from "@/components/features/RouteEditor";
 import SheetView from "@/components/ui/SheetView";
 import { useNavigation } from "@/hooks/useNavigation";
 import { addRouteWaypoint, clearActiveRoute, startRoute } from "@/hooks/useRoutes";
-import { useSheetDetents } from "@/hooks/useSheetDetents";
-import { useHeaderHeight } from "@react-navigation/elements";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
 
@@ -15,13 +13,6 @@ import { useEffect } from "react";
  */
 export default function NewRouteScreen() {
   const { to } = useLocalSearchParams<{ to?: string }>();
-
-  const headerHeight = useHeaderHeight();
-  const { setDetentHeight } = useSheetDetents([0.5, 1]);
-
-  useEffect(() => {
-    setDetentHeight(headerHeight);
-  }, [headerHeight, setDetentHeight]);
 
   useEffect(() => {
     startRoute();
@@ -44,7 +35,7 @@ export default function NewRouteScreen() {
   }, []);
 
   return (
-    <SheetView id="route" style={{ flex: 1 }}>
+    <SheetView id="route" style={{ flex: 1 }} headerDetent additionalDetents={[0.5, 1]}>
       <RouteEditor />
     </SheetView>
   );

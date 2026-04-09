@@ -1,17 +1,16 @@
 import SheetView from "@/components/ui/SheetView";
+import { StatItem } from "@/components/ui/StatItem";
 import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
-import { useSheetDetents } from "@/hooks/useSheetDetents";
 import { start, stop, useTrackRecording } from "@/hooks/useTrackRecording";
 import { formatElapsedTime } from "@/lib/format";
-import { Host, HStack, Spacer, Button as SwiftButton, Text as SwiftText, VStack } from "@expo/ui/swift-ui";
-import { buttonStyle, clipShape, controlSize, font, foregroundStyle, labelStyle, monospacedDigit, padding } from "@expo/ui/swift-ui/modifiers";
+import { Host, HStack, Button as SwiftButton } from "@expo/ui/swift-ui";
+import { buttonStyle, clipShape, controlSize, labelStyle, padding } from "@expo/ui/swift-ui/modifiers";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, StyleSheet } from "react-native";
+import { Alert } from "react-native";
 
 export default function RecordScreen() {
   const { track, isRecording, distance, averageSpeed } = useTrackRecording();
-  const { onHostLayout } = useSheetDetents();
   const [, setTick] = useState(0);
 
   // Start recording if not already active
@@ -28,7 +27,7 @@ export default function RecordScreen() {
   }, []);
 
   const confirmStop = useCallback(() => {
-    Alert.alert("Stop Tracking", "Would you like to stop tracking?", [
+    Alert.alert("Stop Track?", "Do you want to stop this track?", [
       {
         text: "Stop", style: "destructive", onPress: () => {
           stop();
@@ -43,27 +42,23 @@ export default function RecordScreen() {
   const avgSpd = toSpeed(averageSpeed);
 
   return (
-    <SheetView id="record" style={styles.container}>
-      <Host onLayoutContent={onHostLayout} matchContents>
-        <HStack spacing={8} modifiers={[padding({ all: 16 })]}>
-          <Spacer />
+    <SheetView id="record">
+      <Host matchContents>
+        <HStack spacing={8} modifiers={[padding({ all: 12, top: 14 })]}>
           <StatItem
             label="Elapsed"
             value={formatElapsedTime(track?.started_at ?? null)}
           />
-          <Spacer />
           <StatItem
             label="Distance"
             value={dist.value}
-            unit={dist.abbr}
+            suffix={dist.abbr}
           />
-          <Spacer />
           <StatItem
-            label="Avg Speed"
+            label="Average"
             value={avgSpd.value}
-            unit={avgSpd.abbr}
+            suffix={avgSpd.abbr}
           />
-          <Spacer />
           <SwiftButton
             label="Stop"
             systemImage="stop.fill"
@@ -81,106 +76,3 @@ export default function RecordScreen() {
     </SheetView>
   );
 }
-
-function StatItem({ label, value, unit }: { label: string; value: string; unit?: string }) {
-  return (
-    <VStack alignment="center" spacing={2}>
-      <SwiftText
-        modifiers={[
-          font({ size: 13, weight: "semibold" }),
-          foregroundStyle({ type: "hierarchical", style: "secondary" }),
-        ]}
-      >
-        {label}
-      </SwiftText>
-      <HStack alignment="firstTextBaseline" spacing={2}>
-        <SwiftText
-          modifiers={[
-            font({ size: 24, weight: "bold" }),
-            monospacedDigit()
-          ]}
-        >
-          {value}
-        </SwiftText>
-        {unit && (
-          <SwiftText
-            modifiers={[
-              font({ size: 14, weight: "medium" }),
-              foregroundStyle({ type: "hierarchical", style: "secondary" }),
-            ]}
-          >
-            {unit}
-          </SwiftText>
-        )}
-      </HStack>
-    </VStack>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  compact: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    paddingTop: 16,
-    gap: 20,
-  },
-  stat: {
-    alignItems: "center",
-    flex: 1,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  value: {
-    fontSize: 24,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-    letterSpacing: -0.8,
-  },
-  units: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  stopButton: {
-    flex: 1,
-    alignItems: "flex-end",
-  },
-  expanded: {
-    marginTop: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    gap: 20,
-  },
-  section: {
-    gap: 12,
-  },
-  timesRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  timeItem: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  timeLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  timeValue: {
-    fontSize: 20,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-  },
-});

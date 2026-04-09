@@ -93,7 +93,7 @@ export default function NavigateScreen() {
       <Detent style={{ paddingHorizontal: 16, paddingTop: 36 }}>
         <Host matchContents>
           <Button
-            label="Stop Navigation"
+            label="Stop Route"
             role="destructive"
             onPress={handleStop}
             modifiers={[
@@ -109,15 +109,15 @@ export default function NavigateScreen() {
 
 function handleStop() {
   Alert.alert(
-    "Stop Navigation?",
-    "Do you want to stop navigating this route?",
+    "Stop Route?",
+    "Do you want to stop this route?",
     [
       {
-        text: "Keep Navigating",
+        text: "Cancel",
         style: "cancel",
       },
       {
-        text: "Stop Route",
+        text: "Stop",
         style: "destructive",
         onPress: () => {
           stopNavigation()
