@@ -1,6 +1,11 @@
 # Contributing
 
-Open Waters is a modern, open source, mobile-first marine navigation app built with React Native and Expo. See [docs/](docs/README.md) for the full product plan, competitive analysis, and roadmap.
+Open Waters is a modern, open source, mobile-first marine navigation app built with React Native and Expo. See [docs/](docs/README.md) for feature documentation, specs, and the project vision.
+
+This project is built with [Expo](https://expo.dev/), a framework and platform for universal React applications. To learn more, look at the following resources:
+
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
 ## Getting Started
 
