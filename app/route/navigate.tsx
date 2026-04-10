@@ -1,4 +1,5 @@
 import WaypointBadge from "@/components/routes/WaypointBadge";
+import TrackRecordingStats from "@/components/tracks/TrackRecordingStats";
 import { Detent } from "@/components/ui/Detent";
 import SheetView from "@/components/ui/SheetView";
 import { ArrivalTimeStat, BearingStat, DistanceStat, EtaStat } from "@/components/ui/StatItem";
@@ -11,6 +12,7 @@ import {
   stopNavigation,
   useActiveRoute
 } from "@/hooks/useRoutes";
+import { stopTrackRecording, useTrackRecording } from "@/hooks/useTrackRecording";
 import {
   calculateDestinationProgress,
   calculateWaypointProgress,
@@ -29,6 +31,8 @@ export default function NavigateScreen() {
   const activePointIndex = route?.activeIndex ?? 0;
   const points = useMemo(() => route?.points ?? [], [route?.points]);
   const nav = useNavigationState();
+
+  const isRecording = useTrackRecording((s) => s.isRecording);
 
   useDismissBehavior();
   useWaypointArrival();
@@ -90,6 +94,25 @@ export default function NavigateScreen() {
         </Host>
       </Detent>
 
+      {isRecording && (
+        <Detent style={{ padding: 16 }}>
+          <Host matchContents>
+            <VStack alignment="leading" spacing={8}>
+              <HStack spacing={8} alignment="center">
+                <Text modifiers={[
+                  textCase("uppercase"),
+                  font({ size: 13, weight: "semibold" }),
+                  foregroundStyle("secondary"),
+                ]}>
+                  Track
+                </Text>
+              </HStack>
+              <TrackRecordingStats />
+            </VStack>
+          </Host>
+        </Detent>
+      )}
+
       <Detent style={{ paddingHorizontal: 16, paddingTop: 36 }}>
         <Host matchContents>
           <Button
@@ -112,15 +135,27 @@ function handleStop() {
     "Stop Route?",
     "Do you want to stop this route?",
     [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
+      { text: "Cancel", style: "cancel" },
       {
         text: "Stop",
         style: "destructive",
         onPress: () => {
-          stopNavigation()
+          stopNavigation();
+
+          if (useTrackRecording.getState().isRecording) {
+            Alert.alert(
+              "Stop Recording?",
+              "You are still recording a track. Would you like to stop recording too?",
+              [
+                { text: "Keep Recording", style: "cancel" },
+                {
+                  text: "Stop Recording",
+                  style: "destructive",
+                  onPress: () => stopTrackRecording(),
+                },
+              ],
+            );
+          }
         },
       },
     ],

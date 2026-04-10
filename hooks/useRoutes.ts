@@ -1,4 +1,6 @@
+import { setFollowUserLocation } from "@/hooks/useCameraState";
 import { useDbQuery } from "@/hooks/useDbQuery";
+import { startTrackRecording } from "@/hooks/useTrackRecording";
 import {
   deleteRoute as dbDeleteRoute,
   getAllRoutes,
@@ -10,7 +12,6 @@ import {
   type Route,
   type RoutesOrder,
 } from "@/lib/database";
-import { setFollowUserLocation } from "@/hooks/useCameraState";
 import { findNearestLegIndex } from "@/lib/geo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getDistance } from "geolib";
@@ -408,6 +409,7 @@ export async function startNavigation(
 
   setStore({ ...route, mode: RouteMode.Navigating, activeIndex });
   setFollowUserLocation(true);
+  startTrackRecording();
 }
 
 export function advanceToNext() {

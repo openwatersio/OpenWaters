@@ -52,7 +52,7 @@ async function recordLocation(location: LocationObject) {
   // This should never happen since we only subscribe when recording, but just in case:
   if (!track) {
     console.warn("Received location update while no track is active.");
-    stop();
+    stopTrackRecording();
     return
   }
 
@@ -110,7 +110,7 @@ export const useTrackRecording = create<State>()(
       storage: createJSONStorage(() => AsyncStorage),
       onRehydrateStorage: () => (state) => {
         if (state?.isRecording) {
-          resume();
+          resumeTrackRecording();
         }
       },
     },
@@ -129,7 +129,9 @@ function resetState(track: Track | null = null) {
   });
 }
 
-export async function start() {
+export async function startTrackRecording() {
+  if (useTrackRecording.getState().isRecording) return;
+
   const granted = await requestPermissions();
   if (!granted) return;
 
@@ -141,14 +143,14 @@ export async function start() {
   await startBackgroundTracking();
 }
 
-export async function resume() {
+export async function resumeTrackRecording() {
   const { isRecording, track } = useTrackRecording.getState();
   if (!isRecording || !track) return;
 
   startForegroundTracking();
 }
 
-export async function stop() {
+export async function stopTrackRecording() {
   stopForegroundTracking();
   await stopBackgroundTracking();
 

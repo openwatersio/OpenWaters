@@ -53,7 +53,7 @@ export function DistanceStat({ value }: { value: number | undefined }) {
 }
 
 export function BearingStat({ value }: { value: number | undefined }) {
-  return <StatItem label="True" value={value != null ? formatBearing(value) : "—"} />;
+  return <StatItem label="Bearing" value={value != null ? formatBearing(value) : "—"} />;
 }
 
 export function EtaStat({ value }: { value: number | null | undefined }) {
