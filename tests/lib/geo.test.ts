@@ -342,12 +342,12 @@ describe("calculateDestinationProgress", () => {
 });
 
 describe("formatBearing", () => {
-  it("pads single-digit bearings", () => {
-    expect(formatBearing(5)).toBe("005°");
+  it("formats single-digit bearings", () => {
+    expect(formatBearing(5)).toBe("5°");
   });
 
-  it("pads two-digit bearings", () => {
-    expect(formatBearing(45)).toBe("045°");
+  it("formats two-digit bearings", () => {
+    expect(formatBearing(45)).toBe("45°");
   });
 
   it("formats three-digit bearings", () => {
@@ -355,11 +355,11 @@ describe("formatBearing", () => {
   });
 
   it("rounds decimal values", () => {
-    expect(formatBearing(44.7)).toBe("045°");
+    expect(formatBearing(44.7)).toBe("45°");
   });
 
-  it("normalizes 360 to 000", () => {
-    expect(formatBearing(360)).toBe("000°");
+  it("normalizes 360 to 0", () => {
+    expect(formatBearing(360)).toBe("0°");
   });
 });
 
