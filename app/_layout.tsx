@@ -36,12 +36,27 @@ export default function RootLayout() {
           sheetGrabberVisible: true,
           headerShown: false,
         }} />
-        <Stack.Screen name="charts" options={{
+        <Stack.Screen name="charts/index" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
           sheetAllowedDetents: [0.5, 1],
           sheetGrabberVisible: true,
+          sheetExpandsWhenScrolledToEdge: true,
           title: "Charts",
+        }} />
+        <Stack.Screen name="charts/add" options={{
+          presentation: "formSheet",
+          sheetLargestUndimmedDetentIndex: "last",
+          sheetAllowedDetents: [1],
+          sheetGrabberVisible: true,
+          title: "Add Chart Source",
+        }} />
+        <Stack.Screen name="charts/[id]" options={{
+          presentation: "formSheet",
+          sheetLargestUndimmedDetentIndex: "last",
+          sheetAllowedDetents: [1],
+          sheetGrabberVisible: true,
+          title: "Edit Chart Source",
         }} />
         <Stack.Screen name="settings" options={{
           presentation: "formSheet",

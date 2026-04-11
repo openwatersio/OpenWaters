@@ -2,33 +2,42 @@ import googleEarth from "@/styles/google-earth.json";
 import noaaEcdis from "@/styles/noaa-ecdis.json";
 import noaaPaper from "@/styles/noaa-paper.json";
 import openseamap from "@/styles/openseamap.json";
+import type { ChartSourceType } from "@/lib/chartSources";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 
-export default [
+type MapStyle = {
+  name: string;
+  type: ChartSourceType;
+  style: StyleSpecification | string;
+};
+
+const mapStyles: MapStyle[] = [
   {
-    id: "vectorcharts",
     name: "VectorCharts",
+    type: "style",
     style:
       "https://api.vectorcharts.com/api/v1/styles/base.json?token=7756d6ccad1c4656937e539bd3744dcd",
   },
   {
-    id: "noaa-ecdis",
     name: "NOAA (ECDIS)",
+    type: "custom",
     style: noaaEcdis as unknown as StyleSpecification,
   },
   {
-    id: "noaa-paper",
     name: "NOAA (Paper Chart)",
+    type: "custom",
     style: noaaPaper as unknown as StyleSpecification,
   },
   {
-    id: "openseamap",
     name: "OpenSeaMap",
+    type: "custom",
     style: openseamap as unknown as StyleSpecification,
   },
   {
-    id: "google-earth",
     name: "Google Earth",
+    type: "custom",
     style: googleEarth as unknown as StyleSpecification,
   },
 ];
+
+export default mapStyles;

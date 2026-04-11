@@ -1,3 +1,4 @@
+import mapStyles from "@/styles";
 import { LocationObject } from "expo-location";
 import * as SQLite from "expo-sqlite";
 
@@ -85,11 +86,59 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
   }
 
   if (currentVersion < 4) {
-    await db.execAsync(`
-      ALTER TABLE routes ADD COLUMN distance REAL NOT NULL DEFAULT 0;
-      ALTER TABLE route_points DROP COLUMN name;
-      PRAGMA user_version = 4;
-    `);
+    const columns = await db.getAllAsync<{ name: string }>(
+      "PRAGMA table_info(routes)",
+    );
+    if (!columns.some((c) => c.name === "distance")) {
+      await db.execAsync(
+        "ALTER TABLE routes ADD COLUMN distance REAL NOT NULL DEFAULT 0;",
+      );
+    }
+    // DROP COLUMN is idempotent if the column doesn't exist — SQLite ignores it
+    await db.execAsync("ALTER TABLE route_points DROP COLUMN name;").catch(() => {});
+    await db.execAsync("PRAGMA user_version = 4;");
+  }
+
+  if (currentVersion < 5) {
+    await db.withTransactionAsync(async () => {
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS chart_sources (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL,
+          options TEXT NOT NULL,
+          is_builtin INTEGER NOT NULL DEFAULT 0
+        );
+      `);
+
+      for (const { name, type, style } of mapStyles) {
+        const optionsJson =
+          typeof style === "string"
+            ? JSON.stringify({ url: style })
+            : JSON.stringify(style);
+        await db.runAsync(
+          "INSERT INTO chart_sources (name, type, options, is_builtin) VALUES (?, ?, ?, 1)",
+          name,
+          type,
+          optionsJson,
+        );
+      }
+    });
+
+    await db.execAsync("PRAGMA user_version = 5;");
+  }
+
+  if (currentVersion < 6) {
+    // Rename `style` column to `options` for any DB that ran the earlier v5 migration
+    const columns = await db.getAllAsync<{ name: string }>(
+      "PRAGMA table_info(chart_sources)",
+    );
+    if (columns.some((c) => c.name === "style")) {
+      await db.execAsync(
+        "ALTER TABLE chart_sources RENAME COLUMN style TO options;",
+      );
+    }
+    await db.execAsync("PRAGMA user_version = 6;");
   }
 }
 
@@ -441,4 +490,64 @@ export async function getAllTimeSpeedStats(): Promise<SpeedStats> {
     avgSpeed: row?.avg_speed ?? 0,
     maxSpeed: row?.max_speed ?? 0,
   };
+}
+
+// -- Chart source operations --
+
+export type ChartSourceRow = {
+  id: number;
+  name: string;
+  type: string;
+  options: string;
+  is_builtin: number;
+};
+
+export async function getAllChartSources(): Promise<ChartSourceRow[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<ChartSourceRow>(
+    "SELECT * FROM chart_sources ORDER BY id ASC",
+  );
+}
+
+export async function insertChartSource(
+  name: string,
+  type: string,
+  options: string,
+): Promise<ChartSourceRow> {
+  const db = await getDatabase();
+  const result = await db.runAsync(
+    "INSERT INTO chart_sources (name, type, options) VALUES (?, ?, ?)",
+    name,
+    type,
+    options,
+  );
+  const row = await db.getFirstAsync<ChartSourceRow>(
+    "SELECT * FROM chart_sources WHERE id = ?",
+    result.lastInsertRowId,
+  );
+  return row!;
+}
+
+export async function updateChartSource(
+  id: number,
+  fields: Partial<Pick<ChartSourceRow, "name" | "type" | "options">>,
+): Promise<void> {
+  const db = await getDatabase();
+  const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
+  if (entries.length === 0) return;
+  const setClauses = entries.map(([k]) => `${k} = ?`).join(", ");
+  const values = entries.map(([, v]) => v);
+  await db.runAsync(
+    `UPDATE chart_sources SET ${setClauses} WHERE id = ?`,
+    ...values,
+    id,
+  );
+}
+
+export async function deleteChartSource(id: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    "DELETE FROM chart_sources WHERE id = ? AND is_builtin = 0",
+    id,
+  );
 }
