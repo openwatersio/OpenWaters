@@ -1,4 +1,12 @@
-import type { MBTilesOptions } from "@/lib/chartSources";
+export type MBTilesOptions = {
+  path: string;
+  format: "png" | "jpg" | "jpeg" | "webp" | "pbf";
+  tileSize?: number;
+  minzoom?: number;
+  maxzoom?: number;
+  bounds?: [number, number, number, number];
+  attribution?: string;
+};
 import { Directory, File, Paths } from "expo-file-system";
 import { openDatabaseAsync } from "expo-sqlite";
 
@@ -129,7 +137,7 @@ export function deleteMBTilesFile(absolutePath: string): void {
 
 /**
  * Converts raw MBTiles metadata to `MBTilesOptions` suitable for storing
- * in the `chart_sources` table.
+ * in the `sources` table.
  */
 export function metadataToOptions(
   path: string,
@@ -139,8 +147,8 @@ export function metadataToOptions(
   return {
     path,
     format,
-    ...(metadata.minzoom != null && { minZoom: metadata.minzoom }),
-    ...(metadata.maxzoom != null && { maxZoom: metadata.maxzoom }),
+    ...(metadata.minzoom != null && { minzoom: metadata.minzoom }),
+    ...(metadata.maxzoom != null && { maxzoom: metadata.maxzoom }),
     ...(metadata.bounds && { bounds: metadata.bounds }),
     ...(metadata.attribution && { attribution: metadata.attribution }),
   };

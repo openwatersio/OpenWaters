@@ -1,11 +1,7 @@
 import useTheme from "@/hooks/useTheme";
-import type {
-  ChartSourceType,
-  MBTilesOptions,
-  RasterOptions,
-  StyleOptions,
-} from "@/lib/chartSources";
-import { importMBTilesFile } from "@/lib/mbtiles";
+import type { CatalogSourceType, StyleSource, RasterSource } from "@/catalog/types";
+import type { MBTilesOptions } from "@/lib/charts/mbtiles";
+import { importMBTilesFile } from "@/lib/charts/mbtiles";
 import {
   Button,
   Picker,
@@ -17,14 +13,13 @@ import {
 import {
   disabled,
   foregroundStyle,
-  frame,
   pickerStyle,
   tag,
 } from "@expo/ui/swift-ui/modifiers";
 import { File } from "expo-file-system";
 import { useCallback, useState } from "react";
 
-export type FormType = ChartSourceType;
+export type FormType = CatalogSourceType;
 
 export type OptionsFormProps = {
   options: string | null;
@@ -38,7 +33,7 @@ function StyleUrlForm({ options, onOptionsChange }: OptionsFormProps) {
   const [error, setError] = useState<string | null>(null);
 
   const existing = options
-    ? (JSON.parse(options) as StyleOptions).url
+    ? (JSON.parse(options) as StyleSource).url
     : undefined;
 
   const handleChange = useCallback(
@@ -79,8 +74,8 @@ const DEFAULT_MAX_ZOOM = 22;
 function RasterForm({ options, onOptionsChange }: OptionsFormProps) {
   const theme = useTheme();
 
-  const existing: RasterOptions | null = options
-    ? (JSON.parse(options) as RasterOptions)
+  const existing: RasterSource | null = options
+    ? (JSON.parse(options) as RasterSource)
     : null;
 
   const [url, setUrl] = useState(existing?.tiles?.[0] ?? "");
@@ -88,10 +83,10 @@ function RasterForm({ options, onOptionsChange }: OptionsFormProps) {
     existing?.tileSize ?? DEFAULT_TILE_SIZE,
   );
   const [minZoom, setMinZoom] = useState<number>(
-    existing?.minZoom ?? DEFAULT_MIN_ZOOM,
+    existing?.minzoom ?? DEFAULT_MIN_ZOOM,
   );
   const [maxZoom, setMaxZoom] = useState<number>(
-    existing?.maxZoom ?? DEFAULT_MAX_ZOOM,
+    existing?.maxzoom ?? DEFAULT_MAX_ZOOM,
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -99,8 +94,8 @@ function RasterForm({ options, onOptionsChange }: OptionsFormProps) {
     (next: {
       url?: string;
       tileSize?: number;
-      minZoom?: number;
-      maxZoom?: number;
+      minzoom?: number;
+      maxzoom?: number;
     }) => {
       const nextUrl = (next.url ?? url).trim();
       if (!nextUrl) {
@@ -123,9 +118,9 @@ function RasterForm({ options, onOptionsChange }: OptionsFormProps) {
         JSON.stringify({
           tiles: [nextUrl],
           tileSize: next.tileSize ?? tileSize,
-          minZoom: next.minZoom ?? minZoom,
-          maxZoom: next.maxZoom ?? maxZoom,
-        } satisfies RasterOptions),
+          minzoom: next.minzoom ?? minZoom,
+          maxzoom: next.maxzoom ?? maxZoom,
+        } satisfies Partial<RasterSource>),
       );
     },
     [url, tileSize, minZoom, maxZoom, onOptionsChange],
@@ -180,7 +175,7 @@ function RasterForm({ options, onOptionsChange }: OptionsFormProps) {
           step={1}
           onValueChange={(v) => {
             setMinZoom(v);
-            emit({ minZoom: v });
+            emit({ minzoom: v });
           }}
         />
         <Stepper
@@ -191,60 +186,11 @@ function RasterForm({ options, onOptionsChange }: OptionsFormProps) {
           step={1}
           onValueChange={(v) => {
             setMaxZoom(v);
-            emit({ maxZoom: v });
+            emit({ maxzoom: v });
           }}
         />
       </Section>
     </>
-  );
-}
-
-function CustomForm({ options, onOptionsChange }: OptionsFormProps) {
-  const theme = useTheme();
-  const [error, setError] = useState<string | null>(null);
-
-  const existing = options ?? undefined;
-
-  const handleChange = useCallback(
-    (value: string) => {
-      const trimmed = value.trim();
-      if (!trimmed) {
-        setError(null);
-        onOptionsChange(null);
-        return;
-      }
-      try {
-        const parsed = JSON.parse(trimmed);
-        if (parsed.version !== 8) {
-          setError("Style must have version: 8");
-          onOptionsChange(null);
-          return;
-        }
-        setError(null);
-        onOptionsChange(trimmed);
-      } catch {
-        setError("Invalid JSON");
-        onOptionsChange(null);
-      }
-    },
-    [onOptionsChange],
-  );
-
-  return (
-    <Section footer={<Text>Paste a complete MapLibre StyleSpecification</Text>}>
-      <TextField
-        placeholder='{"version": 8, "sources": {}, "layers": []}'
-        defaultValue={existing}
-        onChangeText={handleChange}
-        multiline
-        numberOfLines={8}
-        autocorrection={false}
-        modifiers={[frame({ minHeight: 160, alignment: "topLeading" })]}
-      />
-      {error ? (
-        <Text modifiers={[foregroundStyle(theme.danger)]}>{error}</Text>
-      ) : null}
-    </Section>
   );
 }
 
@@ -318,9 +264,9 @@ function MBTilesForm({
       {existing ? (
         <Section>
           <Text>Format: {existing.format}</Text>
-          {existing.minZoom != null && existing.maxZoom != null ? (
+          {existing.minzoom != null && existing.maxzoom != null ? (
             <Text>
-              Zoom: {existing.minZoom}–{existing.maxZoom}
+              Zoom: {existing.minzoom}–{existing.maxzoom}
             </Text>
           ) : null}
           {existing.bounds ? (
@@ -350,5 +296,5 @@ export const FORM_COMPONENTS: Record<
   style: StyleUrlForm,
   raster: RasterForm,
   mbtiles: MBTilesForm,
-  custom: CustomForm,
+  pmtiles: MBTilesForm, // PMTiles uses the same file-picker form as MBTiles
 };

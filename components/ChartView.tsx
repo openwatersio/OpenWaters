@@ -7,7 +7,7 @@ import {
   setActiveIndex
 } from "@/hooks/useRoutes";
 import { useSelectionHandler } from "@/hooks/useSelection";
-import { useMapStyle } from "@/hooks/useViewOptions";
+import { useMapStyle } from "@/hooks/useCharts";
 import { findNearestLegIndex, metersPerPixel } from "@/lib/geo";
 import { Images, Map, PressEvent } from "@maplibre/maplibre-react-native";
 import { useCallback } from "react";

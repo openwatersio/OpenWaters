@@ -1,47 +1,48 @@
+import ChartPreview from "@/components/charts/ChartPreview";
 import SheetView from "@/components/ui/SheetView";
-import {
-  setViewOptions,
-  useChartSources,
-  useViewOptions,
-} from "@/hooks/useViewOptions";
-import type { ChartSource, MBTilesOptions } from "@/lib/chartSources";
-import { deleteChartSource } from "@/lib/database";
-import { deleteMBTilesFile } from "@/lib/mbtiles";
+import { useCharts } from "@/hooks/useCharts";
+import useTheme from "@/hooks/useTheme";
+import { setViewOptions, useViewOptions } from "@/hooks/useViewOptions";
+import { selectSources } from "@/lib/charts/provider";
+import { buildMapStyle, computeBounds, type Chart } from "@/lib/charts/sources";
+import { deleteChart } from "@/lib/database";
 import {
   Button,
   ContextMenu,
   Host,
+  HStack,
+  Image,
   List,
+  RNHostView,
   Section,
+  Text,
   VStack,
 } from "@expo/ui/swift-ui";
+import {
+  font,
+  lineLimit,
+  onTapGesture
+} from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";
-import { Alert } from "react-native";
+import { useMemo } from "react";
+import { Alert, View } from "react-native";
 
 export default function Charts() {
   const mapStyleId = useViewOptions((s) => s.mapStyleId);
-  const sources = useChartSources();
+  const charts = useCharts();
+  const theme = useTheme();
 
-  function confirmDelete(source: ChartSource) {
-    const { id, name, type, options } = source;
+  function confirmDelete(chart: Chart) {
+    const { id, name } = chart;
     const selected =
-      id === mapStyleId || (mapStyleId == null && id === sources[0]?.id);
-    Alert.alert("Delete Chart Source", `Delete "${name}"?`, [
+      id === mapStyleId || (mapStyleId == null && id === charts[0]?.id);
+    Alert.alert("Delete Chart", `Delete "${name}"?`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          if (type === "mbtiles") {
-            try {
-              const opts = JSON.parse(options) as MBTilesOptions;
-              deleteMBTilesFile(opts.path);
-            } catch {
-              // If parsing or deletion fails, proceed with the DB delete
-              // anyway so we don't end up with an un-deletable row.
-            }
-          }
-          await deleteChartSource(id);
+          await deleteChart(id);
           if (selected) {
             setViewOptions({ mapStyleId: undefined });
           }
@@ -55,7 +56,7 @@ export default function Charts() {
       <Stack.Toolbar placement="left">
         <Stack.Toolbar.Button
           icon="plus"
-          onPress={() => router.push("/charts/add")}
+          onPress={() => router.push("/charts/catalog")}
         >
           Add
         </Stack.Toolbar.Button>
@@ -70,45 +71,27 @@ export default function Charts() {
         <VStack alignment="leading">
           <List>
             <Section>
-              {sources.map((source) => {
-                const { id, name, isBuiltin } = source;
+              {charts.map((chart) => {
+                const { id } = chart;
                 const selected =
                   id === mapStyleId ||
-                  (mapStyleId == null && id === sources[0]?.id);
-                const image = selected
-                  ? "checkmark.circle.fill"
-                  : "circle";
+                  (mapStyleId == null && id === charts[0]?.id);
 
                 return (
-                  <ContextMenu key={id}>
-                    <ContextMenu.Trigger>
-                      <Button
-                        systemImage={image}
-                        label={name}
-                        onPress={() => setViewOptions({ mapStyleId: id })}
-                      />
-                    </ContextMenu.Trigger>
-                    <ContextMenu.Items>
-                      <Button
-                        label="Edit"
-                        systemImage="pencil"
-                        onPress={() =>
-                          router.push({
-                            pathname: "/charts/[id]",
-                            params: { id: String(id) },
-                          })
-                        }
-                      />
-                      {!isBuiltin && (
-                        <Button
-                          label="Delete"
-                          systemImage="trash"
-                          role="destructive"
-                          onPress={() => confirmDelete(source)}
-                        />
-                      )}
-                    </ContextMenu.Items>
-                  </ContextMenu>
+                  <ChartRow
+                    key={id}
+                    chart={chart}
+                    selected={selected}
+                    theme={theme}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/charts/[id]",
+                        params: { id: String(id) },
+                      })
+                    }
+                    onSelect={() => setViewOptions({ mapStyleId: id })}
+                    onDelete={() => confirmDelete(chart)}
+                  />
                 );
               })}
             </Section>
@@ -116,5 +99,82 @@ export default function Charts() {
         </VStack>
       </Host>
     </SheetView>
+  );
+}
+
+function ChartRow({
+  chart,
+  selected,
+  theme,
+  onPress,
+  onSelect,
+  onDelete,
+}: {
+  chart: Chart;
+  selected: boolean;
+  theme: ReturnType<typeof useTheme>;
+  onPress: () => void;
+  onSelect: () => void;
+  onDelete: () => void;
+}) {
+  const renderable = selectSources(chart.sources);
+  const mapStyle = useMemo(
+    () => (renderable.length > 0 ? buildMapStyle(renderable) : null),
+    [renderable],
+  );
+  const previewBounds = useMemo(() => computeBounds(chart.sources), [chart.sources]);
+
+  return (
+    <ContextMenu>
+      <ContextMenu.Trigger>
+        <HStack
+          alignment="center"
+          spacing={16}
+          modifiers={[onTapGesture(onPress)]}
+        >
+          <RNHostView matchContents>
+            {mapStyle ? (
+              <ChartPreview
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 8,
+                  overflow: "hidden",
+                }}
+                mapStyle={mapStyle}
+                bounds={previewBounds}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  backgroundColor: theme.surfaceSecondary,
+                }}
+              />
+            )}
+          </RNHostView>
+          <Text modifiers={[font({ size: 16, weight: "semibold" }), lineLimit(1)]}>
+            {chart.name}
+          </Text>
+          {selected ? (
+            <Image systemName="checkmark" size={14} color={theme.primary} />
+          ) : null}
+        </HStack>
+      </ContextMenu.Trigger>
+      <ContextMenu.Items>
+        <Button
+          label="Select"
+          systemImage="checkmark.circle"
+          onPress={onSelect}
+        />
+        <Button
+          label="Delete"
+          systemImage="trash"
+          role="destructive"
+          onPress={onDelete}
+        />
+      </ContextMenu.Items>
+    </ContextMenu>
   );
 }

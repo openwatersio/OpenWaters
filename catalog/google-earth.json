@@ -1,6 +1,6 @@
 {
   "id": "google-earth",
-  "title": "Google Earth Satellite",
+  "title": "Google Earth",
   "summary": "Satellite imagery useful for anchorages and visual navigation.",
   "description": "Satellite imagery sourced from Google Maps tiles. Useful for visual identification of anchorages, inlets, reef structures, and shoreline features.\n\nNote: these tiles are served from an unofficial endpoint. This source should be replaced with a properly licensed satellite provider before distribution.",
   "license": "custom",

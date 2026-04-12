@@ -1,4 +1,5 @@
-import { setViewOptions, useChartSources } from "@/hooks/useViewOptions";
+import { useCharts } from "@/hooks/useCharts";
+import { setViewOptions } from "@/hooks/useViewOptions";
 import { Button, Divider, Menu } from "@expo/ui/swift-ui";
 import {
   contentShape,
@@ -13,7 +14,7 @@ import { router } from "expo-router";
 const NS_ID = "map-controls";
 
 export function SelectChartButton() {
-  const sources = useChartSources();
+  const charts = useCharts();
 
   return (
     <Menu
@@ -28,7 +29,7 @@ export function SelectChartButton() {
       ]}
     >
       {/* SwiftUI orders menu items bottom to top, and @expo/ui doesn't support menuOrder modifier */}
-      {sources.map(({ id, name }) => (
+      {charts.map(({ id, name }) => (
         <Button
           key={id}
           label={name}

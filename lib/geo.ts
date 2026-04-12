@@ -378,6 +378,20 @@ export function calculateDestinationProgress(
   return { distance, eta };
 }
 
+/** Test whether a position is inside a bounding box [west, south, east, north] */
+export function isInsideBounds(
+  position: { latitude: number; longitude: number },
+  bounds: [number, number, number, number],
+): boolean {
+  const [west, south, east, north] = bounds;
+  return (
+    position.longitude >= west &&
+    position.longitude <= east &&
+    position.latitude >= south &&
+    position.latitude <= north
+  );
+}
+
 /** Format bearing as three-digit true bearing, e.g. "045°T" */
 export function formatBearing(degrees: number): string {
   const rounded = Math.round(((degrees % 360) + 360) % 360);

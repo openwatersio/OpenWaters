@@ -1,13 +1,19 @@
 import ChartSourceForm from "@/components/charts/ChartSourceForm";
 import SheetView from "@/components/ui/SheetView";
-import { insertChartSource } from "@/lib/database";
+import { insertChart, insertSource } from "@/lib/database";
+import { optionsToSourceFields } from "@/lib/charts/sources";
 import { router } from "expo-router";
 import { useCallback } from "react";
 
 export default function AddChartSource() {
   const handleSave = useCallback(
     async (name: string, type: string, options: string) => {
-      await insertChartSource(name, type, options);
+      const chart = await insertChart(name);
+      await insertSource(chart.id, {
+        title: name,
+        type,
+        ...optionsToSourceFields(type, options),
+      });
       router.back();
     },
     [],

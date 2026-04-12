@@ -93,7 +93,6 @@ export default function ChartSourceForm({
               <Text modifiers={[tag("raster")]}>Raster</Text>
               <Text modifiers={[tag("style")]}>Style URL</Text>
               <Text modifiers={[tag("mbtiles")]}>MBTiles</Text>
-              <Text modifiers={[tag("custom")]}>Custom Style</Text>
             </Picker>
           </Section>
 
