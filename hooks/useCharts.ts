@@ -1,55 +1,46 @@
-import { useDbQuery } from "@/hooks/useDbQuery";
-import { useCameraView } from "@/hooks/useCameraView";
 import {
-  buildMapStyle,
-  parseChart,
-  type Chart,
-} from "@/lib/charts/sources";
-import { selectSources } from "@/lib/charts/provider";
-import { getAllChartsWithSources, getChartWithSources } from "@/lib/database";
-import { useViewOptions } from "@/hooks/useViewOptions";
-import { useCallback, useMemo } from "react";
+  useChartStore,
+  type InstalledChart,
+} from "@/lib/charts/store";
+import { useMemo } from "react";
 
-export type { Chart };
+export type { InstalledChart };
 
-export function useChart(id: number): Chart | undefined {
-  const fetch = useCallback(() => getChartWithSources(id), [id]);
-  const row = useDbQuery(["charts", "sources"], fetch);
+/** Get all installed charts as a sorted array */
+export function useCharts(): InstalledChart[] {
+  const charts = useChartStore((s) => s.charts);
   return useMemo(
-    () => (row ? parseChart(row, row.sources) : undefined),
-    [row],
+    () => Object.values(charts).sort((a, b) => a.name.localeCompare(b.name)),
+    [charts],
   );
 }
 
-export function useCharts(): Chart[] {
-  const fetch = useCallback(() => getAllChartsWithSources(), []);
-  const rows = useDbQuery(["charts", "sources"], fetch);
-  return useMemo(
-    () => (rows ?? []).map((r) => parseChart(r, r.sources)),
-    [rows],
-  );
+/** Get a single installed chart by ID */
+export function useChart(chartId: string): InstalledChart | undefined {
+  return useChartStore((s) => s.charts[chartId]);
 }
 
-export function useMapStyle() {
+/**
+ * Get the style URI for the currently selected chart.
+ *
+ * Returns the file:// URI to the chart's style.json on disk.
+ * Falls back to the first chart if none is selected.
+ */
+export function useMapStyle(): string {
   const charts = useCharts();
-  const mapStyleId = useViewOptions((s) => s.mapStyleId);
-  const bounds = useCameraView((s) => s.bounds);
+  const selectedChartId = useChartStore((s) => s.selectedChartId);
 
   return useMemo(() => {
     const chart =
-      charts.find((c) => c.id === mapStyleId) ?? charts[0];
-    if (!chart || chart.sources.length === 0) {
-      return { version: 8 as const, sources: {}, layers: [] };
+      charts.find((c) => c.id === selectedChartId) ?? charts[0];
+
+    if (!chart) {
+      // No charts installed — return a minimal empty style as a data URI
+      return "data:application/json," + encodeURIComponent(
+        JSON.stringify({ version: 8, sources: {}, layers: [] }),
+      );
     }
 
-    const viewport = bounds ? { bounds } : undefined;
-    const active = selectSources(chart.sources, viewport);
-
-    if (active.length === 0) {
-      // All sources were filtered out — fall back to full set
-      return buildMapStyle(chart.sources);
-    }
-
-    return buildMapStyle(active);
-  }, [charts, mapStyleId, bounds]);
+    return chart.styleUri;
+  }, [charts, selectedChartId]);
 }

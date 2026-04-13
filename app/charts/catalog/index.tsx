@@ -3,7 +3,7 @@ import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
 import { useChartCatalog } from "@/hooks/useChartCatalog";
 import useTheme from "@/hooks/useTheme";
-import { installCatalogEntry } from "@/lib/charts/catalog";
+import { installCatalogEntry } from "@/lib/charts/install";
 import { buildPreviewStyle, computeBounds } from "@/lib/charts/sources";
 import {
   Button,
@@ -150,7 +150,7 @@ export default function ChartCatalog() {
                             clipShape("circle"),
                             frame({ width: 32, height: 32 })
                           ]}
-                          onPress={async () => await installCatalogEntry(entry)}
+                          onPress={() => installCatalogEntry(entry)}
                         />
                       )}
                     </HStack>

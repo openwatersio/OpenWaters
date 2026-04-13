@@ -1,6 +1,7 @@
 import { connectAll, disconnectAll } from "@/hooks/useConnections";
 import "@/hooks/useNavigation"; // Register LocationManager listener at module scope
 import "@/hooks/useTrackRecording"; // Register background task at module scope
+import { cancelAllDownloads } from "@/lib/charts/download";
 import { LocationManager } from "@maplibre/maplibre-react-native";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack } from "expo-router";
@@ -10,11 +11,12 @@ import { useColorScheme } from 'react-native';
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
-  // Stop native location updates before JS runtime tears down on reload,
-  // preventing a crash in the MapLibre turbo module event emitter.
+  // Stop native location updates and cancel active downloads before JS
+  // runtime tears down on reload, preventing crashes and orphaned native tasks.
   useEffect(() => {
     return () => {
       LocationManager.removeAllListeners();
+      cancelAllDownloads();
     };
   }, []);
 
@@ -51,11 +53,14 @@ export default function RootLayout() {
           sheetGrabberVisible: true,
           title: "Add Chart Source",
         }} />
-        <Stack.Screen name="charts/[id]" options={{
+        <Stack.Screen name="charts/[id]/index" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
           sheetAllowedDetents: [1],
           sheetGrabberVisible: true,
+        }} />
+        <Stack.Screen name="charts/[id]/offline" options={{
+          headerShown: false,
           title: "Edit Chart Source",
         }} />
         <Stack.Screen name="settings" options={{

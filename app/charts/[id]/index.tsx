@@ -3,10 +3,8 @@ import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
 import { useChart } from "@/hooks/useCharts";
 import useTheme from "@/hooks/useTheme";
-import { setViewOptions } from "@/hooks/useViewOptions";
-import { selectSources } from "@/lib/charts/provider";
-import { buildMapStyle, computeBounds } from "@/lib/charts/sources";
-import { deleteChart } from "@/lib/database";
+import { uninstallChart } from "@/lib/charts/install";
+import { selectChart } from "@/lib/charts/store";
 import {
   Button,
   Host,
@@ -18,38 +16,24 @@ import {
 } from "@expo/ui/swift-ui";
 import { foregroundStyle, listRowInsets } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { Alert, View } from "react-native";
 
 export default function ChartDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const chartId = Number(id);
-  const chart = useChart(chartId);
+  const chart = useChart(id);
   const theme = useTheme();
-
-  const renderable = useMemo(
-    () => (chart ? selectSources(chart.sources) : []),
-    [chart],
-  );
-  const previewStyle = useMemo(
-    () => (renderable.length > 0 ? buildMapStyle(renderable) : null),
-    [renderable],
-  );
-  const previewBounds = useMemo(
-    () => (chart ? computeBounds(chart.sources) : undefined),
-    [chart],
-  );
 
   const handleDelete = useCallback(() => {
     if (!chart) return;
-    Alert.alert("Delete Chart", `Delete "${chart.name}"?`, [
+    Alert.alert("Remove Chart", `Remove "${chart.name}"?`, [
       { text: "Cancel", style: "cancel" },
       {
-        text: "Delete",
+        text: "Remove",
         style: "destructive",
-        onPress: async () => {
-          await deleteChart(chart.id);
-          setViewOptions({ mapStyleId: undefined });
+        onPress: () => {
+          uninstallChart(chart.id);
+          selectChart(undefined);
           router.back();
         },
       },
@@ -58,7 +42,7 @@ export default function ChartDetail() {
 
   const handleSelect = useCallback(() => {
     if (!chart) return;
-    setViewOptions({ mapStyleId: chart.id });
+    selectChart(chart.id);
     router.back();
   }, [chart]);
 
@@ -79,40 +63,47 @@ export default function ChartDetail() {
       <Host style={{ flex: 1 }}>
         <VStack alignment="leading">
           <List>
-            {previewStyle ? (
-              <VStack
-                modifiers={[
-                  // setting to -1 removes the top/bottom margin form the list, but 0 doesn't.
-                  listRowInsets({ top: -0.001, bottom: 0, }),
-                ]}
-              >
-                <RNHostView matchContents>
-                  <View
-                    style={{
-                      height: 200,
-                      width: "100%",
-                    }}
-                  >
-                    <ChartPreview
-                      mapStyle={previewStyle}
-                      bounds={previewBounds}
-                      style={{ borderRadius: 0 }}
-                    />
-                  </View>
-                </RNHostView>
-              </VStack>
-            ) : null}
+            <VStack
+              modifiers={[
+                listRowInsets({ top: -0.001, bottom: 0, }),
+              ]}
+            >
+              <RNHostView matchContents>
+                <View
+                  style={{
+                    height: 200,
+                    width: "100%",
+                  }}
+                >
+                  <ChartPreview
+                    mapStyle={chart.styleUri}
+                    style={{ borderRadius: 0 }}
+                  />
+                </View>
+              </RNHostView>
+            </VStack>
             <Section>
-              <Text>
-                {chart.sources.length}{" "}
-                {chart.sources.length === 1 ? "source" : "sources"}
-              </Text>
-              {chart.catalog_entry_id ? (
+              {chart.catalogEntry ? (
                 <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
-                  From catalog: {chart.catalog_entry_id}
+                  From catalog: {chart.catalogEntry.title}
                 </Text>
               ) : null}
             </Section>
+
+            {chart.catalogEntry ? (
+              <Section>
+                <Button
+                  systemImage="arrow.down.circle"
+                  label="Offline Regions"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/charts/[id]/offline",
+                      params: { id: chart.id },
+                    })
+                  }
+                />
+              </Section>
+            ) : null}
 
             <Section>
               <Button
@@ -122,7 +113,7 @@ export default function ChartDetail() {
               />
               <Button
                 systemImage="trash"
-                label="Delete"
+                label="Remove"
                 role="destructive"
                 onPress={handleDelete}
               />

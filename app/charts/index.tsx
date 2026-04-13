@@ -1,11 +1,9 @@
 import ChartPreview from "@/components/charts/ChartPreview";
 import SheetView from "@/components/ui/SheetView";
-import { useCharts } from "@/hooks/useCharts";
+import { useCharts, type InstalledChart } from "@/hooks/useCharts";
 import useTheme from "@/hooks/useTheme";
-import { setViewOptions, useViewOptions } from "@/hooks/useViewOptions";
-import { selectSources } from "@/lib/charts/provider";
-import { buildMapStyle, computeBounds, type Chart } from "@/lib/charts/sources";
-import { deleteChart } from "@/lib/database";
+import { uninstallChart } from "@/lib/charts/install";
+import { selectChart, useChartStore } from "@/lib/charts/store";
 import {
   Button,
   ContextMenu,
@@ -24,27 +22,26 @@ import {
   onTapGesture
 } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";
-import { useMemo } from "react";
 import { Alert, View } from "react-native";
 
 export default function Charts() {
-  const mapStyleId = useViewOptions((s) => s.mapStyleId);
+  const selectedChartId = useChartStore((s) => s.selectedChartId);
   const charts = useCharts();
   const theme = useTheme();
 
-  function confirmDelete(chart: Chart) {
+  function confirmDelete(chart: InstalledChart) {
     const { id, name } = chart;
     const selected =
-      id === mapStyleId || (mapStyleId == null && id === charts[0]?.id);
+      id === selectedChartId || (selectedChartId == null && id === charts[0]?.id);
     Alert.alert("Delete Chart", `Delete "${name}"?`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
-        onPress: async () => {
-          await deleteChart(id);
+        onPress: () => {
+          uninstallChart(id);
           if (selected) {
-            setViewOptions({ mapStyleId: undefined });
+            selectChart(undefined);
           }
         },
       },
@@ -72,24 +69,23 @@ export default function Charts() {
           <List>
             <Section>
               {charts.map((chart) => {
-                const { id } = chart;
                 const selected =
-                  id === mapStyleId ||
-                  (mapStyleId == null && id === charts[0]?.id);
+                  chart.id === selectedChartId ||
+                  (selectedChartId == null && chart.id === charts[0]?.id);
 
                 return (
                   <ChartRow
-                    key={id}
+                    key={chart.id}
                     chart={chart}
                     selected={selected}
                     theme={theme}
                     onPress={() =>
                       router.push({
                         pathname: "/charts/[id]",
-                        params: { id: String(id) },
+                        params: { id: chart.id },
                       })
                     }
-                    onSelect={() => setViewOptions({ mapStyleId: id })}
+                    onSelect={() => selectChart(chart.id)}
                     onDelete={() => confirmDelete(chart)}
                   />
                 );
@@ -110,20 +106,13 @@ function ChartRow({
   onSelect,
   onDelete,
 }: {
-  chart: Chart;
+  chart: InstalledChart;
   selected: boolean;
   theme: ReturnType<typeof useTheme>;
   onPress: () => void;
   onSelect: () => void;
   onDelete: () => void;
 }) {
-  const renderable = selectSources(chart.sources);
-  const mapStyle = useMemo(
-    () => (renderable.length > 0 ? buildMapStyle(renderable) : null),
-    [renderable],
-  );
-  const previewBounds = useMemo(() => computeBounds(chart.sources), [chart.sources]);
-
   return (
     <ContextMenu>
       <ContextMenu.Trigger>
@@ -133,26 +122,18 @@ function ChartRow({
           modifiers={[onTapGesture(onPress)]}
         >
           <RNHostView matchContents>
-            {mapStyle ? (
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 8,
+                overflow: "hidden",
+              }}
+            >
               <ChartPreview
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 8,
-                  overflow: "hidden",
-                }}
-                mapStyle={mapStyle}
-                bounds={previewBounds}
+                mapStyle={chart.styleUri}
               />
-            ) : (
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  backgroundColor: theme.surfaceSecondary,
-                }}
-              />
-            )}
+            </View>
           </RNHostView>
           <Text modifiers={[font({ size: 16, weight: "semibold" }), lineLimit(1)]}>
             {chart.name}

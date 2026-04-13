@@ -1,5 +1,5 @@
 import { useCharts } from "@/hooks/useCharts";
-import { setViewOptions } from "@/hooks/useViewOptions";
+import { selectChart } from "@/lib/charts/store";
 import { Button, Divider, Menu } from "@expo/ui/swift-ui";
 import {
   contentShape,
@@ -34,7 +34,7 @@ export function SelectChartButton() {
           key={id}
           label={name}
           systemImage="map"
-          onPress={() => setViewOptions({ mapStyleId: id })}
+          onPress={() => selectChart(id)}
         />
       ))}
       <Divider />

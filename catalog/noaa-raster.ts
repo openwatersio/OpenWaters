@@ -10,6 +10,16 @@
 const NOAA_FEATURE_SERVICE =
   "https://gis.charttools.noaa.gov/arcgis/rest/services/MarineChart_Services/ncds_tilecache_metadata/MapServer/0/query";
 
+const OSM_BASE = {
+  id: "osm-base",
+  title: "OpenStreetMap Base",
+  type: "raster",
+  tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+  tileSize: 256,
+  maxzoom: 19,
+  attribution: "© OpenStreetMap contributors",
+};
+
 const WMS_SOURCE = {
   id: "noaa-wms",
   title: "NOAA ENC Online (WMS, paper chart symbology)",
@@ -67,9 +77,7 @@ export default async function fetchNoaaRasterEntry() {
 
   const response = await fetch(`${NOAA_FEATURE_SERVICE}?${params}`);
   if (!response.ok) {
-    throw new Error(
-      `Failed to fetch NOAA NCDS metadata: ${response.status}`,
-    );
+    throw new Error(`Failed to fetch NOAA NCDS metadata: ${response.status}`);
   }
 
   const data = (await response.json()) as { features: Feature[] };
@@ -112,6 +120,6 @@ export default async function fetchNoaaRasterEntry() {
     homepage: "https://distribution.charts.noaa.gov/ncds/",
     license: "public-domain",
     keywords: ["nautical", "raster", "usa", "official"],
-    sources: [WMS_SOURCE, ...mbtilesSources],
+    sources: [OSM_BASE, WMS_SOURCE, ...mbtilesSources],
   };
 }

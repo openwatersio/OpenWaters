@@ -2,11 +2,10 @@ import ChartPreview from "@/components/charts/ChartPreview";
 import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
 import { useChartCatalog } from "@/hooks/useChartCatalog";
-import { useCharts } from "@/hooks/useCharts";
+import { useChart } from "@/hooks/useCharts";
 import useTheme from "@/hooks/useTheme";
-import { installCatalogEntry } from "@/lib/charts/catalog";
+import { installCatalogEntry, uninstallChart } from "@/lib/charts/install";
 import { buildPreviewStyle, computeBounds } from "@/lib/charts/sources";
-import { deleteChart } from "@/lib/database";
 import {
   Button,
   Host,
@@ -23,11 +22,10 @@ import { useCallback, useMemo } from "react";
 export default function CatalogEntryDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { entries } = useChartCatalog();
-  const charts = useCharts();
+  const installedChart = useChart(id);
   const theme = useTheme();
 
   const entry = entries.find((e) => e.id === id);
-  const installedChart = charts.find((c) => c.catalog_entry_id === id);
 
   const previewStyle = useMemo(
     () => (entry ? buildPreviewStyle(entry.sources) : null),
@@ -38,15 +36,15 @@ export default function CatalogEntryDetail() {
     [entry],
   );
 
-  const handleInstall = useCallback(async () => {
+  const handleInstall = useCallback(() => {
     if (!entry) return;
-    await installCatalogEntry(entry);
+    installCatalogEntry(entry);
     router.back();
   }, [entry]);
 
-  const handleUninstall = useCallback(async () => {
+  const handleUninstall = useCallback(() => {
     if (!installedChart) return;
-    await deleteChart(installedChart.id);
+    uninstallChart(installedChart.id);
     router.back();
   }, [installedChart]);
 
@@ -70,7 +68,6 @@ export default function CatalogEntryDetail() {
             {previewStyle ? (
               <VStack
                 modifiers={[
-                  // setting to -1 removes the top/bottom margin form the list, but 0 doesn't.
                   listRowInsets({ top: -0.001, bottom: 0, }),
                   frame({ height: 200 }),
                 ]}

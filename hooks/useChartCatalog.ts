@@ -1,6 +1,6 @@
 import type { CatalogEntry } from "@/catalog/types";
 import loadCatalog from "@/catalog";
-import { useCharts } from "@/hooks/useCharts";
+import { useChartStore } from "@/lib/charts/store";
 import { useEffect, useMemo, useState } from "react";
 
 export type CatalogEntryWithStatus = CatalogEntry & {
@@ -13,7 +13,7 @@ export function useChartCatalog(): {
 } {
   const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const charts = useCharts();
+  const charts = useChartStore((s) => s.charts);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,18 +32,13 @@ export function useChartCatalog(): {
     };
   }, []);
 
-  const installedIds = useMemo(
-    () => new Set(charts.map((c) => c.catalog_entry_id).filter(Boolean)),
-    [charts],
-  );
-
   const entries = useMemo(
     () =>
       catalog.map((entry) => ({
         ...entry,
-        installed: installedIds.has(entry.id),
+        installed: entry.id in charts,
       })),
-    [catalog, installedIds],
+    [catalog, charts],
   );
 
   return { entries, loading };

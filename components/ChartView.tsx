@@ -1,4 +1,5 @@
 import { useCameraPosition } from "@/hooks/useCameraPosition";
+import { useMapStyle } from "@/hooks/useCharts";
 import { mapRef } from "@/hooks/useMapRef";
 import {
   addRouteWaypoint,
@@ -7,9 +8,8 @@ import {
   setActiveIndex
 } from "@/hooks/useRoutes";
 import { useSelectionHandler } from "@/hooks/useSelection";
-import { useMapStyle } from "@/hooks/useCharts";
 import { findNearestLegIndex, metersPerPixel } from "@/lib/geo";
-import { Images, Map, PressEvent } from "@maplibre/maplibre-react-native";
+import { Images, LogManager, Map, PressEvent } from "@maplibre/maplibre-react-native";
 import { useCallback } from "react";
 import { NativeSyntheticEvent } from "react-native";
 import AISLayer from "./AISLayer";
@@ -21,6 +21,12 @@ import TrackOverlay from "./TrackOverlay";
 import { handleRegionDidChange, handleRegionIsChanging, NavigationCamera } from "./map/NavigationCamera";
 import { NavigationPuck } from "./map/NavigationPuck";
 import SelectedLocationAnnotation from "./map/SelectedLocationAnnotation";
+
+// Suppress expected MapLibre network errors (tile fetch failures when offline).
+LogManager.onLog((event) => {
+  return event.level === "error" &&
+    event.message.includes("Internet connection appears to be offline");
+});
 
 export default function ChartView() {
   const mapStyle = useMapStyle();
