@@ -3,6 +3,7 @@ import {
   type DownloadableSource,
 } from "@/hooks/useAvailableDownloads";
 import { useChart } from "@/hooks/useCharts";
+import { formatBytes } from "@/lib/format";
 import {
   deleteDownload,
   startDownload,
@@ -28,13 +29,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
 
 function boundsToPolygon(
   id: string,
