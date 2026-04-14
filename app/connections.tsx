@@ -10,7 +10,7 @@ import {
   stopDiscovery,
 } from "@/lib/discovery";
 import { Button, Host, LabeledContent, List, Picker, Section, Text, TextField } from "@expo/ui/swift-ui";
-import { foregroundStyle, pickerStyle, tag, tint } from "@expo/ui/swift-ui/modifiers";
+import { autocorrectionDisabled, foregroundStyle, keyboardType, pickerStyle, tag, textInputAutocapitalization, tint } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 
@@ -156,7 +156,12 @@ export default function Connections() {
                 <TextField
                   placeholder="http://raspberrypi.local:3000"
                   defaultValue={signalKUrl}
-                  onChangeText={setSignalKUrl}
+                  onValueChange={setSignalKUrl}
+                  modifiers={[
+                    keyboardType("url"),
+                    textInputAutocapitalization("never"),
+                    autocorrectionDisabled(),
+                  ]}
                 />
                 <Button
                   modifiers={[tint("primary")]}
@@ -169,12 +174,21 @@ export default function Connections() {
                 <TextField
                   placeholder="192.168.1.1"
                   defaultValue={nmeaHost}
-                  onChangeText={setNmeaHost}
+                  onValueChange={setNmeaHost}
+                  modifiers={[
+                    keyboardType("url"),
+                    textInputAutocapitalization("never"),
+                    autocorrectionDisabled(),
+                  ]}
                 />
                 <TextField
                   placeholder="10110"
                   defaultValue={nmeaPort}
-                  onChangeText={setNmeaPort}
+                  onValueChange={setNmeaPort}
+                  modifiers={[
+                    keyboardType("numeric"),
+                    autocorrectionDisabled(),
+                  ]}
                 />
                 <Button
                   modifiers={[tint("primary")]}

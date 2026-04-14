@@ -7,7 +7,9 @@ let db: SQLite.SQLiteDatabase | null = null;
 
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (db) return db;
-  db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+  db = await SQLite.openDatabaseAsync(DATABASE_NAME, {
+    enableChangeListener: true,
+  });
   await migrate(db);
   return db;
 }
@@ -85,11 +87,27 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
   }
 
   if (currentVersion < 4) {
-    await db.execAsync(`
-      ALTER TABLE routes ADD COLUMN distance REAL NOT NULL DEFAULT 0;
-      ALTER TABLE route_points DROP COLUMN name;
-      PRAGMA user_version = 4;
-    `);
+    const columns = await db.getAllAsync<{ name: string }>(
+      "PRAGMA table_info(routes)",
+    );
+    if (!columns.some((c) => c.name === "distance")) {
+      await db.execAsync(
+        "ALTER TABLE routes ADD COLUMN distance REAL NOT NULL DEFAULT 0;",
+      );
+    }
+    // Intentionally ignore DROP COLUMN errors (e.g. column already absent
+    // or SQLite version doesn't support DROP COLUMN).
+    await db
+      .execAsync("ALTER TABLE route_points DROP COLUMN name;")
+      .catch(() => {});
+    await db.execAsync("PRAGMA user_version = 4;");
+  }
+
+  // Migrations 7–8 created and then removed the charts + sources tables.
+  // Charts are now stored as style files on disk (see lib/charts/store.ts).
+  // The next migration should use version 9.
+  if (currentVersion < 8) {
+    await db.execAsync("PRAGMA user_version = 8;");
   }
 }
 
@@ -442,3 +460,7 @@ export async function getAllTimeSpeedStats(): Promise<SpeedStats> {
     maxSpeed: row?.max_speed ?? 0,
   };
 }
+
+// -- Chart operations removed --
+// Charts are now stored as style.json files on disk.
+// See lib/charts/store.ts and lib/charts/install.ts.

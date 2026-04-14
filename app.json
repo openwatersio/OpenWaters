@@ -21,6 +21,31 @@
         ],
         "UIBackgroundModes": [
           "location"
+        ],
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "MBTiles Chart Archive",
+            "CFBundleTypeRole": "Viewer",
+            "LSHandlerRank": "Alternate",
+            "LSItemContentTypes": [
+              "io.openwaters.mbtiles"
+            ]
+          }
+        ],
+        "UTImportedTypeDeclarations": [
+          {
+            "UTTypeIdentifier": "io.openwaters.mbtiles",
+            "UTTypeDescription": "MBTiles Chart Archive",
+            "UTTypeConformsTo": [
+              "public.database",
+              "public.data"
+            ],
+            "UTTypeTagSpecification": {
+              "public.filename-extension": [
+                "mbtiles"
+              ]
+            }
+          }
         ]
       },
       "bundleIdentifier": "io.openwaters.mobile"
@@ -56,6 +81,13 @@
       "expo-image",
       "expo-sqlite",
       "expo-sharing",
+      [
+        "expo-file-system",
+        {
+          "enableFileSharing": true,
+          "supportsOpeningDocumentsInPlace": true
+        }
+      ],
       "react-native-map-link",
       [
         "expo-build-properties",

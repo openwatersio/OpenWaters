@@ -1,0 +1,29 @@
+{
+  "id": "openseamap",
+  "title": "OpenSeaMap",
+  "summary": "Crowd-sourced nautical overlay with buoys, beacons, lights, and harbor info on an OpenStreetMap base.",
+  "description": "OpenSeaMap is a crowd-sourced nautical chart built on OpenStreetMap data. It includes buoys, beacons, lights, fog signals, traffic separation schemes, harbor information, and depth soundings contributed by sailors worldwide. Coverage is best in Europe and North America.\n\nThis chart combines an OpenStreetMap base layer with the OpenSeaMap seamark overlay.",
+  "homepage": "https://www.openseamap.org/",
+  "license": "cc-by-sa",
+  "keywords": ["nautical", "overlay", "seamarks", "osm"],
+  "sources": [
+    {
+      "id": "osm-base",
+      "title": "OpenStreetMap Base",
+      "type": "raster",
+      "tiles": ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      "tileSize": 256,
+      "maxzoom": 20,
+      "attribution": "© OpenStreetMap contributors"
+    },
+    {
+      "id": "seamark-overlay",
+      "title": "OpenSeaMap Seamarks",
+      "type": "raster",
+      "tiles": ["https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png"],
+      "tileSize": 256,
+      "maxzoom": 22,
+      "attribution": "© OpenSeaMap contributors"
+    }
+  ]
+}

@@ -71,15 +71,13 @@ export default function EditMarkerScreen() {
             <TextField
               placeholder="Name (optional)"
               defaultValue={marker.name ?? ""}
-              onChangeText={(v) => updateMarker(markerId, { name: v.trim() || null })}
-              autocorrection={false}
+              onValueChange={(v: string) => updateMarker(markerId, { name: v.trim() || null })}
             />
             <TextField
               placeholder="Notes"
               defaultValue={marker.notes ?? ""}
-              multiline
-              numberOfLines={3}
-              onChangeText={(v) => updateMarker(markerId, { notes: v.trim() || null })}
+              axis="vertical"
+              onValueChange={(v: string) => updateMarker(markerId, { notes: v.trim() || null })}
             />
           </Section>
 

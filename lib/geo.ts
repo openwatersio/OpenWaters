@@ -378,6 +378,30 @@ export function calculateDestinationProgress(
   return { distance, eta };
 }
 
+/** Test whether two bounding boxes [west, south, east, north] intersect */
+export function boundsIntersect(
+  a: [number, number, number, number],
+  b: [number, number, number, number],
+): boolean {
+  const [aWest, aSouth, aEast, aNorth] = a;
+  const [bWest, bSouth, bEast, bNorth] = b;
+  return aWest <= bEast && aEast >= bWest && aSouth <= bNorth && aNorth >= bSouth;
+}
+
+/** Test whether a position is inside a bounding box [west, south, east, north] */
+export function isInsideBounds(
+  position: { latitude: number; longitude: number },
+  bounds: [number, number, number, number],
+): boolean {
+  const [west, south, east, north] = bounds;
+  return (
+    position.longitude >= west &&
+    position.longitude <= east &&
+    position.latitude >= south &&
+    position.latitude <= north
+  );
+}
+
 /** Format bearing as three-digit true bearing, e.g. "045°T" */
 export function formatBearing(degrees: number): string {
   const rounded = Math.round(((degrees % 360) + 360) % 360);

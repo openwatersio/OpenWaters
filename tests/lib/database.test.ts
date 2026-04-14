@@ -55,6 +55,10 @@ const mockDb = {
       const id = args[0];
       return rows.route_points.find((p) => p.id === id) ?? null;
     }
+    if (sql.includes("sqlite_master")) {
+      // No charts table in test mock — skip migration
+      return { count: 0 };
+    }
     return null;
   }),
   getAllAsync: jest.fn(async (sql: string, ...args: any[]) => {
@@ -84,6 +88,16 @@ const mockDb = {
       return rows.route_points
         .filter((p) => p.route_id === routeId)
         .sort((a: any, b: any) => a.order - b.order);
+    }
+    if (sql.includes("FROM charts ORDER BY")) {
+      return [...rows.charts];
+    }
+    if (sql.includes("FROM sources WHERE chart_id")) {
+      const chartId = args[0];
+      return rows.sources.filter((s) => s.chart_id === chartId);
+    }
+    if (sql.includes("FROM sources ORDER BY")) {
+      return [...rows.sources];
     }
     return [];
   }),
@@ -210,6 +224,55 @@ const mockDb = {
       rows.routes = rows.routes.filter((r) => r.id !== args[0]);
       return { changes: 0 };
     }
+    if (sql.includes("INSERT INTO charts")) {
+      const id = ++autoIncrement.charts;
+      rows.charts.push({
+        id,
+        name: args[0],
+        catalog_entry_id: args[1] ?? null,
+      });
+      return { lastInsertRowId: id };
+    }
+    if (sql.includes("INSERT INTO sources")) {
+      const id = ++autoIncrement.sources;
+      rows.sources.push({
+        id,
+        chart_id: args[0],
+        title: args[1],
+        type: args[2],
+        url: args[3],
+        tiles: args[4],
+        bounds: args[5],
+        minzoom: args[6],
+        maxzoom: args[7],
+        attribution: args[8],
+        tile_size: args[9],
+        scheme: args[10],
+      });
+      return { lastInsertRowId: id };
+    }
+    if (sql.match(/UPDATE charts SET .+ WHERE id/)) {
+      const id = args[args.length - 1];
+      const chart = rows.charts.find((c) => c.id === id);
+      if (chart) {
+        const setMatch = sql.match(/SET (.+) WHERE/);
+        if (setMatch) {
+          const keys = setMatch[1].split(", ").map((s) => s.replace(" = ?", "").trim());
+          keys.forEach((key, i) => { chart[key] = args[i]; });
+        }
+      }
+      return { changes: chart ? 1 : 0 };
+    }
+    if (sql.includes("DELETE FROM sources WHERE chart_id")) {
+      rows.sources = rows.sources.filter((s) => s.chart_id !== args[0]);
+      return { changes: 0 };
+    }
+    if (sql.includes("DELETE FROM charts WHERE id")) {
+      const id = args[0];
+      rows.sources = rows.sources.filter((s) => s.chart_id !== id);
+      rows.charts = rows.charts.filter((c) => c.id !== id);
+      return { changes: 0 };
+    }
     return { lastInsertRowId: 0, changes: 0 };
   }),
   withTransactionAsync: jest.fn(async (task: () => Promise<void>) => {
@@ -221,13 +284,20 @@ jest.mock("expo-sqlite", () => ({
   openDatabaseAsync: jest.fn(async () => mockDb),
 }));
 
+jest.mock("@/lib/charts/mbtiles", () => ({
+  deleteMBTilesFile: jest.fn(),
+}));
+
+
 beforeEach(() => {
   rows.tracks = [];
   rows.track_points = [];
   rows.markers = [];
   rows.routes = [];
   rows.route_points = [];
-  autoIncrement = { tracks: 0, track_points: 0, markers: 0, routes: 0, route_points: 0 };
+  rows.charts = [];
+  rows.sources = [];
+  autoIncrement = { tracks: 0, track_points: 0, markers: 0, routes: 0, route_points: 0, charts: 0, sources: 0 };
 });
 
 describe("database", () => {
@@ -465,4 +535,7 @@ describe("database", () => {
       expect(points).toHaveLength(0);
     });
   });
+
+  // Chart tests removed — charts are now stored as style files on disk.
+  // See lib/charts/store.ts and lib/charts/install.ts.
 });

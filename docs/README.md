@@ -4,6 +4,7 @@ Open Waters is an open-source marine navigation app. It provides essential navig
 
 ## Features
 
+- [Charts](charts/) — Browse and install nautical charts, add custom sources, offline MBTiles support
 - [Tracks](tracks.md) — Record the vessel's path, display on the chart, export as GPX
 - [Markers](markers.md) — Drop pins, name and color-code them, navigate with live bearing and distance
 - [Routes](routes.md) — Multi-leg route planning with automatic waypoint advancement and ETA

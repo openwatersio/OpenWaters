@@ -1,0 +1,17 @@
+{
+  "id": "vectorcharts",
+  "title": "VectorCharts",
+  "summary": "Vector nautical charts with official hydrographic data.",
+  "description": "VectorCharts provides vector nautical chart tiles rendered from official hydrographic office data. Requires an API token.",
+  "homepage": "https://vectorcharts.com/",
+  "license": "custom",
+  "keywords": ["nautical", "vector"],
+  "sources": [
+    {
+      "id": "vectorcharts-base",
+      "title": "VectorCharts Base",
+      "type": "style",
+      "url": "https://api.vectorcharts.com/api/v1/styles/base.json?token=7756d6ccad1c4656937e539bd3744dcd"
+    }
+  ]
+}

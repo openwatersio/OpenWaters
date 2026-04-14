@@ -1,8 +1,16 @@
 import SheetView from "@/components/ui/SheetView";
 import { ARRIVAL_RADIUS_OPTIONS, describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits, type ArrivalRadius } from "@/hooks/usePreferredUnits";
-import { Host, List, Picker, Section, Text, Toggle, VStack } from "@expo/ui/swift-ui";
+import { setThemePreference, useThemePreference, type ThemePreference } from "@/lib/charts/theme";
+import { Button, Host, List, Picker, Section, Text, Toggle, VStack } from "@expo/ui/swift-ui";
 import { tag } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";
+
+const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: "auto", label: "Auto" },
+  { value: "day", label: "Day" },
+  { value: "dusk", label: "Dusk" },
+  { value: "night", label: "Night" },
+];
 
 export default function Settings() {
   const speed = usePreferredUnits((s) => s.speed);
@@ -11,6 +19,7 @@ export default function Settings() {
   const temperature = usePreferredUnits((s) => s.temperature);
   const arrivalRadius = usePreferredUnits((s) => s.arrivalRadius);
   const arriveOnCircleOnly = usePreferredUnits((s) => s.arriveOnCircleOnly);
+  const themePreference = useThemePreference((s) => s.preference);
 
   return (
     <SheetView id="settings">
@@ -68,6 +77,21 @@ export default function Settings() {
                 ))}
               </Picker>
             </Section>
+            <Section title="Chart Theme">
+              <Picker
+                label="Theme"
+                selection={themePreference}
+                onSelectionChange={(value) =>
+                  setThemePreference(value as ThemePreference)
+                }
+              >
+                {THEME_OPTIONS.map(({ value, label }) => (
+                  <Text key={value} modifiers={[tag(value)]}>
+                    {label}
+                  </Text>
+                ))}
+              </Picker>
+            </Section>
             <Section title="Routes">
               <Picker
                 label="Arrival radius"
@@ -88,6 +112,13 @@ export default function Settings() {
                 onIsOnChange={(value) =>
                   setPreferredUnits({ arriveOnCircleOnly: value })
                 }
+              />
+            </Section>
+            <Section>
+              <Button
+                systemImage="arrow.down.to.line"
+                label="Offline Data"
+                onPress={() => router.push("/offline")}
               />
             </Section>
           </List>

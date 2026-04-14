@@ -1,0 +1,25 @@
+{
+  "id": "sentinel-2-cloudless",
+  "title": "Sentinel-2 Cloudless",
+  "summary": "Cloud-free satellite imagery mosaic from ESA Copernicus Sentinel-2.",
+  "description": "Sentinel-2 cloudless is a global cloud-free satellite imagery mosaic created by EOX from ESA Copernicus Sentinel-2 data. The 2024 edition provides high-resolution imagery useful for visual navigation, anchorage identification, and coastal feature recognition.\n\nFree for non-commercial use with attribution under CC BY-NC-SA 4.0.",
+  "homepage": "https://s2maps.eu",
+  "license": "CC BY-NC-SA 4.0",
+  "keywords": [
+    "satellite",
+    "imagery"
+  ],
+  "sources": [
+    {
+      "id": "sentinel-2-cloudless-2024",
+      "title": "Sentinel-2 Cloudless 2024",
+      "type": "raster",
+      "tiles": [
+        "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg"
+      ],
+      "tileSize": 256,
+      "maxzoom": 21,
+      "attribution": "Sentinel-2 cloudless - s2maps.eu by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2024)"
+    }
+  ]
+}

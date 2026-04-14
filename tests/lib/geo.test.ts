@@ -6,6 +6,7 @@ import {
   calculateWaypointProgress,
   formatBearing,
   headingDelta,
+  isInsideBounds,
   legProgress,
 } from "@/lib/geo";
 
@@ -426,5 +427,28 @@ describe("legProgress", () => {
     expect(Number.isFinite(p.rangeToB)).toBe(true);
     expect(Number.isFinite(p.alongTrackPastB)).toBe(true);
     expect(Number.isFinite(p.crossTrack)).toBe(true);
+  });
+});
+
+describe("isInsideBounds", () => {
+  const bounds: [number, number, number, number] = [-77, 36, -70, 42];
+
+  it("returns true for a point inside the bounds", () => {
+    expect(isInsideBounds({ latitude: 39, longitude: -74 }, bounds)).toBe(true);
+  });
+
+  it("returns true for a point on the boundary", () => {
+    expect(isInsideBounds({ latitude: 36, longitude: -77 }, bounds)).toBe(true);
+    expect(isInsideBounds({ latitude: 42, longitude: -70 }, bounds)).toBe(true);
+  });
+
+  it("returns false for a point outside the bounds", () => {
+    expect(isInsideBounds({ latitude: 35, longitude: -74 }, bounds)).toBe(false);
+    expect(isInsideBounds({ latitude: 39, longitude: -68 }, bounds)).toBe(false);
+  });
+
+  it("handles latitude 0 and longitude 0", () => {
+    const global: [number, number, number, number] = [-180, -90, 180, 90];
+    expect(isInsideBounds({ latitude: 0, longitude: 0 }, global)).toBe(true);
   });
 });

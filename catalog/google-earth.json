@@ -1,0 +1,26 @@
+{
+  "id": "google-earth",
+  "title": "Google Earth",
+  "summary": "Satellite imagery useful for anchorages and visual navigation.",
+  "description": "Satellite imagery sourced from Google Maps tiles. Useful for visual identification of anchorages, inlets, reef structures, and shoreline features.\n\nNote: these tiles are served from an unofficial endpoint. This source should be replaced with a properly licensed satellite provider before distribution.",
+  "license": "custom",
+  "keywords": [
+    "satellite",
+    "imagery"
+  ],
+  "sources": [
+    {
+      "id": "google-earth-hybrid",
+      "title": "Google Earth Satellite",
+      "type": "raster",
+      "tiles": [
+        "https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        "https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        "https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+      ],
+      "tileSize": 256,
+      "maxzoom": 20
+    }
+  ]
+}

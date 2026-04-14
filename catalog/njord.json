@@ -1,0 +1,83 @@
+{
+  "id": "njord",
+  "title": "Njord",
+  "summary": "Vector nautical charts from OpenENC.",
+  "description": "Njord provides vector nautical chart tiles rendered from open electronic navigational chart (ENC) data via OpenENC.",
+  "homepage": "https://openenc.com",
+  "license": "custom",
+  "keywords": ["nautical", "vector"],
+  "sources": [
+    {
+      "id": "njord-feet-day",
+      "title": "Njord (Feet, Day)",
+      "type": "style",
+      "units": "ft",
+      "theme": "day",
+      "url": "https://openenc.com/v1/style/feet/day"
+    },
+    {
+      "id": "njord-feet-dusk",
+      "title": "Njord (Feet, Dusk)",
+      "type": "style",
+      "units": "ft",
+      "theme": "dusk",
+      "url": "https://openenc.com/v1/style/feet/dusk"
+    },
+    {
+      "id": "njord-feet-night",
+      "title": "Njord (Feet, Night)",
+      "type": "style",
+      "units": "ft",
+      "theme": "night",
+      "url": "https://openenc.com/v1/style/feet/night"
+    },
+    {
+      "id": "njord-meters-day",
+      "title": "Njord (Meters, Day)",
+      "type": "style",
+      "units": "m",
+      "theme": "day",
+      "url": "https://openenc.com/v1/style/meters/day"
+    },
+    {
+      "id": "njord-meters-dusk",
+      "title": "Njord (Meters, Dusk)",
+      "type": "style",
+      "units": "m",
+      "theme": "dusk",
+      "url": "https://openenc.com/v1/style/meters/dusk"
+    },
+    {
+      "id": "njord-meters-night",
+      "title": "Njord (Meters, Night)",
+      "type": "style",
+      "units": "m",
+      "theme": "night",
+      "url": "https://openenc.com/v1/style/meters/night"
+    },
+    {
+      "id": "njord-fathoms-day",
+      "title": "Njord (Fathoms, Day)",
+      "type": "style",
+      "units": "fathom",
+      "theme": "day",
+      "url": "https://openenc.com/v1/style/fathoms/day"
+    },
+    {
+      "id": "njord-fathoms-dusk",
+      "title": "Njord (Fathoms, Dusk)",
+      "type": "style",
+      "units": "fathom",
+      "theme": "dusk",
+      "url": "https://openenc.com/v1/style/fathoms/dusk"
+    },
+    {
+      "id": "njord-fathoms-night",
+      "title": "Njord (Fathoms, Night)",
+      "type": "style",
+      "units": "fathom",
+      "theme": "night",
+      "url": "https://openenc.com/v1/style/fathoms/night"
+    }
+  ]
+}

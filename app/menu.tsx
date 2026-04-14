@@ -27,14 +27,14 @@ export default function Menu() {
               label="Routes"
               onPress={() => router.dismissTo("/routes")}
             />
+          </Section>
+          <Section>
             <Button
               modifiers={[tint('primary')]}
               systemImage="map"
               label="Charts"
               onPress={() => router.navigate("/charts")}
             />
-          </Section>
-          <Section>
             <Button
               modifiers={[tint('primary')]}
               systemImage="antenna.radiowaves.left.and.right"
