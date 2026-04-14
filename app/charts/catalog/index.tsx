@@ -2,6 +2,7 @@ import ChartPreview from "@/components/charts/ChartPreview";
 import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
 import { useChartCatalog } from "@/hooks/useChartCatalog";
+import { useSourceFilters } from "@/hooks/useCharts";
 import useTheme from "@/hooks/useTheme";
 import { installCatalogEntry } from "@/lib/charts/install";
 import { buildPreviewStyle, computeBounds } from "@/lib/charts/sources";
@@ -36,6 +37,7 @@ import { View } from "react-native";
 export default function ChartCatalog() {
   const { entries, loading } = useChartCatalog();
   const theme = useTheme();
+  const filters = useSourceFilters();
 
   return (
     <SheetView id="charts-catalog">
@@ -51,7 +53,7 @@ export default function ChartCatalog() {
             ) : (
               <Section>
                 {entries.map((entry) => {
-                  const previewStyle = buildPreviewStyle(entry.sources);
+                  const previewStyle = buildPreviewStyle(entry.sources, filters);
                   const previewBounds = computeBounds(entry.sources);
 
                   return (

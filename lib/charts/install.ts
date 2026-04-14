@@ -1,6 +1,7 @@
 import type { CatalogEntry, CatalogSource } from "@/catalog/types";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { deletePacksForChart } from "@/lib/charts/offline";
+import { filterSources, type SourceFilters } from "@/lib/charts/sources";
 import {
   chartDirectory,
   getChart,
@@ -30,10 +31,13 @@ import {
  */
 export async function generateStyle(
   sources: CatalogSource[],
+  filters: SourceFilters = {},
 ): Promise<StyleSpecification> {
+  const filtered = filterSources(sources, filters);
+
   // Single style source — fetch the remote style and return its contents
-  if (sources.length === 1 && sources[0].type === "style") {
-    const response = await fetch(sources[0].url);
+  if (filtered.length === 1 && filtered[0].type === "style") {
+    const response = await fetch(filtered[0].url);
     if (!response.ok) {
       throw new Error(`Failed to fetch style: ${response.status}`);
     }
@@ -46,7 +50,7 @@ export async function generateStyle(
     layers: [],
   };
 
-  for (const source of sources) {
+  for (const source of filtered) {
     const sourceId = source.id;
 
     switch (source.type) {

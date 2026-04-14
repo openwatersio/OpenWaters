@@ -1,5 +1,6 @@
 import type { CatalogSource } from "@/catalog/types";
 import { generateStyle } from "@/lib/charts/install";
+import type { SourceFilters } from "@/lib/charts/sources";
 import {
   chartDirectory,
   getChart,
@@ -59,7 +60,10 @@ export async function deleteDownload(
  *
  * Updates the chart store so the map re-renders.
  */
-export async function regenerateStyle(chartId: string): Promise<void> {
+export async function regenerateStyle(
+  chartId: string,
+  filters: SourceFilters = {},
+): Promise<void> {
   const catalog = readCatalog(chartId);
   if (!catalog) return;
 
@@ -76,7 +80,7 @@ export async function regenerateStyle(chartId: string): Promise<void> {
     return source;
   });
 
-  const style = await generateStyle(sources);
+  const style = await generateStyle(sources, filters);
   const styleUri = writeStyle(chartId, style);
 
   // Update the store so the map re-renders

@@ -2,7 +2,7 @@ import ChartPreview from "@/components/charts/ChartPreview";
 import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
 import { useChartCatalog } from "@/hooks/useChartCatalog";
-import { useChart } from "@/hooks/useCharts";
+import { useChart, useSourceFilters } from "@/hooks/useCharts";
 import useTheme from "@/hooks/useTheme";
 import { installCatalogEntry, uninstallChart } from "@/lib/charts/install";
 import { buildPreviewStyle, computeBounds } from "@/lib/charts/sources";
@@ -24,12 +24,13 @@ export default function CatalogEntryDetail() {
   const { entries } = useChartCatalog();
   const installedChart = useChart(id);
   const theme = useTheme();
+  const filters = useSourceFilters();
 
   const entry = entries.find((e) => e.id === id);
 
   const previewStyle = useMemo(
-    () => (entry ? buildPreviewStyle(entry.sources) : null),
-    [entry],
+    () => (entry ? buildPreviewStyle(entry.sources, filters) : null),
+    [entry, filters],
   );
   const previewBounds = useMemo(
     () => (entry ? computeBounds(entry.sources) : undefined),

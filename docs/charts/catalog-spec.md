@@ -84,6 +84,8 @@ Each source describes a single data endpoint or file. A chart entry contains one
 | `scheme`  | string   | no          | Tile scheme: `xyz` (default) or `tms`. |
 | `sizeBytes` | number | no          | File size for downloadable sources (MBTiles, PMTiles). |
 | `updated` | string   | no          | ISO 8601 timestamp of last source data update. |
+| `theme`   | string   | no          | One of `day`, `dusk`, `night`. Source is only used when the active theme matches. Omit to include regardless of theme. See [themes spec](../specs/themes.md). |
+| `units`   | string   | no          | One of `ft`, `m`, `fathom`. Source is only used when the preferred depth unit matches. Omit to include regardless of units. See [themes spec](../specs/themes.md). |
 
 Field names follow [TileJSON 3.0](https://github.com/mapbox/tilejson-spec/tree/master/3.0.0) conventions where applicable.
 

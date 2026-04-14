@@ -1,5 +1,9 @@
 // -- Source types --
 
+import type { DepthUnit } from "@/hooks/usePreferredUnits";
+
+export type Theme = "day" | "dusk" | "night";
+
 type SourceBase = {
   id: string;
   title: string;
@@ -11,6 +15,10 @@ type SourceBase = {
   scheme?: "xyz" | "tms";
   sizeBytes?: number;
   updated?: string;
+  /** Only include this source when the active theme matches. Omit to include regardless of theme. */
+  theme?: Theme;
+  /** Only include this source when the preferred depth unit matches. Omit to include regardless of units. */
+  units?: DepthUnit;
 };
 
 export type StyleSource = SourceBase & {

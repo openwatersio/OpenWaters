@@ -2,6 +2,7 @@ import type { CatalogSource } from "@/catalog/types";
 import ChartPreview from "@/components/charts/ChartPreview";
 import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
+import { useSourceFilters } from "@/hooks/useCharts";
 import useTheme from "@/hooks/useTheme";
 import { detectFile, detectUrl } from "@/lib/charts/detect";
 import { installManualChart } from "@/lib/charts/install";
@@ -176,9 +177,10 @@ export default function AddChart() {
   const canSave = name.trim().length > 0 && sources.length > 0 && !saving;
   const hasSources = sources.length > 0;
 
+  const filters = useSourceFilters();
   const previewStyle = useMemo(
-    () => (hasSources ? buildPreviewStyle(sources) : null),
-    [hasSources, sources],
+    () => (hasSources ? buildPreviewStyle(sources, filters) : null),
+    [hasSources, sources, filters],
   );
   const previewBounds = useMemo(
     () => (hasSources ? computeBounds(sources) : undefined),

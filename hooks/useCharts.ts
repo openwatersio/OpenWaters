@@ -1,8 +1,16 @@
+import { useCameraPosition } from "@/hooks/useCameraPosition";
+import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import type { CatalogSource } from "@/catalog/types";
+import { generateStyle } from "@/lib/charts/install";
+import { readLocalPaths } from "@/lib/charts/style";
 import {
+  readCatalog,
   useChartStore,
   type InstalledChart,
 } from "@/lib/charts/store";
-import { useMemo } from "react";
+import { resolveTheme, useThemePreference } from "@/lib/charts/theme";
+import type { StyleSpecification } from "@maplibre/maplibre-react-native";
+import { useEffect, useMemo, useState } from "react";
 
 export type { InstalledChart };
 
@@ -21,26 +29,106 @@ export function useChart(chartId: string): InstalledChart | undefined {
 }
 
 /**
- * Get the style URI for the currently selected chart.
- *
- * Returns the file:// URI to the chart's style.json on disk.
- * Falls back to the first chart if none is selected.
+ * How often to re-evaluate the active theme when in "auto" mode (ms).
+ * 5 minutes is fine-grained enough to catch the dusk/day/night transitions
+ * without burning cycles.
  */
-export function useMapStyle(): string {
-  const charts = useCharts();
-  const selectedChartId = useChartStore((s) => s.selectedChartId);
+const AUTO_THEME_TICK_MS = 5 * 60_000;
+
+/**
+ * Resolve the active theme from the user's preference, using the last
+ * known camera position as a proxy for location when in "auto" mode.
+ */
+export function useActiveTheme() {
+  const preference = useThemePreference((s) => s.preference);
+  const center = useCameraPosition((s) => s.center);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (preference !== "auto") return;
+    const id = setInterval(() => setTick((t) => t + 1), AUTO_THEME_TICK_MS);
+    return () => clearInterval(id);
+  }, [preference]);
 
   return useMemo(() => {
-    const chart =
-      charts.find((c) => c.id === selectedChartId) ?? charts[0];
+    const [longitude, latitude] = center ?? [];
+    return resolveTheme(preference, { latitude, longitude });
+    // `tick` forces re-resolution on auto-mode timer
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preference, center, tick]);
+}
 
+/** Get the active source filters (theme + preferred depth units). */
+export function useSourceFilters() {
+  const theme = useActiveTheme();
+  const units = usePreferredUnits((s) => s.depth);
+  return useMemo(() => ({ theme, units }), [theme, units]);
+}
+
+const EMPTY_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {},
+  layers: [],
+};
+
+/**
+ * Get the style for the currently selected chart, filtered by the user's
+ * active theme and preferred depth units.
+ *
+ * Returns a StyleSpecification object (not a URI) so that each regeneration
+ * yields a fresh object reference, forcing MapLibre to reload the style
+ * even though the on-disk path is stable.
+ *
+ * Falls back to the first installed chart if none is selected, or to an
+ * empty style if no charts are installed.
+ */
+export function useMapStyle(): StyleSpecification | string {
+  const charts = useCharts();
+  const selectedChartId = useChartStore((s) => s.selectedChartId);
+  const filters = useSourceFilters();
+
+  const chart = useMemo(
+    () => charts.find((c) => c.id === selectedChartId) ?? charts[0],
+    [charts, selectedChartId],
+  );
+
+  const [style, setStyle] = useState<StyleSpecification | null>(null);
+
+  useEffect(() => {
     if (!chart) {
-      // No charts installed — return a minimal empty style as a data URI
-      return "data:application/json," + encodeURIComponent(
-        JSON.stringify({ version: 8, sources: {}, layers: [] }),
-      );
+      setStyle(null);
+      return;
     }
 
-    return chart.styleUri;
-  }, [charts, selectedChartId]);
+    let cancelled = false;
+
+    (async () => {
+      const catalog = readCatalog(chart.id);
+      if (!catalog) return;
+
+      const localPaths = readLocalPaths(chart.id);
+      const sources: CatalogSource[] = catalog.sources.map((source) => {
+        if (
+          (source.type === "mbtiles" || source.type === "pmtiles") &&
+          localPaths[source.id]
+        ) {
+          return { ...source, url: localPaths[source.id] };
+        }
+        return source;
+      });
+
+      try {
+        const next = await generateStyle(sources, filters);
+        if (!cancelled) setStyle(next);
+      } catch (err) {
+        console.warn(`Failed to generate style for ${chart.id}:`, err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chart, filters]);
+
+  return style ?? EMPTY_STYLE;
 }
