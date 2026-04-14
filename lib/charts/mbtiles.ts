@@ -7,6 +7,7 @@ export type MBTilesOptions = {
   bounds?: [number, number, number, number];
   attribution?: string;
 };
+import { chartDirectory } from "@/lib/charts/store";
 import { Directory, File, Paths } from "expo-file-system";
 import { openDatabaseAsync } from "expo-sqlite";
 
@@ -109,9 +110,20 @@ export async function readMBTilesMetadata(
  */
 export async function importMBTilesFile(
   sourceUri: string,
+  chartId?: string,
 ): Promise<{ path: string; metadata: MBTilesMetadata; options: MBTilesOptions }> {
-  const dir = ensureMBTilesDirectory();
-  const filename = `${generateId()}.mbtiles`;
+  let dir: Directory;
+  let filename: string;
+  if (chartId) {
+    dir = chartDirectory(chartId);
+    if (!dir.exists) {
+      dir.create({ intermediates: true });
+    }
+    filename = "mbtiles.mbtiles";
+  } else {
+    dir = ensureMBTilesDirectory();
+    filename = `${generateId()}.mbtiles`;
+  }
   const destination = new File(dir, filename);
 
   const source = new File(sourceUri);

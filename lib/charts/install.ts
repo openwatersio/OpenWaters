@@ -150,6 +150,53 @@ export async function installCatalogEntry(entry: CatalogEntry): Promise<Installe
 }
 
 /**
+ * Install a manually created chart from detected sources.
+ * Generates a chart ID from the name, writes catalog.json + style.json.
+ */
+export async function installManualChart(
+  name: string,
+  sources: CatalogSource[],
+): Promise<InstalledChart> {
+  const id = slugify(name);
+
+  const existing = getChart(id);
+  if (existing) {
+    throw new Error(`A chart named "${name}" already exists`);
+  }
+
+  const entry: CatalogEntry = {
+    id,
+    title: name,
+    summary: "",
+    description: "",
+    license: "",
+    sources,
+  };
+
+  writeCatalog(id, entry);
+
+  const style = await generateStyle(sources);
+  const styleUri = writeStyle(id, style);
+
+  const chart: InstalledChart = {
+    id,
+    name,
+    styleUri,
+    catalogEntry: entry,
+  };
+
+  setChart(chart);
+  return chart;
+}
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/**
  * Uninstall a chart: delete the directory and all associated files.
  */
 export function uninstallChart(chartId: string): void {

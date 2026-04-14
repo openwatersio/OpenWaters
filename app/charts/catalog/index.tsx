@@ -30,7 +30,7 @@ import {
   onTapGesture,
   padding
 } from "@expo/ui/swift-ui/modifiers";
-import { router, Stack } from "expo-router";
+import { router } from "expo-router";
 import { View } from "react-native";
 
 export default function ChartCatalog() {
@@ -40,22 +40,6 @@ export default function ChartCatalog() {
   return (
     <SheetView id="charts-catalog">
       <SheetHeader title="Chart Catalog" />
-      <Stack.Toolbar placement="left">
-        <Stack.Toolbar.Button
-          icon="chevron.left"
-          onPress={() => router.back()}
-        >
-          Back
-        </Stack.Toolbar.Button>
-      </Stack.Toolbar>
-      <Stack.Toolbar placement="right">
-        <Stack.Toolbar.Button
-          icon="plus"
-          onPress={() => router.push("/charts/add")}
-        >
-          Manually Add
-        </Stack.Toolbar.Button>
-      </Stack.Toolbar>
 
       <Host style={{ flex: 1 }}>
         <VStack alignment="leading">
@@ -158,6 +142,21 @@ export default function ChartCatalog() {
                 })}
               </Section>
             )}
+            <Section>
+              <HStack
+                modifiers={[onTapGesture(() => router.push("/charts/add"))]}
+              >
+                <Text modifiers={[foregroundStyle(theme.primary)]}>
+                  Manually Add Chart…
+                </Text>
+                <Spacer />
+                <Image
+                  systemName="chevron.right"
+                  size={13}
+                  color={theme.textSecondary}
+                />
+              </HStack>
+            </Section>
           </List>
         </VStack>
       </Host>

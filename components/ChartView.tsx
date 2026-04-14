@@ -9,26 +9,25 @@ import {
 } from "@/hooks/useRoutes";
 import { useSelectionHandler } from "@/hooks/useSelection";
 import { findNearestLegIndex, metersPerPixel } from "@/lib/geo";
-import { Images, LogManager, Map, PressEvent } from "@maplibre/maplibre-react-native";
+import { Images, Map, PressEvent } from "@maplibre/maplibre-react-native";
 import { useCallback } from "react";
-import { NativeSyntheticEvent } from "react-native";
+import { LogBox, NativeSyntheticEvent } from "react-native";
 import AISLayer from "./AISLayer";
 import AtoNLayer from "./AtoNLayer";
 import { DownloadRegionOverlay } from "./map/DownloadRegionOverlay";
+import { handleRegionDidChange, handleRegionIsChanging, NavigationCamera } from "./map/NavigationCamera";
+import { NavigationPuck } from "./map/NavigationPuck";
+import SelectedLocationAnnotation from "./map/SelectedLocationAnnotation";
 import MapOverlay from "./MapOverlay";
 import MarkerOverlay from "./MarkerOverlay";
 import RouteOverlay from "./RouteOverlay";
 import TrackOverlay from "./TrackOverlay";
-import { handleRegionDidChange, handleRegionIsChanging, NavigationCamera } from "./map/NavigationCamera";
-import { NavigationPuck } from "./map/NavigationPuck";
-import SelectedLocationAnnotation from "./map/SelectedLocationAnnotation";
 
-// Suppress expected MapLibre network errors (offline, rate limiting).
-LogManager.onLog((event) => {
-  if (event.level !== "error") return false;
-  return event.message.includes("Internet connection appears to be offline") ||
-    event.message.includes("HTTP status code 429");
-});
+// Downgrade expected MapLibre network errors from red overlay to warnings.
+LogBox.ignoreLogs([
+  "Internet connection appears to be offline",
+  "HTTP status code 429",
+]);
 
 export default function ChartView() {
   const mapStyle = useMapStyle();
