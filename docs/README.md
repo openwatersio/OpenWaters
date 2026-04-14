@@ -10,7 +10,7 @@ Open Waters is an open-source marine navigation app. It provides essential navig
 - [Routes](routes.md) — Multi-leg route planning with automatic waypoint advancement and ETA
 - [Instruments](instruments.md) — Connect to onboard instruments via Signal K or NMEA 0183
 
-- [Roadmap](roadmap.md) — Feature roadmap and priorities
+- [Roadmap](https://github.com/orgs/openwatersio/projects/3) — Feature roadmap and priorities
 
 ## Vision
 
