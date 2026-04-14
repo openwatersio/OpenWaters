@@ -3,6 +3,8 @@ import {
   createTilePack,
   deleteTilePack,
   getTilePacks,
+  pauseTilePack,
+  resumeTilePack,
   type PackInfo,
   type PackMetadata,
 } from "@/lib/charts/offline";
@@ -59,6 +61,10 @@ export async function loadPacks(): Promise<void> {
   useOfflinePacks.setState({ packs, loading: false });
 }
 
+// Throttle: pause every THROTTLE_BATCH tiles for THROTTLE_DELAY_MS to avoid 429s.
+const THROTTLE_BATCH = 50;
+const THROTTLE_DELAY_MS = 1000;
+
 /** Start downloading tiles for the visible area of a chart */
 export async function downloadVisibleArea(
   chartId: string,
@@ -67,13 +73,15 @@ export async function downloadVisibleArea(
   minZoom: number,
   maxZoom: number,
 ): Promise<void> {
+  let lastThrottleTile = 0;
+
   const pack = await createTilePack(
     chartId,
     styleUri,
     bounds,
     minZoom,
     maxZoom,
-    (_pack: OfflinePack, status: OfflinePackStatus) => {
+    async (_pack: OfflinePack, status: OfflinePackStatus) => {
       useOfflinePacks.setState((s) => ({
         packs: {
           ...s.packs,
@@ -83,6 +91,16 @@ export async function downloadVisibleArea(
           },
         },
       }));
+
+      // Throttle: pause briefly every N tiles to avoid overwhelming tile servers
+      if (
+        status.state === "active" &&
+        status.completedTileCount - lastThrottleTile >= THROTTLE_BATCH
+      ) {
+        lastThrottleTile = status.completedTileCount;
+        await _pack.pause();
+        setTimeout(() => _pack.resume(), THROTTLE_DELAY_MS);
+      }
     },
     (_pack: OfflinePack, error) => {
       console.warn(`Tile pack error for ${chartId}:`, error.message);
@@ -101,6 +119,16 @@ export async function downloadVisibleArea(
       },
     },
   }));
+}
+
+/** Pause a tile pack download */
+export async function pausePack(packId: string): Promise<void> {
+  await pauseTilePack(packId);
+}
+
+/** Resume a paused tile pack download */
+export async function resumePack(packId: string): Promise<void> {
+  await resumeTilePack(packId);
 }
 
 /** Delete a tile pack and remove from store */

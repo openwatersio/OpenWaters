@@ -1,6 +1,6 @@
 import SheetView from "@/components/ui/SheetView";
 import { ARRIVAL_RADIUS_OPTIONS, describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits, type ArrivalRadius } from "@/hooks/usePreferredUnits";
-import { Host, List, Picker, Section, Text, Toggle, VStack } from "@expo/ui/swift-ui";
+import { Button, Host, List, Picker, Section, Text, Toggle, VStack } from "@expo/ui/swift-ui";
 import { tag } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";
 
@@ -88,6 +88,13 @@ export default function Settings() {
                 onIsOnChange={(value) =>
                   setPreferredUnits({ arriveOnCircleOnly: value })
                 }
+              />
+            </Section>
+            <Section>
+              <Button
+                systemImage="arrow.down.to.line"
+                label="Offline Data"
+                onPress={() => router.push("/offline")}
               />
             </Section>
           </List>

@@ -1,10 +1,10 @@
+import { chartDirectory } from "@/lib/charts/store";
+import { readMBTilesMetadata } from "@/lib/charts/mbtiles";
 import {
   createDownloadResumable,
-  documentDirectory,
   type DownloadProgressData,
   type DownloadResumable,
 } from "expo-file-system/legacy";
-import { ensureMBTilesDirectory, readMBTilesMetadata } from "@/lib/charts/mbtiles";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,16 +32,18 @@ const activeDownloads = new Map<string, DownloadResumable>();
  * Throws if the download fails or is cancelled.
  */
 export async function downloadMBTiles(
+  chartId: string,
   sourceId: string,
   url: string,
   callbacks?: DownloadCallbacks,
 ): Promise<string> {
-  // Ensure the mbtiles directory exists
-  const dir = ensureMBTilesDirectory();
+  const dir = chartDirectory(chartId);
+  if (!dir.exists) {
+    dir.create({ intermediates: true });
+  }
 
-  // Generate a unique filename
-  const filename = `${sourceId}-${Date.now().toString(36)}.mbtiles`;
-  const localUri = `${documentDirectory}mbtiles/${filename}`;
+  const filename = `${sourceId}.mbtiles`;
+  const localUri = `${dir.uri}/${filename}`;
 
   const download = createDownloadResumable(
     url,

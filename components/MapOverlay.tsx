@@ -1,8 +1,11 @@
 import { useSheetOffset } from "@/hooks/useSheetPosition";
+import { Host, VStack } from "@expo/ui/swift-ui";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MapControls } from "./MapControls";
 import NavigationHUD from "./NavigationHUD";
+import { OfflineStatusButton } from "./map/OfflineStatusButton";
+import { SelectChartButton } from "./map/SelectChartButton";
 import TrackRecordButton from "./map/TrackRecordButton";
 
 export default function MapOverlay() {
@@ -19,6 +22,12 @@ export default function MapOverlay() {
         </SafeAreaView>
         <SafeAreaView style={{ position: "absolute", bottom: 0, left: 16, gap: 16 }}>
           <TrackRecordButton />
+          <Host matchContents>
+            <VStack spacing={16}>
+              <OfflineStatusButton />
+              <SelectChartButton />
+            </VStack>
+          </Host>
         </SafeAreaView>
       </Animated.View>
     </>

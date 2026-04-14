@@ -14,6 +14,7 @@ import { useCallback } from "react";
 import { NativeSyntheticEvent } from "react-native";
 import AISLayer from "./AISLayer";
 import AtoNLayer from "./AtoNLayer";
+import { DownloadRegionOverlay } from "./map/DownloadRegionOverlay";
 import MapOverlay from "./MapOverlay";
 import MarkerOverlay from "./MarkerOverlay";
 import RouteOverlay from "./RouteOverlay";
@@ -22,10 +23,11 @@ import { handleRegionDidChange, handleRegionIsChanging, NavigationCamera } from 
 import { NavigationPuck } from "./map/NavigationPuck";
 import SelectedLocationAnnotation from "./map/SelectedLocationAnnotation";
 
-// Suppress expected MapLibre network errors (tile fetch failures when offline).
+// Suppress expected MapLibre network errors (offline, rate limiting).
 LogManager.onLog((event) => {
-  return event.level === "error" &&
-    event.message.includes("Internet connection appears to be offline");
+  if (event.level !== "error") return false;
+  return event.message.includes("Internet connection appears to be offline") ||
+    event.message.includes("HTTP status code 429");
 });
 
 export default function ChartView() {
@@ -104,6 +106,7 @@ export default function ChartView() {
       <SelectedLocationAnnotation />
       <NavigationPuck />
     </Map>
+    <DownloadRegionOverlay />
     <MapOverlay />
   </>;
 }

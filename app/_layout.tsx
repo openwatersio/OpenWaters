@@ -60,8 +60,24 @@ export default function RootLayout() {
           sheetGrabberVisible: true,
         }} />
         <Stack.Screen name="charts/[id]/offline" options={{
-          headerShown: false,
-          title: "Edit Chart Source",
+          presentation: "formSheet",
+          sheetLargestUndimmedDetentIndex: "last",
+          sheetAllowedDetents: [0.3, 0.5, 1],
+        }} />
+        <Stack.Screen name="charts/[id]/download" options={{
+          presentation: "formSheet",
+          sheetLargestUndimmedDetentIndex: "last",
+          sheetAllowedDetents: [0.4, 0.55],
+          sheetGrabberVisible: true,
+          title: "Download",
+        }} />
+        <Stack.Screen name="offline/index" options={{
+          presentation: "formSheet",
+          sheetLargestUndimmedDetentIndex: "last",
+          sheetAllowedDetents: [1],
+          sheetGrabberVisible: true,
+          sheetExpandsWhenScrolledToEdge: true,
+          title: "Offline Data",
         }} />
         <Stack.Screen name="settings" options={{
           presentation: "formSheet",

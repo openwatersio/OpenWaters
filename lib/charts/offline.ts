@@ -71,6 +71,18 @@ export async function createTilePack(
   );
 }
 
+/** Pause a tile pack download */
+export async function pauseTilePack(packId: string): Promise<void> {
+  const pack = await OfflineManager.getPack(packId);
+  await pack.pause();
+}
+
+/** Resume a paused tile pack download */
+export async function resumeTilePack(packId: string): Promise<void> {
+  const pack = await OfflineManager.getPack(packId);
+  await pack.resume();
+}
+
 /** Delete a tile pack by ID */
 export async function deleteTilePack(packId: string): Promise<void> {
   await OfflineManager.deletePack(packId);

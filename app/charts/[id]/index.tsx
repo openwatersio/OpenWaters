@@ -1,18 +1,10 @@
 import ChartPreview from "@/components/charts/ChartPreview";
 import SheetHeader from "@/components/ui/SheetHeader";
 import SheetView from "@/components/ui/SheetView";
-import { useCameraView } from "@/hooks/useCameraView";
 import { useChart } from "@/hooks/useCharts";
-import {
-  downloadVisibleArea,
-  loadPacks,
-  removePack,
-  usePacksForChart,
-} from "@/hooks/useOfflinePacks";
 import useTheme from "@/hooks/useTheme";
 import { uninstallChart } from "@/lib/charts/install";
 import { selectChart } from "@/lib/charts/store";
-import { formatBytes } from "@/lib/format";
 import {
   Button,
   Host,
@@ -24,17 +16,13 @@ import {
 } from "@expo/ui/swift-ui";
 import { foregroundStyle, listRowInsets } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { Alert, View } from "react-native";
 
 export default function ChartDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const chart = useChart(id);
   const theme = useTheme();
-  const tilePacks = usePacksForChart(id);
-
-  // Load packs on mount
-  useEffect(() => { loadPacks(); }, []);
 
   const handleDelete = useCallback(() => {
     if (!chart) return;
@@ -102,64 +90,17 @@ export default function ChartDetail() {
               ) : null}
             </Section>
 
-            {chart.catalogEntry ? (
-              <Section>
-                <Button
-                  systemImage="arrow.down.circle"
-                  label="Offline Regions"
-                  onPress={() =>
-                    router.push({
-                      pathname: "/charts/[id]/offline",
-                      params: { id: chart.id },
-                    })
-                  }
-                />
-              </Section>
-            ) : null}
-
-            <Section title="Tile Cache">
-              <Button
-                systemImage="square.and.arrow.down"
-                label="Cache Visible Area"
-                onPress={() => {
-                  const { bounds, zoom } = useCameraView.getState();
-                  if (!bounds) return;
-                  downloadVisibleArea(
-                    chart.id,
-                    chart.styleUri,
-                    bounds,
-                    zoom,
-                    Math.min(Math.floor(zoom) + 4, 22),
-                  );
-                }}
-              />
-              {tilePacks.map((pack) => {
-                const percentage = pack.status?.percentage ?? 0;
-                const state = pack.status?.state ?? "inactive";
-                const tileCount = pack.status?.completedTileCount ?? 0;
-                const size = pack.status?.completedTileSize ?? 0;
-
-                return (
-                  <VStack key={pack.packId} alignment="leading">
-                    <Text>
-                      {state === "complete"
-                        ? `${tileCount} tiles · ${formatBytes(size)}`
-                        : state === "active"
-                          ? `Downloading… ${percentage.toFixed(0)}%`
-                          : "Queued"}
-                    </Text>
-                    <Button
-                      systemImage="trash"
-                      label="Delete"
-                      role="destructive"
-                      onPress={() => removePack(pack.packId)}
-                    />
-                  </VStack>
-                );
-              })}
-            </Section>
-
             <Section>
+              <Button
+                systemImage="arrow.down.to.line"
+                label="Offline"
+                onPress={() =>
+                  router.push({
+                    pathname: "/charts/[id]/offline",
+                    params: { id: chart.id },
+                  })
+                }
+              />
               <Button
                 systemImage="checkmark.circle"
                 label="Use This Chart"

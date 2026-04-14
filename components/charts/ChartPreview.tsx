@@ -1,4 +1,4 @@
-import { useNavigation } from "@/hooks/useNavigation";
+import { useCameraView } from "@/hooks/useCameraView";
 import { isInsideBounds } from "@/lib/geo";
 import type {
   InitialViewState,
@@ -13,38 +13,36 @@ type ChartPreviewProps = {
   mapStyle: StyleSpecification | string;
   /** Bounds of the source coverage [west, south, east, north] */
   bounds?: LngLatBounds;
-  /** Zoom level for center-based views, default 6 */
-  zoom?: number;
   style?: ViewStyle;
 };
 
 /**
  * A small, non-interactive map preview for chart listings and catalog entries.
  *
- * Centers on the user's current location if available and within the source
- * bounds. Otherwise falls back to the center of the source bounds.
+ * Shows the current camera view if it falls within the source bounds.
+ * Otherwise falls back to the source bounds.
  */
 export default function ChartPreview({
   mapStyle,
   bounds,
-  zoom = 6,
   style,
 }: ChartPreviewProps) {
-  const { latitude, longitude } = useNavigation.getState();
+  const cameraBounds = useCameraView.getState().bounds;
 
   const initialViewState = useMemo((): InitialViewState => {
-    if (
-      latitude != null &&
-      longitude != null &&
-      (!bounds || isInsideBounds({ latitude, longitude }, bounds))
-    ) {
-      return { center: [longitude, latitude], zoom };
+    if (cameraBounds) {
+      const [west, south, east, north] = cameraBounds;
+      const latitude = (south + north) / 2;
+      const longitude = (west + east) / 2;
+      if (!bounds || isInsideBounds({ latitude, longitude }, bounds)) {
+        return { bounds: cameraBounds };
+      }
     }
 
     if (bounds) return { bounds };
 
     return { center: [0, 0], zoom: 2 };
-  }, [latitude, longitude, bounds, zoom]);
+  }, [cameraBounds, bounds]);
 
   return (
     <Map

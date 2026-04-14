@@ -3,8 +3,7 @@ import {
   downloadMBTiles,
   type DownloadProgress,
 } from "@/lib/charts/download";
-import { deleteMBTilesFile } from "@/lib/charts/mbtiles";
-import { readLocalPaths, recordDownload, removeDownloadRecord } from "@/lib/charts/style";
+import { regenerateStyle } from "@/lib/charts/style";
 import { create } from "zustand";
 
 // ---------------------------------------------------------------------------
@@ -66,14 +65,14 @@ export async function startDownload(
   setDownloadState(key, { status: "downloading" });
 
   try {
-    const localPath = await downloadMBTiles(sourceId, url, {
+    await downloadMBTiles(chartId, sourceId, url, {
       onProgress: (progress) => {
         setDownloadState(key, { status: "downloading", progress });
       },
     });
 
     // Record the download and regenerate the style
-    await recordDownload(chartId, sourceId, localPath);
+    await regenerateStyle(chartId);
 
     setDownloadState(key, { status: "complete" });
 
@@ -103,21 +102,7 @@ export async function stopDownload(
 /**
  * Delete a downloaded MBTiles file and regenerate the style.
  */
-export async function deleteDownload(
-  chartId: string,
-  sourceId: string,
-): Promise<void> {
-  const localPaths = readLocalPaths(chartId);
-  const path = localPaths[sourceId];
-  if (path) {
-    try {
-      deleteMBTilesFile(path);
-    } catch {
-      // Continue even if file cleanup fails
-    }
-  }
-  await removeDownloadRecord(chartId, sourceId);
-}
+export { deleteDownload } from "@/lib/charts/style";
 
 // ---------------------------------------------------------------------------
 // Selectors

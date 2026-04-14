@@ -1,5 +1,5 @@
+import type { CatalogSourceType, RasterSource, StyleSource } from "@/catalog/types";
 import useTheme from "@/hooks/useTheme";
-import type { CatalogSourceType, StyleSource, RasterSource } from "@/catalog/types";
 import type { MBTilesOptions } from "@/lib/charts/mbtiles";
 import { importMBTilesFile } from "@/lib/charts/mbtiles";
 import {
@@ -251,7 +251,7 @@ function MBTilesForm({
       >
         <Button
           systemImage={
-            existing ? "arrow.triangle.2.circlepath" : "square.and.arrow.down"
+            existing ? "arrow.triangle.2.circlepath" : "arrow.down.to.line"
           }
           label={
             importing ? "Importing…" : existing ? "Replace file" : "Choose file…"

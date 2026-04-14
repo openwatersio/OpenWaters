@@ -1,11 +1,9 @@
 import type { CatalogEntry, CatalogSource } from "@/catalog/types";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
-import { deleteMBTilesFile } from "@/lib/charts/mbtiles";
 import { deletePacksForChart } from "@/lib/charts/offline";
 import {
   chartDirectory,
   getChart,
-  readStyle,
   removeChart,
   setChart,
   writeCatalog,
@@ -155,22 +153,6 @@ export async function installCatalogEntry(entry: CatalogEntry): Promise<Installe
  * Uninstall a chart: delete the directory and all associated files.
  */
 export function uninstallChart(chartId: string): void {
-  // Clean up MBTiles files referenced in the style
-  const style = readStyle(chartId);
-  if (style && typeof style === "object" && style.sources) {
-    for (const source of Object.values(style.sources)) {
-      const src = source as { url?: string };
-      if (src.url?.startsWith("mbtiles://")) {
-        const path = src.url.slice("mbtiles://".length);
-        try {
-          deleteMBTilesFile(path);
-        } catch {
-          // Continue even if file cleanup fails
-        }
-      }
-    }
-  }
-
   // Clean up OfflineManager tile packs (best-effort, async)
   deletePacksForChart(chartId).catch(() => {});
 

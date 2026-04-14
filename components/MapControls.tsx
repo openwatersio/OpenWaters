@@ -1,7 +1,6 @@
 import { Compass } from '@/components/map/Compass';
 import { FollowLocationButton } from '@/components/map/FollowLocationButton';
 import { MenuButton } from '@/components/map/MenuButton';
-import { SelectChartButton } from '@/components/map/SelectChartButton';
 import { ZoomButtons } from '@/components/map/ZoomButtons';
 import {
   GlassEffectContainer,
@@ -21,7 +20,6 @@ export const MapControls = memo(function MapControls() {
         <GlassEffectContainer>
           <VStack spacing={16} modifiers={[tint('primary')]}>
             <Compass />
-            <SelectChartButton />
             <ZoomButtons />
             <FollowLocationButton />
             <MenuButton />
