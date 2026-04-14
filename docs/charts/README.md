@@ -48,13 +48,3 @@ For the data model and fallback rules, see the [themes spec](../specs/themes.md)
 ## Technical Details
 
 Charts are stored on disk under the app's documents directory as a `style.json` (a MapLibre `StyleSpecification`) plus an optional cached `catalog.json` from the originating catalog entry. Downloaded MBTiles files live alongside the style in the chart's directory. Tile packs for raster and style sources are stored in MapLibre's native offline database via `OfflineManager`.
-
-Relevant modules:
-
-- [lib/charts/install.ts](../../lib/charts/install.ts) — write `catalog.json` and generate `style.json` on install.
-- [lib/charts/style.ts](../../lib/charts/style.ts) — regenerate the style when downloads, themes, or units change.
-- [lib/charts/sources.ts](../../lib/charts/sources.ts) — filter catalog sources by theme and units.
-- [lib/charts/offline.ts](../../lib/charts/offline.ts) — tile pack lifecycle wrapper around MapLibre's `OfflineManager`.
-- [lib/charts/download.ts](../../lib/charts/download.ts) — MBTiles file downloads with progress and cancel.
-- [lib/charts/detect.ts](../../lib/charts/detect.ts) — auto-detect source type from a URL or file for manual chart creation.
-- [hooks/useCharts.ts](../../hooks/useCharts.ts) — chart index, active theme/unit resolution, and map-style hook.
