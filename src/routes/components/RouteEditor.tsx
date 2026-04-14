@@ -1,6 +1,6 @@
 import { flyTo } from "@/navigation/components/NavigationCamera";
 import SheetHeader from "@/ui/SheetHeader";
-import { useNavigationState } from "@/navigation/hooks/useNavigationState";
+import { useNavigation } from "@/navigation/hooks/useNavigation";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import {
   clearActiveRoute,
@@ -179,10 +179,10 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
     if (id == null) return;
     // Snap the starting waypoint to the leg the vessel is currently on, so
     // resuming mid-route picks up where you actually are.
-    const coords = useNavigationState.getState().coords;
+    const { latitude, longitude } = useNavigation.getState();
     const from =
-      coords?.latitude != null && coords?.longitude != null
-        ? { latitude: coords.latitude, longitude: coords.longitude }
+      latitude != null && longitude != null
+        ? { latitude, longitude }
         : undefined;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await startNavigation(id, { from });

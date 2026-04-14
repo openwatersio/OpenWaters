@@ -6,13 +6,18 @@ import { HStack } from "@expo/ui/swift-ui";
 import { useEffect, useState } from "react";
 
 export default function TrackRecordingStats() {
-  const { track, distance, averageSpeed } = useTrackRecording();
+  const { track, distance } = useTrackRecording();
   const [, setTick] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const elapsedSeconds = track?.started_at
+    ? (Date.now() - new Date(track.started_at).getTime()) / 1000
+    : 0;
+  const averageSpeed = elapsedSeconds > 0 ? distance / elapsedSeconds : 0;
 
   const dist = toDistance(distance);
   const avgSpd = toSpeed(averageSpeed);

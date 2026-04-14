@@ -1,5 +1,5 @@
 import { Annotation, AnnotationProps } from "@/map/components/Annotation";
-import { useNavigationState } from "@/navigation/hooks/useNavigationState";
+import { usePosition } from "@/navigation/hooks/useNavigation";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
 import {
   advanceToNext,
@@ -298,7 +298,7 @@ function WaypointAnnotation({
 }
 
 function useWaypointArrival(points: ActiveWaypoint[], activePointIndex: number) {
-  const nav = useNavigationState();
+  const position = usePosition();
   const arrivalRadius = usePreferredUnits((s) => s.arrivalRadius);
   const arriveOnCircleOnly = usePreferredUnits((s) => s.arriveOnCircleOnly);
 
@@ -306,10 +306,10 @@ function useWaypointArrival(points: ActiveWaypoint[], activePointIndex: number) 
   const isLastPoint = activePointIndex >= points.length - 1;
 
   useEffect(() => {
-    if (!nav.coords || !targetPoint) return;
+    if (!position || !targetPoint) return;
 
     const arrival = checkWaypointArrival({
-      position: nav.coords,
+      position,
       previousWaypoint: activePointIndex > 0 ? points[activePointIndex - 1] : null,
       activeWaypoint: targetPoint,
       nextWaypoint:
@@ -327,7 +327,7 @@ function useWaypointArrival(points: ActiveWaypoint[], activePointIndex: number) 
       }
     }
   }, [
-    nav.coords,
+    position,
     targetPoint,
     isLastPoint,
     activePointIndex,

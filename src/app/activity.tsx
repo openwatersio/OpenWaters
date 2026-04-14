@@ -3,7 +3,7 @@ import TrackRecordingStats from "@/tracks/components/TrackRecordingStats";
 import { Detent } from "@/ui/Detent";
 import SheetView from "@/ui/SheetView";
 import { ArrivalTimeStat, BearingStat, DistanceStat, EtaStat } from "@/ui/StatItem";
-import { useNavigationState } from "@/navigation/hooks/useNavigationState";
+import { useNavigation } from "@/navigation/hooks/useNavigation";
 import {
   RouteMode,
   stopNavigation,
@@ -26,29 +26,34 @@ export default function ActivityScreen() {
   const isNavigating = route?.mode === RouteMode.Navigating;
   const activePointIndex = route?.activeIndex ?? 0;
   const points = useMemo(() => route?.points ?? [], [route?.points]);
-  const nav = useNavigationState();
+  const nav = useNavigation();
   const isRecording = useTrackRecording((s) => s.isRecording);
 
   const targetPoint = points[activePointIndex] ?? null;
   const previousPoint = activePointIndex > 0 ? points[activePointIndex - 1] ?? null : null;
 
+  const position =
+    nav.latitude !== null && nav.longitude !== null
+      ? { latitude: nav.latitude, longitude: nav.longitude }
+      : null;
+
   const waypointProgress = useMemo(() => {
-    if (!nav.coords || !targetPoint) return null;
-    const sog = nav.coords.speed ?? 0;
-    const cog = nav.coords.heading ?? 0;
-    return calculateWaypointProgress(nav.coords, sog, cog, targetPoint, previousPoint);
-  }, [nav.coords, targetPoint, previousPoint]);
+    if (!position || !targetPoint) return null;
+    const sog = nav.speed ?? 0;
+    const cog = nav.heading ?? 0;
+    return calculateWaypointProgress(position, sog, cog, targetPoint, previousPoint);
+  }, [position, nav.speed, nav.heading, targetPoint, previousPoint]);
 
   const destinationProgress = useMemo(() => {
-    if (!waypointProgress || !nav.coords) return null;
-    const sog = nav.coords.speed ?? 0;
+    if (!waypointProgress || !position) return null;
+    const sog = nav.speed ?? 0;
     return calculateDestinationProgress(
       waypointProgress,
       points,
       activePointIndex,
       sog,
     );
-  }, [waypointProgress, nav.coords, points, activePointIndex]);
+  }, [waypointProgress, position, nav.speed, points, activePointIndex]);
 
   // Auto-dismiss when all activities stop.
   useEffect(() => {

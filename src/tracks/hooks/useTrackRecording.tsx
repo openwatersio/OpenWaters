@@ -35,7 +35,6 @@ type State = {
   distance: number;
   pointCount: number;
   maxSpeed: number;
-  averageSpeed: number;
   lastLocation: LocationObject | null;
 };
 
@@ -45,6 +44,9 @@ const MIN_TRACK_DURATION_MS = 60_000;
 const MAX_SPEED_MS = 20;
 // Reject fixes with poor GPS accuracy
 const MAX_ACCURACY_METERS = 50;
+// Below this speed (~0.5 kn) the vessel is effectively stationary; skip the fix
+// so GPS jitter doesn't inflate the track distance.
+const MIN_SPEED_MS = 0.25;
 
 async function recordLocation(location: LocationObject) {
   const { track, lastLocation } = useTrackRecording.getState();
@@ -59,6 +61,7 @@ async function recordLocation(location: LocationObject) {
   const { coords } = location;
   if (coords.accuracy !== null && coords.accuracy > MAX_ACCURACY_METERS) return;
   if (coords.speed !== null && coords.speed > MAX_SPEED_MS) return;
+  if (coords.speed !== null && coords.speed < MIN_SPEED_MS) return;
 
   const segmentDistance = lastLocation ? getDistance(lastLocation.coords, coords) : 0;
   if (lastLocation) {
@@ -68,30 +71,14 @@ async function recordLocation(location: LocationObject) {
 
   await insertTrackPoint(track.id, location);
 
-  useTrackRecording.setState(({ distance, pointCount, maxSpeed, averageSpeed }) => {
+  useTrackRecording.setState(({ distance, pointCount, maxSpeed }) => {
     return {
       lastLocation: location,
       distance: distance + segmentDistance,
       pointCount: pointCount + 1,
       maxSpeed: Math.max(maxSpeed, coords.speed ?? 0),
-      averageSpeed: coords.speed != null
-        ? (averageSpeed * pointCount + coords.speed) / (pointCount + 1)
-        : averageSpeed,
     };
   });
-}
-
-let stopForegroundSubscription: (() => void) | null = null;
-
-function startForegroundTracking() {
-  stopForegroundSubscription = subscribeToLocationUpdate(recordLocation);
-}
-
-function stopForegroundTracking() {
-  if (stopForegroundSubscription) {
-    stopForegroundSubscription();
-    stopForegroundSubscription = null;
-  }
 }
 
 export const useTrackRecording = create<State>()(
@@ -102,17 +89,11 @@ export const useTrackRecording = create<State>()(
       distance: 0,
       pointCount: 0,
       maxSpeed: 0,
-      averageSpeed: 0,
       lastLocation: null as LocationObject | null,
     }),
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => AsyncStorage),
-      onRehydrateStorage: () => (state) => {
-        if (state?.isRecording) {
-          resumeTrackRecording();
-        }
-      },
     },
   ),
 );
@@ -124,7 +105,6 @@ function resetState(track: Track | null = null) {
     distance: 0,
     pointCount: 0,
     maxSpeed: 0,
-    averageSpeed: 0,
     lastLocation: null,
   });
 }
@@ -139,19 +119,10 @@ export async function startTrackRecording() {
 
   resetState(track);
 
-  startForegroundTracking();
   await startBackgroundTracking();
 }
 
-export async function resumeTrackRecording() {
-  const { isRecording, track } = useTrackRecording.getState();
-  if (!isRecording || !track) return;
-
-  startForegroundTracking();
-}
-
 export async function stopTrackRecording() {
-  stopForegroundTracking();
   await stopBackgroundTracking();
 
   const { track, distance } = useTrackRecording.getState();

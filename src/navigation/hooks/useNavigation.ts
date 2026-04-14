@@ -1,6 +1,9 @@
 import { getInstrumentData } from "@/instruments/hooks/useInstruments";
-import type { GeolocationPosition } from "@maplibre/maplibre-react-native";
-import { LocationManager } from "@maplibre/maplibre-react-native";
+import {
+  Accuracy,
+  watchPositionAsync,
+  type LocationObject,
+} from "expo-location";
 import { create } from "zustand";
 import { useShallow } from "zustand/shallow";
 
@@ -119,8 +122,8 @@ function scheduleMoored(currentState: NavigationState) {
 
 // --- Update functions ---
 
-/** Called from LocationManager listener (device GPS) */
-export function updateFromDevice(location: GeolocationPosition) {
+/** Called from expo-location watcher (device GPS) */
+export function updateFromDevice(location: LocationObject) {
   if (!location) return;
   const { coords } = location;
   _device = {
@@ -201,6 +204,13 @@ export function usePosition(): { latitude: number; longitude: number } | null {
 
 // --- Wire device GPS listener at module scope ---
 
-LocationManager.addListener((location) => {
-  updateFromDevice(location);
+watchPositionAsync(
+  {
+    accuracy: Accuracy.BestForNavigation,
+    distanceInterval: 1,
+    timeInterval: 1000,
+  },
+  updateFromDevice,
+).catch((error) => {
+  console.warn("Failed to start navigation location watcher:", error);
 });
