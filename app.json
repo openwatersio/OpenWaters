@@ -81,6 +81,13 @@
       "expo-image",
       "expo-sqlite",
       "expo-sharing",
+      [
+        "expo-file-system",
+        {
+          "enableFileSharing": true,
+          "supportsOpeningDocumentsInPlace": true
+        }
+      ],
       "react-native-map-link",
       [
         "expo-build-properties",
