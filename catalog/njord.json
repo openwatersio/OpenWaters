@@ -1,0 +1,17 @@
+{
+  "id": "njord",
+  "title": "Njord",
+  "summary": "Vector nautical charts from OpenENC.",
+  "description": "Njord provides vector nautical chart tiles rendered from open electronic navigational chart (ENC) data via OpenENC.",
+  "homepage": "https://openenc.com",
+  "license": "custom",
+  "keywords": ["nautical", "vector"],
+  "sources": [
+    {
+      "id": "njord-feet-day",
+      "title": "Njord (Feet, Day)",
+      "type": "style",
+      "url": "https://openenc.com/v1/style/feet/day"
+    }
+  ]
+}
