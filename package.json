@@ -15,7 +15,7 @@
       "<rootDir>/tests/setup.ts"
     ],
     "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/$1",
+      "^@/(.*)$": "<rootDir>/src/$1",
       "^@react-native-async-storage/async-storage$": "@react-native-async-storage/async-storage/jest/async-storage-mock"
     },
     "transformIgnorePatterns": [
