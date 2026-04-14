@@ -23,7 +23,9 @@ import {
   disabled,
   foregroundStyle,
   frame,
+  keyboardType,
   listRowInsets,
+  onSubmit,
   textInputAutocapitalization,
 } from "@expo/ui/swift-ui/modifiers";
 import { File } from "expo-file-system";
@@ -39,6 +41,8 @@ type DetectStatus =
 export default function AddChart() {
   const theme = useTheme();
   const [name, setName] = useState("");
+  const [urlInput, setUrlInput] = useState("");
+  const [addUrlInput, setAddUrlInput] = useState("");
   const [status, setStatus] = useState<DetectStatus>({ state: "idle" });
   const [saving, setSaving] = useState(false);
   const nameFieldRef = useRef<TextFieldRef>(null);
@@ -46,8 +50,8 @@ export default function AddChart() {
   const sources =
     status.state === "detected" ? status.sources : [];
 
-  const handleUrlSubmit = useCallback(async (url: string) => {
-    const trimmed = url.trim();
+  const handleUrlSubmit = useCallback(async () => {
+    const trimmed = urlInput.trim();
     if (!trimmed) return;
 
     setStatus({ state: "detecting" });
@@ -68,7 +72,7 @@ export default function AddChart() {
         message: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [name]);
+  }, [urlInput, name]);
 
   const handleFilePick = useCallback(async () => {
     setStatus({ state: "detecting" });
@@ -97,8 +101,8 @@ export default function AddChart() {
     }
   }, [name]);
 
-  const handleAddSource = useCallback(async (url: string) => {
-    const trimmed = url.trim();
+  const handleAddSource = useCallback(async () => {
+    const trimmed = addUrlInput.trim();
     if (!trimmed || status.state !== "detected") return;
 
     setStatus((prev) =>
@@ -121,7 +125,7 @@ export default function AddChart() {
         message: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [status, sources]);
+  }, [addUrlInput, status, sources]);
 
   const handleUpdateSource = useCallback(
     (index: number, updated: CatalogSource) => {
@@ -212,12 +216,12 @@ export default function AddChart() {
             >
               <TextField
                 placeholder="https://..."
-                onSubmit={handleUrlSubmit}
-                autocorrection={false}
-                keyboardType="url"
+                onValueChange={setUrlInput}
                 modifiers={[
+                  keyboardType("url"),
                   textInputAutocapitalization("never"),
                   autocorrectionDisabled(),
+                  onSubmit(handleUrlSubmit),
                 ]}
               />
               <Button
@@ -256,8 +260,7 @@ export default function AddChart() {
                   ref={nameFieldRef}
                   placeholder="Chart Name"
                   defaultValue={name}
-                  onChangeText={setName}
-                  autocorrection={false}
+                  onValueChange={setName}
                 />
               </Section>
 
@@ -291,12 +294,12 @@ export default function AddChart() {
               >
                 <TextField
                   placeholder="https://..."
-                  onSubmit={handleAddSource}
-                  autocorrection={false}
-                  keyboardType="url"
+                  onValueChange={setAddUrlInput}
                   modifiers={[
+                    keyboardType("url"),
                     textInputAutocapitalization("never"),
                     autocorrectionDisabled(),
+                    onSubmit(handleAddSource),
                   ]}
                 />
                 <Button
@@ -344,8 +347,7 @@ function SourceCard({
       <TextField
         placeholder="Source Title"
         defaultValue={source.title}
-        onChangeText={(title) => onUpdate({ ...source, title })}
-        autocorrection={false}
+        onValueChange={(title: string) => onUpdate({ ...source, title })}
       />
 
       {"url" in source && source.url ? (
@@ -396,10 +398,9 @@ function SourceCard({
             <TextField
               placeholder="Attribution"
               defaultValue={source.attribution}
-              onChangeText={(attribution) =>
+              onValueChange={(attribution: string) =>
                 onUpdate({ ...source, attribution } as CatalogSource)
               }
-              autocorrection={false}
             />
           ) : null}
         </>
