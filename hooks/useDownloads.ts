@@ -95,7 +95,7 @@ export async function stopDownload(
   chartId: string,
   sourceId: string,
 ): Promise<void> {
-  await cancelDownload(sourceId);
+  await cancelDownload(chartId, sourceId);
   clearDownloadState(downloadKey(chartId, sourceId));
 }
 

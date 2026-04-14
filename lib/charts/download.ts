@@ -57,7 +57,8 @@ export async function downloadMBTiles(
     },
   );
 
-  activeDownloads.set(sourceId, download);
+  const downloadKey = `${chartId}:${sourceId}`;
+  activeDownloads.set(downloadKey, download);
 
   try {
     const result = await download.downloadAsync();
@@ -81,25 +82,26 @@ export async function downloadMBTiles(
 
     return path;
   } finally {
-    activeDownloads.delete(sourceId);
+    activeDownloads.delete(downloadKey);
   }
 }
 
 /**
- * Cancel an active download for the given source ID.
+ * Cancel an active download.
  * No-ops if no download is active.
  */
-export async function cancelDownload(sourceId: string): Promise<void> {
-  const download = activeDownloads.get(sourceId);
+export async function cancelDownload(chartId: string, sourceId: string): Promise<void> {
+  const key = `${chartId}:${sourceId}`;
+  const download = activeDownloads.get(key);
   if (download) {
     await download.cancelAsync();
-    activeDownloads.delete(sourceId);
+    activeDownloads.delete(key);
   }
 }
 
-/** Check whether a download is active for the given source ID */
-export function isDownloading(sourceId: string): boolean {
-  return activeDownloads.has(sourceId);
+/** Check whether a download is active */
+export function isDownloading(chartId: string, sourceId: string): boolean {
+  return activeDownloads.has(`${chartId}:${sourceId}`);
 }
 
 /** Cancel all active downloads. Called on app teardown to prevent orphaned native tasks. */

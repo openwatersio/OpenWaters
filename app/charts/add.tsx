@@ -77,18 +77,23 @@ export default function AddChart() {
   }, [urlInput, name]);
 
   const handleFilePick = useCallback(async () => {
+    const prevSources = status.state === "detected" ? status.sources : [];
     setStatus({ state: "detecting" });
     try {
       const picked = await File.pickFileAsync();
       const source = Array.isArray(picked) ? picked[0] : picked;
       if (!source) {
-        setStatus({ state: "idle" });
+        setStatus(
+          prevSources.length > 0
+            ? { state: "detected", sources: prevSources }
+            : { state: "idle" },
+        );
         return;
       }
       const result = await detectFile(source.uri, source.name);
       setStatus({
         state: "detected",
-        sources: [result.source],
+        sources: [...prevSources, result.source],
         suggestedName: result.suggestedName,
       });
       if (result.suggestedName && !name.trim()) {
@@ -101,7 +106,7 @@ export default function AddChart() {
         message: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [name]);
+  }, [name, status]);
 
   const handleAddSource = useCallback(async () => {
     const trimmed = addUrlInput.trim();

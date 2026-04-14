@@ -107,7 +107,7 @@ export async function downloadVisibleArea(
     },
   );
 
-  // Add to store immediately
+  // Add to store, preserving any status already recorded by the progress callback
   useOfflinePacks.setState((s) => ({
     packs: {
       ...s.packs,
@@ -115,7 +115,7 @@ export async function downloadVisibleArea(
         packId: pack.id,
         chartId,
         downloadedAt: Date.now(),
-        status: null,
+        status: s.packs[pack.id]?.status ?? null,
       },
     },
   }));

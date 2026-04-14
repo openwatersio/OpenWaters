@@ -22,7 +22,7 @@ export type DownloadableSource = (MBTilesSource | PMTilesSource) & {
  * Given a chart ID, derive the list of sources available for download.
  *
  * Returns all mbtiles/pmtiles sources from the catalog, annotated with
- * whether they've been downloaded (by checking local-paths.json).
+ * whether they've been downloaded (by scanning the chart directory for .mbtiles files).
  */
 export function useAvailableDownloads(chartId: string): DownloadableSource[] {
   // This hook currently reads from disk synchronously. The useMemo dep on

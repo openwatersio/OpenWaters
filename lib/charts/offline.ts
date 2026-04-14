@@ -31,7 +31,7 @@ export function initOfflineManager(): void {
   if (initialized) return;
   initialized = true;
   // Remove the default 6,000 tile cap (Mapbox ToS holdover — doesn't apply to our sources)
-  OfflineManager.setTileCountLimit(Infinity);
+  OfflineManager.setTileCountLimit(Number.MAX_SAFE_INTEGER);
 }
 
 // ---------------------------------------------------------------------------

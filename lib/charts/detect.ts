@@ -50,7 +50,7 @@ export async function detectUrl(url: string): Promise<DetectResult> {
   }
   if (lower.endsWith(".pmtiles")) {
     return {
-      source: { type: "pmtiles", id: "pmtiles", title: "PMTiles", url: trimmed },
+      source: { type: "pmtiles", id: uniqueId("pmtiles"), title: "PMTiles", url: trimmed },
     };
   }
 
@@ -127,7 +127,7 @@ function detectJson(body: string, url: string): DetectResult {
   if (json.version === 8 && json.sources && typeof json.sources === "object") {
     const source: StyleSource = {
       type: "style",
-      id: "style",
+      id: uniqueId("style"),
       title: json.name ?? "Style",
       url,
     };
@@ -138,7 +138,7 @@ function detectJson(body: string, url: string): DetectResult {
   if (Array.isArray(json.tiles) && json.tiles.length > 0) {
     const source: RasterSource = {
       type: "raster",
-      id: "raster",
+      id: uniqueId("raster"),
       title: json.name ?? "Raster",
       tiles: json.tiles,
       ...(json.minzoom != null && { minzoom: json.minzoom }),
@@ -158,6 +158,13 @@ function detectJson(body: string, url: string): DetectResult {
 // Helpers
 // ---------------------------------------------------------------------------
 
+let sourceCounter = 0;
+
+/** Generate a unique source ID with a type prefix */
+function uniqueId(type: string): string {
+  return `${type}-${++sourceCounter}`;
+}
+
 function isRasterTemplate(url: string): boolean {
   const hasXyz =
     url.includes("{x}") && url.includes("{y}") && url.includes("{z}");
@@ -167,7 +174,7 @@ function isRasterTemplate(url: string): boolean {
 function rasterSource(url: string): RasterSource {
   return {
     type: "raster",
-    id: "raster",
+    id: uniqueId("raster"),
     title: "Raster",
     tiles: [url],
   };
@@ -176,7 +183,7 @@ function rasterSource(url: string): RasterSource {
 function mbtilesSource(url: string): MBTilesSource {
   return {
     type: "mbtiles",
-    id: "mbtiles",
+    id: uniqueId("mbtiles"),
     title: "MBTiles",
     url,
   };
@@ -188,7 +195,7 @@ function mbtilesSourceFromImport(
 ): MBTilesSource {
   return {
     type: "mbtiles",
-    id: "mbtiles",
+    id: uniqueId("mbtiles"),
     title: metadata.name ?? "MBTiles",
     url: path,
     ...(metadata.minzoom != null && { minzoom: metadata.minzoom }),

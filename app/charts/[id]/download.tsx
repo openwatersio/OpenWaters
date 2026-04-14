@@ -49,10 +49,16 @@ export default function DownloadRegion() {
 
   // Zoom range state — defaults from current map zoom
   const [minZoom] = useState(
-    Math.max(Math.floor(zoom), MIN_POSSIBLE_ZOOM),
+    Math.min(
+      Math.max(Math.floor(zoom), MIN_POSSIBLE_ZOOM),
+      MAX_POSSIBLE_ZOOM - 1,
+    ),
   );
   const [maxZoom, setMaxZoom] = useState(
-    Math.min(Math.floor(zoom) + DEFAULT_ZOOM_RANGE, MAX_POSSIBLE_ZOOM),
+    Math.max(
+      minZoom + 1,
+      Math.min(Math.floor(zoom) + DEFAULT_ZOOM_RANGE, MAX_POSSIBLE_ZOOM),
+    ),
   );
 
   // Compute download plan

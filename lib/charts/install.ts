@@ -190,10 +190,14 @@ export async function installManualChart(
 }
 
 function slugify(name: string): string {
-  return name
+  const slug = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+  if (!slug) {
+    return `chart-${Date.now().toString(36)}`;
+  }
+  return slug;
 }
 
 /**
