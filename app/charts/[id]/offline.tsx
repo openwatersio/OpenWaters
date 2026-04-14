@@ -248,11 +248,23 @@ export default function OfflineSummary() {
 
             {/* Empty state */}
             {!hasAnyData && activeDownloads.length === 0 ? (
-              <Section>
-                <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
-                  No offline data for this chart. Tap "Download Region" to
-                  save an area for offline use.
-                </Text>
+              <Section
+                footer={
+                  <Text>
+                    Download a region to use this chart offline.
+                  </Text>
+                }
+              >
+                <Button
+                  systemImage="arrow.down.to.line"
+                  label="Download Region"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/charts/[id]/download",
+                      params: { id },
+                    })
+                  }
+                />
               </Section>
             ) : null}
           </List>

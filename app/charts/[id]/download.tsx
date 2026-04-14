@@ -35,7 +35,6 @@ export default function DownloadRegion() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const chart = useChart(id);
   const theme = useTheme();
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   // Show the rectangle overlay on the map behind the sheet
@@ -49,7 +48,7 @@ export default function DownloadRegion() {
   const zoom = useCameraView((s) => s.zoom);
 
   // Zoom range state — defaults from current map zoom
-  const [minZoom, setMinZoom] = useState(
+  const [minZoom] = useState(
     Math.max(Math.floor(zoom), MIN_POSSIBLE_ZOOM),
   );
   const [maxZoom, setMaxZoom] = useState(
@@ -114,8 +113,6 @@ export default function DownloadRegion() {
   if (plan && plan.needsTilePack && plan.estimatedTileCount > 0) {
     parts.push(`~${plan.estimatedTileCount.toLocaleString()} tiles`);
   }
-  const summary = parts.join(" + ");
-
   return (
     <SheetView id="download-region" headerDetent additionalDetents={[0.25]}>
       <Stack.Screen

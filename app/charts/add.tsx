@@ -47,8 +47,10 @@ export default function AddChart() {
   const [saving, setSaving] = useState(false);
   const nameFieldRef = useRef<TextFieldRef>(null);
 
-  const sources =
-    status.state === "detected" ? status.sources : [];
+  const sources = useMemo(
+    () => (status.state === "detected" ? status.sources : []),
+    [status],
+  );
 
   const handleUrlSubmit = useCallback(async () => {
     const trimmed = urlInput.trim();
