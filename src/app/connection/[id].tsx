@@ -1,13 +1,13 @@
-import SheetHeader from "@/components/ui/SheetHeader";
-import SheetView from "@/components/ui/SheetView";
-import { useAIS } from "@/hooks/useAIS";
+import SheetHeader from "@/ui/SheetHeader";
+import SheetView from "@/ui/SheetView";
+import { useAIS } from "@/ais/hooks/useAIS";
 import {
   connectConnection,
   disconnectConnection,
   removeConnection,
   useConnection,
-} from "@/hooks/useConnections";
-import { useInstrumentData } from "@/hooks/useInstruments";
+} from "@/instruments/hooks/useConnections";
+import { useInstrumentData } from "@/instruments/hooks/useInstruments";
 import {
   Button,
   Form,

@@ -1,4 +1,4 @@
-import SheetView from "@/components/ui/SheetView";
+import SheetView from "@/ui/SheetView";
 import { Button, Host, List, Section } from "@expo/ui/swift-ui";
 import { tint } from "@expo/ui/swift-ui/modifiers";
 import { router } from "expo-router";

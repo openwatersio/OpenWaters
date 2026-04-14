@@ -1,9 +1,9 @@
-import ChartPreview from "@/components/charts/ChartPreview";
-import SheetView from "@/components/ui/SheetView";
-import { useCharts, type InstalledChart } from "@/hooks/useCharts";
+import ChartPreview from "@/charts/components/ChartPreview";
+import SheetView from "@/ui/SheetView";
+import { useCharts, type InstalledChart } from "@/charts/hooks/useCharts";
 import useTheme from "@/hooks/useTheme";
-import { uninstallChart } from "@/lib/charts/install";
-import { selectChart, useChartStore } from "@/lib/charts/store";
+import { uninstallChart } from "@/charts/install";
+import { selectChart, useChartStore } from "@/charts/store";
 import {
   Button,
   ContextMenu,

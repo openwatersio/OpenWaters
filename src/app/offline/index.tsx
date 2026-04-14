@@ -1,22 +1,22 @@
-import SheetView from "@/components/ui/SheetView";
-import { useCharts } from "@/hooks/useCharts";
-import { getAvailableDownloads } from "@/hooks/useAvailableDownloads";
-import { deleteDownload, useDownloads } from "@/hooks/useDownloads";
+import SheetView from "@/ui/SheetView";
+import { useCharts } from "@/charts/hooks/useCharts";
+import { getAvailableDownloads } from "@/charts/hooks/useAvailableDownloads";
+import { deleteDownload, useDownloads } from "@/charts/hooks/useDownloads";
 import {
   loadPacks,
   removePack,
   useOfflinePacks,
   type TilePackState,
-} from "@/hooks/useOfflinePacks";
+} from "@/charts/hooks/useOfflinePacks";
 import {
   AMBIENT_CACHE_OPTIONS,
   TILE_LIMIT_OPTIONS,
   setAmbientCacheSize,
   setTileCountLimit,
   useOfflineSettings,
-} from "@/hooks/useOfflineSettings";
+} from "@/charts/hooks/useOfflineSettings";
 import useTheme from "@/hooks/useTheme";
-import { formatBytes } from "@/lib/format";
+import { formatBytes } from "@/format";
 import { getFreeDiskStorageAsync } from "expo-file-system/legacy";
 import {
   Button,

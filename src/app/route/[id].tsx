@@ -1,7 +1,7 @@
-import RouteEditor from "@/components/features/RouteEditor";
-import { fitBounds } from "@/components/map/NavigationCamera";
-import SheetView from "@/components/ui/SheetView";
-import { useRoute } from "@/hooks/useRoutes";
+import RouteEditor from "@/routes/components/RouteEditor";
+import { fitBounds } from "@/navigation/components/NavigationCamera";
+import SheetView from "@/ui/SheetView";
+import { useRoute } from "@/routes/hooks/useRoutes";
 import type { LngLatBounds } from "@maplibre/maplibre-react-native";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { getBounds } from "geolib";

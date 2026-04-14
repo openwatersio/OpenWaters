@@ -1,19 +1,19 @@
-import WaypointBadge from "@/components/routes/WaypointBadge";
-import TrackRecordingStats from "@/components/tracks/TrackRecordingStats";
-import { Detent } from "@/components/ui/Detent";
-import SheetView from "@/components/ui/SheetView";
-import { ArrivalTimeStat, BearingStat, DistanceStat, EtaStat } from "@/components/ui/StatItem";
-import { useNavigationState } from "@/hooks/useNavigationState";
+import WaypointBadge from "@/routes/components/WaypointBadge";
+import TrackRecordingStats from "@/tracks/components/TrackRecordingStats";
+import { Detent } from "@/ui/Detent";
+import SheetView from "@/ui/SheetView";
+import { ArrivalTimeStat, BearingStat, DistanceStat, EtaStat } from "@/ui/StatItem";
+import { useNavigationState } from "@/navigation/hooks/useNavigationState";
 import {
   RouteMode,
   stopNavigation,
   useActiveRoute
-} from "@/hooks/useRoutes";
-import { stopTrackRecording, useTrackRecording } from "@/hooks/useTrackRecording";
+} from "@/routes/hooks/useRoutes";
+import { stopTrackRecording, useTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import {
   calculateDestinationProgress,
   calculateWaypointProgress,
-} from "@/lib/geo";
+} from "@/geo";
 import { Button, Host, HStack, Text, VStack } from "@expo/ui/swift-ui";
 import * as Haptics from "expo-haptics";
 import { buttonStyle, font, foregroundStyle, frame, textCase } from "@expo/ui/swift-ui/modifiers";

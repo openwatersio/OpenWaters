@@ -1,8 +1,8 @@
-import { AnnotationIcon, AnnotationIconName, ICONS } from "@/components/map/AnnotationIcon";
-import { flyTo } from "@/components/map/NavigationCamera";
-import SheetHeader from "@/components/ui/SheetHeader";
-import SheetView from "@/components/ui/SheetView";
-import { updateMarker, useMarkers } from "@/hooks/useMarkers";
+import { AnnotationIcon, AnnotationIconName, ICONS } from "@/map/components/AnnotationIcon";
+import { flyTo } from "@/navigation/components/NavigationCamera";
+import SheetHeader from "@/ui/SheetHeader";
+import SheetView from "@/ui/SheetView";
+import { updateMarker, useMarkers } from "@/markers/hooks/useMarkers";
 import useTheme from "@/hooks/useTheme";
 import {
   ColorPicker,

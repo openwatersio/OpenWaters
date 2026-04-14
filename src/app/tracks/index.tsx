@@ -1,7 +1,7 @@
-import SheetView from "@/components/ui/SheetView";
+import SheetView from "@/ui/SheetView";
 import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
-import { useTrackRecording } from "@/hooks/useTrackRecording";
+import { useTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import {
   formatDate,
   formatDuration,
@@ -11,8 +11,8 @@ import {
   trackDisplayName,
   useLoadTracks,
   useTracks,
-} from "@/hooks/useTracks";
-import { getTrackDistances, type TrackWithStats } from "@/lib/database";
+} from "@/tracks/hooks/useTracks";
+import { getTrackDistances, type TrackWithStats } from "@/database";
 import {
   Button,
   ContextMenu,

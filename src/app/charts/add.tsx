@@ -1,12 +1,12 @@
-import type { CatalogSource } from "@/catalog/types";
-import ChartPreview from "@/components/charts/ChartPreview";
-import SheetHeader from "@/components/ui/SheetHeader";
-import SheetView from "@/components/ui/SheetView";
-import { useSourceFilters } from "@/hooks/useCharts";
+import type { CatalogSource } from "@/charts/catalog/types";
+import ChartPreview from "@/charts/components/ChartPreview";
+import SheetHeader from "@/ui/SheetHeader";
+import SheetView from "@/ui/SheetView";
+import { useSourceFilters } from "@/charts/hooks/useCharts";
 import useTheme from "@/hooks/useTheme";
-import { detectFile, detectUrl } from "@/lib/charts/detect";
-import { installManualChart } from "@/lib/charts/install";
-import { buildPreviewStyle, computeBounds } from "@/lib/charts/sources";
+import { detectFile, detectUrl } from "@/charts/detect";
+import { installManualChart } from "@/charts/install";
+import { buildPreviewStyle, computeBounds } from "@/charts/sources";
 import {
   Button,
   Form,

@@ -1,4 +1,4 @@
-import SheetView from "@/components/ui/SheetView";
+import SheetView from "@/ui/SheetView";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import {
   getActiveRoute,
@@ -7,10 +7,10 @@ import {
   RouteMode,
   useActiveRoute,
   useRoutes,
-} from "@/hooks/useRoutes";
+} from "@/routes/hooks/useRoutes";
 import useTheme from "@/hooks/useTheme";
-import { type Route, type RoutesOrder } from "@/lib/database";
-import { exportRouteAsGPX } from "@/lib/export";
+import { type Route, type RoutesOrder } from "@/database";
+import { exportRouteAsGPX } from "@/tracks/export";
 import {
   Button,
   ContextMenu,

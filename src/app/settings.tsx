@@ -1,6 +1,6 @@
-import SheetView from "@/components/ui/SheetView";
+import SheetView from "@/ui/SheetView";
 import { ARRIVAL_RADIUS_OPTIONS, describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits, type ArrivalRadius } from "@/hooks/usePreferredUnits";
-import { setThemePreference, useThemePreference, type ThemePreference } from "@/lib/charts/theme";
+import { setThemePreference, useThemePreference, type ThemePreference } from "@/charts/theme";
 import { Button, Host, List, Picker, Section, Text, Toggle, VStack } from "@expo/ui/swift-ui";
 import { tag } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";

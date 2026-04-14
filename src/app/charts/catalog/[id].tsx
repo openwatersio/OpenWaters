@@ -1,11 +1,11 @@
-import ChartPreview from "@/components/charts/ChartPreview";
-import SheetHeader from "@/components/ui/SheetHeader";
-import SheetView from "@/components/ui/SheetView";
-import { useChartCatalog } from "@/hooks/useChartCatalog";
-import { useChart, useSourceFilters } from "@/hooks/useCharts";
+import ChartPreview from "@/charts/components/ChartPreview";
+import SheetHeader from "@/ui/SheetHeader";
+import SheetView from "@/ui/SheetView";
+import { useChartCatalog } from "@/charts/hooks/useChartCatalog";
+import { useChart, useSourceFilters } from "@/charts/hooks/useCharts";
 import useTheme from "@/hooks/useTheme";
-import { installCatalogEntry, uninstallChart } from "@/lib/charts/install";
-import { buildPreviewStyle, computeBounds } from "@/lib/charts/sources";
+import { installCatalogEntry, uninstallChart } from "@/charts/install";
+import { buildPreviewStyle, computeBounds } from "@/charts/sources";
 import {
   Button,
   Host,

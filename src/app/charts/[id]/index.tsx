@@ -1,10 +1,10 @@
-import ChartPreview from "@/components/charts/ChartPreview";
-import SheetHeader from "@/components/ui/SheetHeader";
-import SheetView from "@/components/ui/SheetView";
-import { useChart } from "@/hooks/useCharts";
+import ChartPreview from "@/charts/components/ChartPreview";
+import SheetHeader from "@/ui/SheetHeader";
+import SheetView from "@/ui/SheetView";
+import { useChart } from "@/charts/hooks/useCharts";
 import useTheme from "@/hooks/useTheme";
-import { uninstallChart } from "@/lib/charts/install";
-import { selectChart } from "@/lib/charts/store";
+import { uninstallChart } from "@/charts/install";
+import { selectChart } from "@/charts/store";
 import {
   Button,
   Host,

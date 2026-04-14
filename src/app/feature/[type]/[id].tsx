@@ -1,9 +1,9 @@
-import AtoNDetail from "@/components/features/AtoNDetail";
-import LocationDetail from "@/components/features/LocationDetail";
-import MarkerDetail from "@/components/features/MarkerDetail";
-import TrackDetail from "@/components/features/TrackDetail";
-import VesselDetail from "@/components/features/VesselDetail";
-import SheetView from "@/components/ui/SheetView";
+import AtoNDetail from "@/aton/components/AtoNDetail";
+import LocationDetail from "@/map/components/LocationDetail";
+import MarkerDetail from "@/markers/components/MarkerDetail";
+import TrackDetail from "@/tracks/components/TrackDetail";
+import VesselDetail from "@/ais/components/VesselDetail";
+import SheetView from "@/ui/SheetView";
 import { useLocalSearchParams } from "expo-router";
 
 export default function FeatureScreen() {

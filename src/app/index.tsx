@@ -1,6 +1,6 @@
-import ChartView from "@/components/ChartView";
-import { RouteMode, useActiveRoute } from "@/hooks/useRoutes";
-import { useTrackRecording } from "@/hooks/useTrackRecording";
+import ChartView from "@/map/components/ChartView";
+import { RouteMode, useActiveRoute } from "@/routes/hooks/useRoutes";
+import { useTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import { router, usePathname } from "expo-router";
 import { useEffect } from "react";
 

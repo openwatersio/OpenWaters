@@ -1,13 +1,13 @@
-import SheetView from "@/components/ui/SheetView";
-import { useCameraView } from "@/hooks/useCameraView";
-import { useChart } from "@/hooks/useCharts";
-import { hideDownloadOverlay, showDownloadOverlay } from "@/hooks/useDownloadOverlay";
-import { startDownload } from "@/hooks/useDownloads";
-import { downloadVisibleArea } from "@/hooks/useOfflinePacks";
+import SheetView from "@/ui/SheetView";
+import { useCameraView } from "@/map/hooks/useCameraView";
+import { useChart } from "@/charts/hooks/useCharts";
+import { hideDownloadOverlay, showDownloadOverlay } from "@/charts/hooks/useDownloadOverlay";
+import { startDownload } from "@/charts/hooks/useDownloads";
+import { downloadVisibleArea } from "@/charts/hooks/useOfflinePacks";
 import useTheme from "@/hooks/useTheme";
-import { planDownload, planTilePackOnly } from "@/lib/charts/downloadStrategy";
-import { readLocalPaths } from "@/lib/charts/style";
-import { formatBytes } from "@/lib/format";
+import { planDownload, planTilePackOnly } from "@/charts/downloadStrategy";
+import { readLocalPaths } from "@/charts/style";
+import { formatBytes } from "@/format";
 import {
   Host,
   List,

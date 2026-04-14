@@ -1,11 +1,11 @@
-import { AnnotationIcon } from "@/components/map/AnnotationIcon";
-import SheetView from "@/components/ui/SheetView";
-import { deleteMarker, loadMarkers, updateMarker, useMarkers } from "@/hooks/useMarkers";
-import { usePosition } from "@/hooks/useNavigation";
+import { AnnotationIcon } from "@/map/components/AnnotationIcon";
+import SheetView from "@/ui/SheetView";
+import { deleteMarker, loadMarkers, updateMarker, useMarkers } from "@/markers/hooks/useMarkers";
+import { usePosition } from "@/navigation/hooks/useNavigation";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
-import type { Marker } from "@/lib/database";
-import { formatBearing } from "@/lib/geo";
+import type { Marker } from "@/database";
+import { formatBearing } from "@/geo";
 import {
   Button,
   ContextMenu,

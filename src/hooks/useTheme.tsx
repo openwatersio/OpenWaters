@@ -1,7 +1,8 @@
 import { useColorScheme } from "react-native";
 
-export default function useTheme(colorScheme: "light" | "dark" = (useColorScheme() as "light" | "dark") ?? "light") {
-  const isDark = colorScheme === "dark";
+export default function useTheme(colorScheme?: "light" | "dark") {
+  const systemScheme = useColorScheme() as "light" | "dark" | null;
+  const isDark = (colorScheme ?? systemScheme ?? "light") === "dark";
 
   return {
     background: isDark ? "#000000" : "#f2f2f7",

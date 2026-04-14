@@ -1,7 +1,7 @@
-import RouteEditor from "@/components/features/RouteEditor";
-import SheetView from "@/components/ui/SheetView";
-import { useNavigation } from "@/hooks/useNavigation";
-import { addRouteWaypoint, startRoute } from "@/hooks/useRoutes";
+import RouteEditor from "@/routes/components/RouteEditor";
+import SheetView from "@/ui/SheetView";
+import { useNavigation } from "@/navigation/hooks/useNavigation";
+import { addRouteWaypoint, startRoute } from "@/routes/hooks/useRoutes";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
 

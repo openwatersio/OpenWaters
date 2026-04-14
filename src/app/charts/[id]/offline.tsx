@@ -1,15 +1,15 @@
-import { useAvailableDownloads } from "@/hooks/useAvailableDownloads";
-import { useChart } from "@/hooks/useCharts";
-import { deleteDownload, stopDownload, useDownloads } from "@/hooks/useDownloads";
+import { useAvailableDownloads } from "@/charts/hooks/useAvailableDownloads";
+import { useChart } from "@/charts/hooks/useCharts";
+import { deleteDownload, stopDownload, useDownloads } from "@/charts/hooks/useDownloads";
 import {
   loadPacks,
   pausePack,
   removePack,
   resumePack,
   usePacksForChart,
-} from "@/hooks/useOfflinePacks";
+} from "@/charts/hooks/useOfflinePacks";
 import useTheme from "@/hooks/useTheme";
-import { formatBytes } from "@/lib/format";
+import { formatBytes } from "@/format";
 import {
   Button,
   Host,

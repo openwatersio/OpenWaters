@@ -1,14 +1,14 @@
-import SheetView from "@/components/ui/SheetView";
+import SheetView from "@/ui/SheetView";
 import {
   addNMEAConnection,
   addSignalKConnection,
   useConnections,
-} from "@/hooks/useConnections";
+} from "@/instruments/hooks/useConnections";
 import {
   type DiscoveredService,
   startDiscovery,
   stopDiscovery,
-} from "@/lib/discovery";
+} from "@/instruments/discovery";
 import { Button, Host, LabeledContent, List, Picker, Section, Text, TextField } from "@expo/ui/swift-ui";
 import { autocorrectionDisabled, foregroundStyle, keyboardType, pickerStyle, tag, textInputAutocapitalization, tint } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";
