@@ -320,7 +320,7 @@ export type RouteLeg = {
  * Returns an empty array for routes with fewer than 2 points.
  */
 export function calculateRouteLegs(
-  points: { latitude: number; longitude: number }[],
+  points: readonly { latitude: number; longitude: number }[],
 ): RouteLeg[] {
   if (points.length < 2) return [];
   return points.slice(1).map((point, i) => {
@@ -355,7 +355,7 @@ export type DestinationProgress = {
  */
 export function calculateDestinationProgress(
   nextWaypointProgress: WaypointProgress,
-  points: { latitude: number; longitude: number }[],
+  points: readonly { latitude: number; longitude: number }[],
   activeIndex: number,
   sog: number,
 ): DestinationProgress {
@@ -385,20 +385,46 @@ export function boundsIntersect(
 ): boolean {
   const [aWest, aSouth, aEast, aNorth] = a;
   const [bWest, bSouth, bEast, bNorth] = b;
-  return aWest <= bEast && aEast >= bWest && aSouth <= bNorth && aNorth >= bSouth;
+  return (
+    aWest <= bEast && aEast >= bWest && aSouth <= bNorth && aNorth >= bSouth
+  );
 }
 
-/** Test whether a position is inside a bounding box [west, south, east, north] */
+/**
+ * Expand a bounds box [west, south, east, north] by a fraction of its
+ * width/height on each side.
+ */
+export function expandBounds(
+  bounds: Readonly<[number, number, number, number]>,
+  buffer: number,
+): [number, number, number, number] {
+  const [west, south, east, north] = bounds;
+  const latBuf = (north - south) * buffer;
+  const lngBuf = (east - west) * buffer;
+  return [west - lngBuf, south - latBuf, east + lngBuf, north + latBuf];
+}
+
+/**
+ * Test whether a position is inside a bounding box [west, south, east, north].
+ *
+ * `buffer` extends the box by that fraction of its width/height on each
+ * side — e.g. 0.5 means "include points within half a viewport beyond the
+ * edge", useful for prefetching markers that aren't quite on-screen yet so
+ * they don't pop in while panning.
+ */
 export function isInsideBounds(
   position: { latitude: number; longitude: number },
-  bounds: [number, number, number, number],
+  bounds: Readonly<[number, number, number, number]>,
+  buffer: number = 0,
 ): boolean {
   const [west, south, east, north] = bounds;
+  const latBuf = (north - south) * buffer;
+  const lngBuf = (east - west) * buffer;
   return (
-    position.longitude >= west &&
-    position.longitude <= east &&
-    position.latitude >= south &&
-    position.latitude <= north
+    position.longitude >= west - lngBuf &&
+    position.longitude <= east + lngBuf &&
+    position.latitude >= south - latBuf &&
+    position.latitude <= north + latBuf
   );
 }
 

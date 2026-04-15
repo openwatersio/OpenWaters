@@ -1,5 +1,5 @@
-import { flushAIS, useAIS } from "@/ais/hooks/useAIS";
-import { useAtoN } from "@/aton/hooks/useAtoN";
+import { aisState, clearAIS, flushAIS } from "@/ais/hooks/useAIS";
+import { atonState, clearAtoN } from "@/aton/hooks/useAtoN";
 import { getInstrumentData, resetInstrumentStore } from "@/instruments/hooks/useInstruments";
 import {
   type SignalKClientState,
@@ -8,14 +8,10 @@ import {
   processDelta,
 } from "@/instruments/signalk";
 
-// Reset stores between tests
-const initialAIS = useAIS.getState();
-const initialAtoN = useAtoN.getState();
-
 beforeEach(() => {
   resetInstrumentStore();
-  useAIS.setState(initialAIS, true);
-  useAtoN.setState(initialAtoN, true);
+  clearAIS();
+  clearAtoN();
 });
 
 describe("discoverEndpoints", () => {
@@ -152,7 +148,7 @@ describe("processDelta", () => {
     flushAIS();
 
 
-    const vessel = useAIS.getState().vessels["211234567"];
+    const vessel = aisState.vessels["211234567"];
     expect(vessel).toBeDefined();
     expect(vessel.data["navigation.position"]?.value).toEqual({
       latitude: 47.6,
@@ -182,7 +178,7 @@ describe("processDelta", () => {
     // Should go to instrument store (self), not AIS store
     expect(getInstrumentData()["navigation.speedOverGround"]?.value).toBe(4.2);
     flushAIS();
-    expect(useAIS.getState().vessels["123456789"]).toBeUndefined();
+    expect(aisState.vessels["123456789"]).toBeUndefined();
   });
 
   it("handles bare MMSI context", () => {
@@ -205,7 +201,7 @@ describe("processDelta", () => {
     flushAIS();
 
 
-    expect(useAIS.getState().vessels["211234567"]).toBeDefined();
+    expect(aisState.vessels["211234567"]).toBeDefined();
   });
 
   it("handles position objects", () => {
@@ -255,7 +251,7 @@ describe("processDelta", () => {
     flushAIS();
 
 
-    const vessel = useAIS.getState().vessels["211234567"];
+    const vessel = aisState.vessels["211234567"];
     expect(vessel).toBeDefined();
     expect(vessel.data["name"]?.value).toBe("WRANGO");
     expect(vessel.data["mmsi"]?.value).toBe("211234567");
@@ -285,7 +281,7 @@ describe("processDelta", () => {
     flushAIS();
 
 
-    const vessel = useAIS.getState().vessels["211234567"];
+    const vessel = aisState.vessels["211234567"];
     expect(vessel.data["design.length"]?.value).toBe(18);
   });
 
@@ -312,7 +308,7 @@ describe("processDelta", () => {
     flushAIS();
 
 
-    const vessel = useAIS.getState().vessels["211234567"];
+    const vessel = aisState.vessels["211234567"];
     expect(vessel.data["design.aisShipType"]?.value).toBe(36);
   });
 
@@ -362,7 +358,7 @@ describe("processDelta", () => {
       "signalk.test",
     );
 
-    const aton = useAtoN.getState().atons["993661302"];
+    const aton = atonState.atons["993661302"];
     expect(aton).toBeDefined();
     expect(aton.data["navigation.position"]?.value).toEqual({
       latitude: 48.5,
@@ -372,7 +368,7 @@ describe("processDelta", () => {
 
     // Should NOT appear in AIS store
     flushAIS();
-    expect(useAIS.getState().vessels["993661302"]).toBeUndefined();
+    expect(aisState.vessels["993661302"]).toBeUndefined();
   });
 
   it("expands empty-path AtoN deltas into individual properties", () => {
@@ -394,7 +390,7 @@ describe("processDelta", () => {
       "signalk.test",
     );
 
-    const aton = useAtoN.getState().atons["993661302"];
+    const aton = atonState.atons["993661302"];
     expect(aton).toBeDefined();
     expect(aton.data["name"]?.value).toBe("SMITH ISLAND BUOY");
     expect(aton.data["mmsi"]?.value).toBe("993661302");
@@ -416,7 +412,7 @@ describe("processDelta", () => {
       "signalk.test",
     );
 
-    expect(useAtoN.getState().atons["993661302"]).toBeDefined();
+    expect(atonState.atons["993661302"]).toBeDefined();
   });
 });
 

@@ -10,7 +10,7 @@ An experiment in building modern marine charts. Currently alpha and not to be us
 - [**Charts**](docs/charts/) — Browse and install nautical charts from a curated catalog, add custom tile sources, or import MBTiles for offline use.
 - [**Instruments**](docs/instruments.md) — Connect to onboard instruments via Signal K or NMEA 0183 over WiFi to display depth, wind, heading, and AIS targets.
 
-See the [roadmap](docs/roadmap.md) for what's planned and the [vision](docs/vision/) for the long-term direction.
+See the [roadmap](https://github.com/orgs/openwatersio/projects/3) for what's planned and the [vision](docs/vision/) for the long-term direction.
 
 ## Contributing
 

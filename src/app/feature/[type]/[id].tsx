@@ -1,8 +1,8 @@
+import VesselDetail from "@/ais/components/VesselDetail";
 import AtoNDetail from "@/aton/components/AtoNDetail";
 import LocationDetail from "@/map/components/LocationDetail";
 import MarkerDetail from "@/markers/components/MarkerDetail";
 import TrackDetail from "@/tracks/components/TrackDetail";
-import VesselDetail from "@/ais/components/VesselDetail";
 import SheetView from "@/ui/SheetView";
 import { useLocalSearchParams } from "expo-router";
 

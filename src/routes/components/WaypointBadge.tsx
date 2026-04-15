@@ -6,7 +6,7 @@ import { background, font, foregroundStyle, frame, shapes } from "@expo/ui/swift
 export type WaypointBadgeProps = {
   index?: number,
   last?: boolean,
-  points?: ActiveWaypoint[]
+  points?: readonly ActiveWaypoint[]
 };
 
 export default function WaypointBadge({

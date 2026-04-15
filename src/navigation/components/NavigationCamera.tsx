@@ -1,12 +1,15 @@
-import { saveViewport, useCameraPosition } from "@/map/hooks/useCameraPosition";
-import { setFollowUserLocation, useCameraState } from "@/map/hooks/useCameraState";
-import { onRegionDidChange, onRegionIsChanging, useCameraView } from "@/map/hooks/useCameraView";
-import { useNavigation } from "@/navigation/hooks/useNavigation";
+import { isInsideBounds } from "@/geo";
+import { cameraPositionState, saveViewport } from "@/map/hooks/useCameraPosition";
+import { cameraState, setFollowUserLocation } from "@/map/hooks/useCameraState";
+import { cameraViewState, onRegionDidChange, onRegionIsChanging } from "@/map/hooks/useCameraView";
+import { navigationState } from "@/navigation/hooks/useNavigation";
 import type { CameraRef, LngLatBounds, ViewStateChangeEvent } from "@maplibre/maplibre-react-native";
 import { Camera } from "@maplibre/maplibre-react-native";
 import type { ComponentProps } from "react";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { NativeSyntheticEvent } from "react-native";
+import { subscribe } from "valtio";
+import { subscribeKey } from "valtio/utils";
 
 /** Module-scoped camera ref accessible by exported imperative functions */
 let _cameraRef: React.RefObject<CameraRef | null> = { current: null };
@@ -34,47 +37,54 @@ export const NavigationCamera = forwardRef<CameraRef, NavigationCameraProps>(
 
     // Follow user location imperatively to avoid re-renders on every GPS tick
     useEffect(() => {
-      const unsubNav = useNavigation.subscribe((nav) => {
-        const { followUserLocation, trackingMode } = useCameraState.getState();
-        if (!followUserLocation || nav.latitude === null || nav.longitude === null) return;
+      const unsubNav = subscribe(navigationState, () => {
+        const { followUserLocation, trackingMode } = cameraState;
+        const { latitude, longitude, course } = navigationState;
+        if (!followUserLocation || latitude === null || longitude === null) return;
 
         cameraRef.current?.easeTo({
-          center: [nav.longitude, nav.latitude],
-          bearing: trackingMode === "course" && nav.course !== null
-            ? (nav.course * 180) / Math.PI
+          center: [longitude, latitude],
+          bearing: trackingMode === "course" && course !== null
+            ? (course * 180) / Math.PI
             : undefined,
           duration: 1000,
           easing: "linear",
         });
       });
 
-      const unsubCamera = useCameraState.subscribe((state, prev) => {
-        if (state.trackingMode === "default" && prev.trackingMode !== "default") {
-          resetNorth();
-        }
+      // (state, prev) Zustand idiom → subscribeKey per field with captured prev.
+      let prevTrackingMode = cameraState.trackingMode;
+      const unsubTracking = subscribeKey(cameraState, "trackingMode", (next) => {
+        if (next === "default" && prevTrackingMode !== "default") resetNorth();
+        prevTrackingMode = next;
+      });
 
-        if (state.followUserLocation && !prev.followUserLocation) {
-          const nav = useNavigation.getState();
-          if (nav.latitude !== null && nav.longitude !== null) {
+      let prevFollow = cameraState.followUserLocation;
+      const unsubFollow = subscribeKey(cameraState, "followUserLocation", (next) => {
+        if (next && !prevFollow) {
+          const { latitude, longitude } = navigationState;
+          if (latitude !== null && longitude !== null) {
             cameraRef.current?.easeTo({
-              center: [nav.longitude, nav.latitude],
+              center: [longitude, latitude],
               duration: 1000,
               easing: "linear",
             });
           }
         }
+        prevFollow = next;
       });
 
       return () => {
         unsubNav();
-        unsubCamera();
+        unsubTracking();
+        unsubFollow();
       };
     }, []);
 
     return (
       <Camera
         ref={cameraRef}
-        initialViewState={useCameraPosition.getState()}
+        initialViewState={{ ...cameraPositionState }}
         pitch={0}
         {...props}
       />
@@ -102,12 +112,12 @@ export function handleRegionDidChange(e: NativeSyntheticEvent<ViewStateChangeEve
 // --- Imperative camera actions ---
 
 export function zoomIn() {
-  const { zoom } = useCameraView.getState();
+  const { zoom } = cameraViewState;
   _cameraRef.current?.zoomTo(zoom + 1, { duration: 300 });
 }
 
 export function zoomOut() {
-  const { zoom } = useCameraView.getState();
+  const { zoom } = cameraViewState;
   _cameraRef.current?.zoomTo(zoom - 1, { duration: 300 });
 }
 
@@ -128,4 +138,17 @@ export function flyTo(
 ) {
   setFollowUserLocation(false);
   _cameraRef.current?.flyTo(options);
+}
+
+/**
+ * Fly to a position only if it falls outside the current camera viewport.
+ */
+export function ensureVisible(
+  position: { latitude: number; longitude: number },
+  duration = 600,
+) {
+  const { bounds } = cameraViewState;
+  if (!bounds || !isInsideBounds(position, bounds)) {
+    flyTo({ center: [position.longitude, position.latitude], duration });
+  }
 }

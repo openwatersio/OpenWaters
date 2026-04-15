@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { proxy, useSnapshot } from "valtio";
 
 import type { DataPoint } from "@/instruments/hooks/useInstruments";
 
@@ -10,17 +10,17 @@ export type AISVessel = {
   lastSeen: number;
 };
 
-interface State {
-  vessels: Record<string, AISVessel>;
-}
+type State = { vessels: Record<string, AISVessel> };
 
-export const useAIS = create<State>()(() => ({
-  vessels: {},
-}));
+export const aisState = proxy<State>({ vessels: {} });
+
+export function useAIS() {
+  return useSnapshot(aisState).vessels;
+}
 
 /** Select a single AIS vessel by MMSI */
 export function useAISVessel(mmsi: string) {
-  return useAIS((s) => s.vessels[mmsi]);
+  return useSnapshot(aisState).vessels[mmsi];
 }
 
 // --- Buffered AIS writes: accumulate in a mutable object, flush on a timer ---
@@ -39,18 +39,14 @@ export function flushAIS() {
 
   if (Object.keys(updates).length === 0) return;
 
-  useAIS.setState((s) => {
-    const vessels = { ...s.vessels };
-    for (const [mmsi, update] of Object.entries(updates)) {
-      const existing = vessels[mmsi];
-      vessels[mmsi] = {
-        mmsi,
-        data: { ...(existing?.data ?? {}), ...update.paths },
-        lastSeen: update.lastSeen,
-      };
-    }
-    return { vessels };
-  });
+  for (const [mmsi, update] of Object.entries(updates)) {
+    const existing = aisState.vessels[mmsi];
+    aisState.vessels[mmsi] = {
+      mmsi,
+      data: { ...(existing?.data ?? {}), ...update.paths },
+      lastSeen: update.lastSeen,
+    };
+  }
 }
 
 function scheduleAISFlush() {
@@ -76,11 +72,11 @@ export function updateAISVessel(
 /** Remove vessels not updated within maxAgeMs (default 9 minutes) */
 export function pruneStaleVessels(maxAgeMs: number = 9 * 60 * 1000) {
   const now = Date.now();
-  useAIS.setState((s) => ({
-    vessels: Object.fromEntries(
-      Object.entries(s.vessels).filter(([, v]) => now - v.lastSeen < maxAgeMs),
-    ),
-  }));
+  for (const mmsi of Object.keys(aisState.vessels)) {
+    if (now - aisState.vessels[mmsi].lastSeen >= maxAgeMs) {
+      delete aisState.vessels[mmsi];
+    }
+  }
 }
 
 /** Clear all AIS vessel data */
@@ -90,5 +86,5 @@ export function clearAIS() {
     clearTimeout(aisFlushTimer);
     aisFlushTimer = null;
   }
-  useAIS.setState({ vessels: {} });
+  aisState.vessels = {};
 }

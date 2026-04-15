@@ -1,7 +1,9 @@
-import { Annotation, AnnotationProps } from "@/map/components/Annotation";
-import { useNavigationState } from "@/navigation/hooks/useNavigationState";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import useTheme from "@/hooks/useTheme";
+import { Annotation, AnnotationProps } from "@/map/components/Annotation";
+import { usePosition } from "@/navigation/hooks/useNavigation";
 import {
+  activeRouteState,
   advanceToNext,
   clearActiveRoute,
   removeRouteWaypoint,
@@ -10,17 +12,15 @@ import {
   stopNavigation,
   updateRouteWaypoint,
   useActiveRoute,
-  type ActiveRoute,
   type ActiveWaypoint
 } from "@/routes/hooks/useRoutes";
-import useTheme from "@/hooks/useTheme";
 import { checkWaypointArrival } from "@/routes/waypointArrival";
+import OverlayView from "@/ui/OverlayView";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import * as Haptics from "expo-haptics";
 import { router, usePathname } from "expo-router";
 import { useEffect, useMemo } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
-import OverlayView from "@/ui/OverlayView";
 
 type Coord = [longitude: number, latitude: number];
 
@@ -31,16 +31,11 @@ type Coord = [longitude: number, latitude: number];
  *  - navigating → completed/active/remaining segments + read-only waypoints
  */
 export default function RouteOverlay() {
-  const active = useActiveRoute();
+  const { isActive, isNavigating } = useActiveRoute();
   useRouteCleanup();
 
-  if (!active) return null;
-
-  return active.mode === RouteMode.Navigating ? (
-    <NavigatingOverlay active={active} />
-  ) : (
-    <EditingOverlay active={active} />
-  );
+  if (!isActive) return null;
+  return isNavigating ? <NavigatingOverlay /> : <EditingOverlay />;
 }
 
 /**
@@ -55,14 +50,14 @@ function useRouteCleanup() {
     if (pathname !== "/") return;
 
     const timeout = setTimeout(() => {
-      const route = useActiveRoute.getState();
-      if (!route || route.mode === RouteMode.Navigating) return;
+      const { mode, id } = activeRouteState;
+      if (mode === null || mode === RouteMode.Navigating) return;
 
-      if (route.mode === RouteMode.Viewing) {
+      if (mode === RouteMode.Viewing) {
         clearActiveRoute();
-      } else if (route.mode === RouteMode.Editing) {
-        router.navigate(route.id
-          ? { pathname: "/route/[id]" as const, params: { id: route.id } }
+      } else if (mode === RouteMode.Editing) {
+        router.navigate(id != null
+          ? { pathname: "/route/[id]" as const, params: { id } }
           : "/route/new"
         );
       }
@@ -76,10 +71,9 @@ function useRouteCleanup() {
 
 // --- Editing overlay (in-memory, draggable) ---
 
-function EditingOverlay({ active }: { active: ActiveRoute }) {
+function EditingOverlay() {
   const theme = useTheme();
-  const points = active.points;
-  const activeIndex = active.activeIndex;
+  const { points, activeIndex } = useActiveRoute();
 
   const coords: Coord[] = useMemo(
     () => points.map((p) => [p.longitude, p.latitude]),
@@ -139,12 +133,12 @@ function EditingOverlay({ active }: { active: ActiveRoute }) {
 
 // --- Navigating overlay (segments + read-only waypoints) ---
 
-function NavigatingOverlay({ active }: { active: ActiveRoute }) {
+function NavigatingOverlay() {
   const theme = useTheme();
-  const points = active.points;
-  const activePointIndex = active.activeIndex ?? 0;
+  const { points, activeIndex } = useActiveRoute();
+  const activePointIndex = activeIndex ?? 0;
 
-  useWaypointArrival(points, activePointIndex);
+  useWaypointArrival(points as ActiveWaypoint[], activePointIndex);
 
   const coords: Coord[] = useMemo(
     () => points.map((p) => [p.longitude, p.latitude]),
@@ -297,19 +291,18 @@ function WaypointAnnotation({
   );
 }
 
-function useWaypointArrival(points: ActiveWaypoint[], activePointIndex: number) {
-  const nav = useNavigationState();
-  const arrivalRadius = usePreferredUnits((s) => s.arrivalRadius);
-  const arriveOnCircleOnly = usePreferredUnits((s) => s.arriveOnCircleOnly);
+function useWaypointArrival(points: readonly ActiveWaypoint[], activePointIndex: number) {
+  const position = usePosition();
+  const { arrivalRadius, arriveOnCircleOnly } = usePreferredUnits();
 
   const targetPoint = points[activePointIndex] ?? null;
   const isLastPoint = activePointIndex >= points.length - 1;
 
   useEffect(() => {
-    if (!nav.coords || !targetPoint) return;
+    if (!position || !targetPoint) return;
 
     const arrival = checkWaypointArrival({
-      position: nav.coords,
+      position,
       previousWaypoint: activePointIndex > 0 ? points[activePointIndex - 1] : null,
       activeWaypoint: targetPoint,
       nextWaypoint:
@@ -327,7 +320,7 @@ function useWaypointArrival(points: ActiveWaypoint[], activePointIndex: number) 
       }
     }
   }, [
-    nav.coords,
+    position,
     targetPoint,
     isLastPoint,
     activePointIndex,

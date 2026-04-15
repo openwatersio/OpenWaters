@@ -12,8 +12,7 @@ import {
 const NS_ID = 'map-controls';
 
 export function FollowLocationButton() {
-  const followUserLocation = useCameraState((s) => s.followUserLocation);
-  const trackingMode = useCameraState((s) => s.trackingMode);
+  const { followUserLocation, trackingMode } = useCameraState();
 
   return (
     <Button

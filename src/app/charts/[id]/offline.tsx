@@ -8,8 +8,8 @@ import {
   resumePack,
   usePacksForChart,
 } from "@/charts/hooks/useOfflinePacks";
-import useTheme from "@/hooks/useTheme";
 import { formatBytes } from "@/format";
+import useTheme from "@/hooks/useTheme";
 import {
   Button,
   Host,
@@ -32,7 +32,7 @@ export default function OfflineSummary() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const chart = useChart(id);
   const sources = useAvailableDownloads(id);
-  const downloads = useDownloads((s) => s.downloads);
+  const { downloads } = useDownloads();
   const tilePacks = usePacksForChart(id);
   const theme = useTheme();
 

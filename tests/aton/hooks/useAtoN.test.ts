@@ -1,19 +1,17 @@
 import {
+  atonState,
   clearAtoN,
   pruneStaleAtoNs,
   updateAtoN,
-  useAtoN,
 } from "@/aton/hooks/useAtoN";
 
-const initialState = useAtoN.getState();
-
 beforeEach(() => {
-  useAtoN.setState(initialState, true);
+  clearAtoN();
 });
 
 describe("useAtoN", () => {
   it("starts with no AtoNs", () => {
-    expect(useAtoN.getState().atons).toEqual({});
+    expect(atonState.atons).toEqual({});
   });
 
   describe("updateAtoN", () => {
@@ -26,7 +24,7 @@ describe("useAtoN", () => {
         },
       });
 
-      const aton = useAtoN.getState().atons["993661302"];
+      const aton = atonState.atons["993661302"];
       expect(aton).toBeDefined();
       expect(aton.id).toBe("993661302");
       expect(aton.data["navigation.position"]?.value).toEqual({
@@ -46,7 +44,7 @@ describe("useAtoN", () => {
       });
       const after = Date.now();
 
-      const aton = useAtoN.getState().atons["993661302"];
+      const aton = atonState.atons["993661302"];
       expect(aton.lastSeen).toBeGreaterThanOrEqual(before);
       expect(aton.lastSeen).toBeLessThanOrEqual(after);
     });
@@ -67,7 +65,7 @@ describe("useAtoN", () => {
         },
       });
 
-      const aton = useAtoN.getState().atons["993661302"];
+      const aton = atonState.atons["993661302"];
       expect(aton.data["navigation.position"]).toBeDefined();
       expect(aton.data["atonType"]?.value).toBe(25);
     });
@@ -88,10 +86,9 @@ describe("useAtoN", () => {
         },
       });
 
-      const atons = useAtoN.getState().atons;
-      expect(Object.keys(atons)).toHaveLength(2);
-      expect(atons["993661302"].data["atonType"]?.value).toBe(21);
-      expect(atons["993661303"].data["atonType"]?.value).toBe(25);
+      expect(Object.keys(atonState.atons)).toHaveLength(2);
+      expect(atonState.atons["993661302"].data["atonType"]?.value).toBe(21);
+      expect(atonState.atons["993661303"].data["atonType"]?.value).toBe(25);
     });
   });
 
@@ -113,21 +110,12 @@ describe("useAtoN", () => {
         },
       });
       // Manually backdate
-      useAtoN.setState((s) => ({
-        atons: {
-          ...s.atons,
-          "993661303": {
-            ...s.atons["993661303"],
-            lastSeen: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
-          },
-        },
-      }));
+      atonState.atons["993661303"].lastSeen = Date.now() - 2 * 60 * 60 * 1000;
 
       pruneStaleAtoNs(60 * 60 * 1000); // 1 hour threshold
 
-      const atons = useAtoN.getState().atons;
-      expect(atons["993661302"]).toBeDefined();
-      expect(atons["993661303"]).toBeUndefined();
+      expect(atonState.atons["993661302"]).toBeDefined();
+      expect(atonState.atons["993661303"]).toBeUndefined();
     });
 
     it("keeps all AtoNs if none are stale", () => {
@@ -140,7 +128,7 @@ describe("useAtoN", () => {
       });
 
       pruneStaleAtoNs(60 * 60 * 1000);
-      expect(Object.keys(useAtoN.getState().atons)).toHaveLength(1);
+      expect(Object.keys(atonState.atons)).toHaveLength(1);
     });
   });
 
@@ -154,7 +142,7 @@ describe("useAtoN", () => {
         },
       });
       clearAtoN();
-      expect(useAtoN.getState().atons).toEqual({});
+      expect(atonState.atons).toEqual({});
     });
   });
 });

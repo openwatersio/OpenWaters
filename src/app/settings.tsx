@@ -13,13 +13,8 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 ];
 
 export default function Settings() {
-  const speed = usePreferredUnits((s) => s.speed);
-  const distance = usePreferredUnits((s) => s.distance);
-  const depth = usePreferredUnits((s) => s.depth);
-  const temperature = usePreferredUnits((s) => s.temperature);
-  const arrivalRadius = usePreferredUnits((s) => s.arrivalRadius);
-  const arriveOnCircleOnly = usePreferredUnits((s) => s.arriveOnCircleOnly);
-  const themePreference = useThemePreference((s) => s.preference);
+  const { speed, distance, depth, temperature, arrivalRadius, arriveOnCircleOnly } = usePreferredUnits();
+  const { preference: themePreference } = useThemePreference();
 
   return (
     <SheetView id="settings">

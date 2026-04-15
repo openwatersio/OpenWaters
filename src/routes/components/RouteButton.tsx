@@ -1,5 +1,5 @@
-import { addRouteWaypoint, useActiveRoute } from "@/routes/hooks/useRoutes";
 import useTheme from "@/hooks/useTheme";
+import { addRouteWaypoint, useActiveRoute } from "@/routes/hooks/useRoutes";
 import { router, Stack } from "expo-router";
 
 type Props = {
@@ -9,14 +9,14 @@ type Props = {
 
 export default function RouteButton({ latitude, longitude }: Props) {
   const theme = useTheme();
-  const hasActiveRoute = useActiveRoute((a) => a != null);
+  const { isActive } = useActiveRoute();
 
   return (
     <Stack.Toolbar.Button
       icon="point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath.fill"
-      tintColor={hasActiveRoute ? theme.primary : undefined}
+      tintColor={isActive ? theme.primary : undefined}
       onPress={() => {
-        if (hasActiveRoute) {
+        if (isActive) {
           addRouteWaypoint({ latitude, longitude });
           router.back();
         } else {

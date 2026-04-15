@@ -7,8 +7,8 @@ import {
   resumeTilePack,
   type PackInfo,
 } from "@/charts/offline";
-import { create } from "zustand";
-import { useShallow } from "zustand/shallow";
+import { useMemo } from "react";
+import { proxy, useSnapshot } from "valtio";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,10 +30,14 @@ interface OfflinePacksStoreState {
 // Store (ephemeral)
 // ---------------------------------------------------------------------------
 
-export const useOfflinePacks = create<OfflinePacksStoreState>()(() => ({
+export const offlinePacksState = proxy<OfflinePacksStoreState>({
   packs: {},
   loading: true,
-}));
+});
+
+export function useOfflinePacks() {
+  return useSnapshot(offlinePacksState);
+}
 
 // ---------------------------------------------------------------------------
 // Actions
@@ -50,13 +54,14 @@ function packStateFromInfo(info: PackInfo): TilePackState {
 
 /** Load all packs from OfflineManager and populate the store */
 export async function loadPacks(): Promise<void> {
-  useOfflinePacks.setState({ loading: true });
+  offlinePacksState.loading = true;
   const infos = await getTilePacks();
   const packs: Record<string, TilePackState> = {};
   for (const info of infos) {
     packs[info.pack.id] = packStateFromInfo(info);
   }
-  useOfflinePacks.setState({ packs, loading: false });
+  offlinePacksState.packs = packs;
+  offlinePacksState.loading = false;
 }
 
 // Throttle: pause every THROTTLE_BATCH tiles for THROTTLE_DELAY_MS to avoid 429s.
@@ -80,15 +85,11 @@ export async function downloadVisibleArea(
     minZoom,
     maxZoom,
     async (_pack: OfflinePack, status: OfflinePackStatus) => {
-      useOfflinePacks.setState((s) => ({
-        packs: {
-          ...s.packs,
-          [_pack.id]: {
-            ...s.packs[_pack.id],
-            status,
-          },
-        },
-      }));
+      const existing = offlinePacksState.packs[_pack.id];
+      offlinePacksState.packs[_pack.id] = {
+        ...existing,
+        status,
+      } as TilePackState;
 
       // Throttle: pause briefly every N tiles to avoid overwhelming tile servers
       if (
@@ -106,17 +107,13 @@ export async function downloadVisibleArea(
   );
 
   // Add to store, preserving any status already recorded by the progress callback
-  useOfflinePacks.setState((s) => ({
-    packs: {
-      ...s.packs,
-      [pack.id]: {
-        packId: pack.id,
-        chartId,
-        downloadedAt: Date.now(),
-        status: s.packs[pack.id]?.status ?? null,
-      },
-    },
-  }));
+  const existingStatus = offlinePacksState.packs[pack.id]?.status ?? null;
+  offlinePacksState.packs[pack.id] = {
+    packId: pack.id,
+    chartId,
+    downloadedAt: Date.now(),
+    status: existingStatus,
+  };
 }
 
 /** Pause a tile pack download */
@@ -132,10 +129,7 @@ export async function resumePack(packId: string): Promise<void> {
 /** Delete a tile pack and remove from store */
 export async function removePack(packId: string): Promise<void> {
   await deleteTilePack(packId);
-  useOfflinePacks.setState((s) => {
-    const { [packId]: _, ...rest } = s.packs;
-    return { packs: rest };
-  });
+  delete offlinePacksState.packs[packId];
 }
 
 // ---------------------------------------------------------------------------
@@ -144,9 +138,9 @@ export async function removePack(packId: string): Promise<void> {
 
 /** Get all packs for a specific chart */
 export function usePacksForChart(chartId: string): TilePackState[] {
-  return useOfflinePacks(
-    useShallow((s) =>
-      Object.values(s.packs).filter((p) => p.chartId === chartId),
-    ),
+  const { packs } = useSnapshot(offlinePacksState);
+  return useMemo(
+    () => Object.values(packs).filter((p) => p.chartId === chartId) as TilePackState[],
+    [packs, chartId],
   );
 }

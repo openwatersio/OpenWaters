@@ -1,9 +1,12 @@
-import { fitBounds } from "@/navigation/components/NavigationCamera";
-import { useSelection } from "@/map/hooks/useSelection";
-import { useSheetStore } from "@/map/hooks/useSheetPosition";
+import { getTrackPoints } from "@/database";
 import useTheme from "@/hooks/useTheme";
-import { subscribeToLocationUpdate, useTrackRecording } from "@/tracks/hooks/useTrackRecording";
-import { getTrackPoints, Track } from "@/database";
+import { useSelection } from "@/map/hooks/useSelection";
+import { useSheets } from "@/map/hooks/useSheetPosition";
+import { fitBounds } from "@/navigation/components/NavigationCamera";
+import {
+  useTrackRecording,
+  useTrackRecordingPoints,
+} from "@/tracks/hooks/useTrackRecording";
 import type { LngLatBounds } from "@maplibre/maplibre-react-native";
 import { getBounds } from "geolib";
 import { useEffect, useState } from "react";
@@ -13,34 +16,19 @@ import TrackLine from "./TrackLine";
 type Coordinate = [longitude: number, latitude: number];
 
 export default function TrackOverlay() {
-  const recording = useTrackRecording((s) => s.track);
+  const { track } = useTrackRecording();
 
   return (
     <>
-      {recording && <ActiveTrackOverlay track={recording} />}
+      {track && <ActiveTrackOverlay />}
       <SelectedTrackOverlay />
     </>
   );
 }
 
-function ActiveTrackOverlay({ track }: { track: Track }) {
+function ActiveTrackOverlay() {
   const theme = useTheme();
-  const [coordinates, setCoordinates] = useState<Coordinate[]>([]);
-
-  // Load historical coordinates from DB on mount/resume
-  useEffect(() => {
-    console.log("loading track points for active recording:", track.id);
-    getTrackPoints(track.id).then((points) => {
-      setCoordinates(points.map((p) => [p.longitude, p.latitude]));
-    });
-  }, [track]);
-
-  useEffect(() => {
-    return subscribeToLocationUpdate((location) => {
-      setCoordinates((prev) => [...prev, [location.coords.longitude, location.coords.latitude]]);
-    });
-  }, [track]);
-
+  const coordinates = useTrackRecordingPoints();
   return <TrackLine id="active-track" coordinates={coordinates} color={theme.danger} />;
 }
 
@@ -54,10 +42,7 @@ function SelectedTrackOverlay() {
   const theme = useTheme();
   const selection = useSelection();
   const selectedId = selection?.type === "track" ? Number(selection.id) : null;
-  const sheetHeight = useSheetStore((s) => {
-    const entry = s.sheets["track"];
-    return entry?.height ?? 0;
-  });
+  const sheetHeight = useSheets()["track"]?.height ?? 0;
   const [coords, setCoords] = useState<Coordinate[]>([]);
   const insets = useSafeAreaInsets();
 

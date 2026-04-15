@@ -1,44 +1,23 @@
-import { Annotation } from "@/map/components/Annotation";
-import { useCameraView } from "@/map/hooks/useCameraView";
-import { loadMarkers, updateMarker, useMarkers } from "@/markers/hooks/useMarkers";
-import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
 import useTheme from "@/hooks/useTheme";
-import type { LngLatBounds } from "@maplibre/maplibre-react-native";
+import { Annotation } from "@/map/components/Annotation";
+import { useBounds } from "@/map/hooks/useCameraView";
+import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
+import { updateMarker, useMarkers } from "@/markers/hooks/useMarkers";
 import type { SFSymbol } from "expo-symbols";
-import { useEffect, useMemo } from "react";
 
 const DEFAULT_ICON: SFSymbol = "mappin";
-// Fraction of the viewport to extend bounds by, to avoid pop-in while panning
-const BOUNDS_BUFFER = 0.5;
-
-function isInBounds(lat: number, lng: number, bounds: LngLatBounds): boolean {
-  const [west, south, east, north] = bounds;
-  const latBuf = (north - south) * BOUNDS_BUFFER;
-  const lngBuf = (east - west) * BOUNDS_BUFFER;
-  return lat >= south - latBuf && lat <= north + latBuf
-    && lng >= west - lngBuf && lng <= east + lngBuf;
-}
 
 export default function MarkerOverlay() {
-  useEffect(() => {
-    loadMarkers();
-  }, []);
-
-  const markers = useMarkers((s) => s.markers);
+  const bounds = useBounds({ buffer: 0.5, hysteresis: 0.1 });
+  const markers = useMarkers({ bounds });
   const selection = useSelection();
   const selectedId = selection?.type === "marker" ? Number(selection.id) : null;
-  const bounds = useCameraView((s) => s.bounds);
   const theme = useTheme();
   const navigate = useSelectionHandler();
 
-  const visible = useMemo(() => {
-    if (!bounds) return markers;
-    return markers.filter((m) => isInBounds(m.latitude, m.longitude, bounds));
-  }, [markers, bounds]);
-
   return (
     <>
-      {visible.map((marker) => {
+      {markers.map((marker) => {
         const isSelected = marker.id === selectedId;
         return (
           <Annotation

@@ -83,7 +83,7 @@ function vesselShipType(vessel: AISVessel): number | undefined {
 }
 
 export default function AISLayer() {
-  const vessels = useAIS((s) => s.vessels);
+  const vessels = useAIS();
 
   // Tick every 30s to re-evaluate staleness even when vessel data hasn't changed
   const [tick, setTick] = useState(0);

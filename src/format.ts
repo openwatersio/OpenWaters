@@ -2,12 +2,18 @@
  * Format elapsed seconds as a timer: "mm:ss" or "h:mm:ss"
  */
 export function formatElapsedTime(
-  startedAt: string | null,
-  endedAt?: string | null,
+  startedAt: number | string | null,
+  endedAt?: number | string | null,
 ): string {
   if (!startedAt) return "00:00";
   const end = endedAt ? new Date(endedAt).getTime() : Date.now();
-  const seconds = Math.floor((end - new Date(startedAt).getTime()) / 1000);
+  return formatElapsedMs(end - new Date(startedAt).getTime());
+}
+
+/** Format an elapsed duration (in ms) as "mm:ss" or "h:mm:ss". */
+export function formatElapsedMs(ms: number): string {
+  if (ms <= 0) return "00:00";
+  const seconds = Math.floor(ms / 1000);
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
@@ -69,6 +75,7 @@ export function formatTime(iso: string | null): string {
  */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }

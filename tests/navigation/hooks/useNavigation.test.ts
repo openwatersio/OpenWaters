@@ -2,15 +2,14 @@ import { type DataPoint, resetInstrumentStore, updatePaths } from "@/instruments
 import {
   NavigationState,
   flushNavigation,
+  navigationState,
+  resetNavigation,
   updateFromDevice,
   updateFromSignalK,
-  useNavigation,
 } from "@/navigation/hooks/useNavigation";
 
-const initialState = useNavigation.getState();
-
 beforeEach(() => {
-  useNavigation.setState(initialState, true);
+  resetNavigation();
   resetInstrumentStore();
 });
 
@@ -69,7 +68,7 @@ function signalkPosition(lat: number, lon: number, opts: { sog?: number; cog?: n
 
 describe("useNavigation", () => {
   it("starts with null values and Moored state", () => {
-    const s = useNavigation.getState();
+    const s = navigationState;
     expect(s.latitude).toBeNull();
     expect(s.longitude).toBeNull();
     expect(s.speed).toBeNull();
@@ -80,7 +79,7 @@ describe("useNavigation", () => {
   describe("device GPS updates", () => {
     it("updates position from device GPS", () => {
       updateFromDevice(deviceLocation({ latitude: 47.6, longitude: -122.3 }));
-      const s = useNavigation.getState();
+      const s = navigationState;
       expect(s.latitude).toBe(47.6);
       expect(s.longitude).toBe(-122.3);
       expect(s.source).toBe("device");
@@ -88,25 +87,25 @@ describe("useNavigation", () => {
 
     it("updates speed and heading from device", () => {
       updateFromDevice(deviceLocation({ speed: 5.0, heading: 90 }));
-      const s = useNavigation.getState();
+      const s = navigationState;
       expect(s.speed).toBe(5.0);
       expect(s.heading).toBe(90);
     });
 
     it("converts device heading to course in radians", () => {
       updateFromDevice(deviceLocation({ heading: 180 }));
-      const s = useNavigation.getState();
+      const s = navigationState;
       expect(s.course).toBeCloseTo(Math.PI, 5);
     });
 
     it("sets Underway when speed exceeds threshold", () => {
       updateFromDevice(deviceLocation({ speed: 1.0 }));
-      expect(useNavigation.getState().state).toBe(NavigationState.Underway);
+      expect(navigationState.state).toBe(NavigationState.Underway);
     });
 
     it("sets Moored when speed is below threshold", () => {
       updateFromDevice(deviceLocation({ speed: 0.1 }));
-      expect(useNavigation.getState().state).toBe(NavigationState.Moored);
+      expect(navigationState.state).toBe(NavigationState.Moored);
     });
   });
 
@@ -114,14 +113,14 @@ describe("useNavigation", () => {
     it("prefers Signal K when fresh", () => {
       // First set device position
       updateFromDevice(deviceLocation({ latitude: 47.6, longitude: -122.3 }));
-      expect(useNavigation.getState().source).toBe("device");
+      expect(navigationState.source).toBe("device");
 
       // Then set Signal K position
       signalkPosition(48.0, -123.0);
       updateFromSignalK();
       flushNavigation();
 
-      const s = useNavigation.getState();
+      const s = navigationState;
       expect(s.latitude).toBe(48.0);
       expect(s.longitude).toBe(-123.0);
       expect(s.source).toBe("signalk");
@@ -133,7 +132,7 @@ describe("useNavigation", () => {
       updateFromSignalK();
       flushNavigation();
 
-      expect(useNavigation.getState().speed).toBe(5.0);
+      expect(navigationState.speed).toBe(5.0);
     });
 
     it("uses Signal K heading converted to degrees", () => {
@@ -142,7 +141,7 @@ describe("useNavigation", () => {
       updateFromSignalK();
       flushNavigation();
 
-      expect(useNavigation.getState().heading).toBeCloseTo(90, 1);
+      expect(navigationState.heading).toBeCloseTo(90, 1);
     });
 
     it("falls back to device when Signal K position is stale", () => {
@@ -159,7 +158,7 @@ describe("useNavigation", () => {
       updateFromSignalK();
       flushNavigation();
 
-      const s = useNavigation.getState();
+      const s = navigationState;
       expect(s.latitude).toBe(47.6); // device value
       expect(s.source).toBe("device");
     });
@@ -170,7 +169,7 @@ describe("useNavigation", () => {
       updateFromSignalK();
       flushNavigation();
 
-      expect(useNavigation.getState().speed).toBe(3.0);
+      expect(navigationState.speed).toBe(3.0);
     });
   });
 
@@ -180,7 +179,7 @@ describe("useNavigation", () => {
       updateFromSignalK();
       flushNavigation();
 
-      expect(useNavigation.getState().state).toBe(NavigationState.Underway);
+      expect(navigationState.state).toBe(NavigationState.Underway);
     });
   });
 });

@@ -1,8 +1,13 @@
 import { getInstrumentData } from "@/instruments/hooks/useInstruments";
-import type { GeolocationPosition } from "@maplibre/maplibre-react-native";
-import { LocationManager } from "@maplibre/maplibre-react-native";
-import { create } from "zustand";
-import { useShallow } from "zustand/shallow";
+import {
+  Accuracy,
+  getForegroundPermissionsAsync,
+  getLastKnownPositionAsync,
+  requestForegroundPermissionsAsync,
+  watchPositionAsync,
+  type LocationObject,
+} from "expo-location";
+import { proxy, useSnapshot } from "valtio";
 
 export enum NavigationState {
   Moored,
@@ -23,7 +28,7 @@ interface State {
   state: NavigationState;
 }
 
-export const useNavigation = create<State>()(() => ({
+const INITIAL_STATE: State = {
   latitude: null,
   longitude: null,
   speed: null,
@@ -31,9 +36,20 @@ export const useNavigation = create<State>()(() => ({
   heading: null,
   accuracy: null,
   timestamp: null,
-  source: "device" as NavigationSource,
+  source: "device",
   state: NavigationState.Moored,
-}));
+};
+
+export const navigationState = proxy<State>({ ...INITIAL_STATE });
+
+/** Reset to defaults. Exposed for tests. */
+export function resetNavigation() {
+  Object.assign(navigationState, INITIAL_STATE);
+}
+
+export function useNavigation() {
+  return useSnapshot(navigationState);
+}
 
 // --- Shadow objects (module-scoped, not in the store) ---
 
@@ -87,7 +103,7 @@ function resolve() {
 
   scheduleMoored(resolvedState);
 
-  useNavigation.setState({
+  Object.assign(navigationState, {
     latitude: src.latitude,
     longitude: src.longitude,
     speed,
@@ -112,15 +128,15 @@ function scheduleMoored(currentState: NavigationState) {
   if (currentState === NavigationState.Underway) {
     mooredTimeout = setTimeout(() => {
       mooredTimeout = undefined;
-      useNavigation.setState({ state: NavigationState.Moored });
+      navigationState.state = NavigationState.Moored;
     }, MOORED_TIMEOUT);
   }
 }
 
 // --- Update functions ---
 
-/** Called from LocationManager listener (device GPS) */
-export function updateFromDevice(location: GeolocationPosition) {
+/** Called from expo-location watcher (device GPS) */
+export function updateFromDevice(location: LocationObject) {
   if (!location) return;
   const { coords } = location;
   _device = {
@@ -190,17 +206,54 @@ function resolveFromInstruments() {
 
 /** Select position as a geolib-compatible object, or null */
 export function usePosition(): { latitude: number; longitude: number } | null {
-  return useNavigation(
-    useShallow((s) =>
-      s.latitude !== null && s.longitude !== null
-        ? { latitude: s.latitude, longitude: s.longitude }
-        : null,
-    ),
-  );
+  const { latitude, longitude } = useSnapshot(navigationState);
+  if (latitude === null || longitude === null) return null;
+  return { latitude, longitude };
+}
+
+/** Imperative position read — returns the current value or null. Use from
+ *  event handlers and one-shot reads that shouldn't subscribe to GPS ticks. */
+export function getPosition(): { latitude: number; longitude: number } | null {
+  const { latitude, longitude } = navigationState;
+  if (latitude === null || longitude === null) return null;
+  return { latitude, longitude };
+}
+
+async function seedFromLastKnownPosition() {
+  try {
+    const location = await getLastKnownPositionAsync();
+    if (!location) return;
+    updateFromDevice(location);
+  } catch (error) {
+    console.warn("Failed to read last known navigation position:", error);
+  }
 }
 
 // --- Wire device GPS listener at module scope ---
 
-LocationManager.addListener((location) => {
-  updateFromDevice(location);
+seedFromLastKnownPosition();
+
+let _locationSub: { remove(): void } | null = null;
+
+async function startLocationWatcher() {
+  let { status } = await getForegroundPermissionsAsync();
+  if (status !== "granted") {
+    ({ status } = await requestForegroundPermissionsAsync());
+  }
+  if (status !== "granted") {
+    console.warn("Location permission not granted; GPS watcher not started.");
+    return;
+  }
+  _locationSub = await watchPositionAsync(
+    {
+      accuracy: Accuracy.BestForNavigation,
+      distanceInterval: 1,
+      timeInterval: 1000,
+    },
+    updateFromDevice,
+  );
+}
+
+startLocationWatcher().catch((error) => {
+  console.warn("Failed to start navigation location watcher:", error);
 });

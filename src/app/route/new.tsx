@@ -1,7 +1,7 @@
+import { getPosition } from "@/navigation/hooks/useNavigation";
 import RouteEditor from "@/routes/components/RouteEditor";
-import SheetView from "@/ui/SheetView";
-import { useNavigation } from "@/navigation/hooks/useNavigation";
 import { addRouteWaypoint, startRoute } from "@/routes/hooks/useRoutes";
+import SheetView from "@/ui/SheetView";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
 
@@ -17,14 +17,12 @@ export default function NewRouteScreen() {
   useEffect(() => {
     startRoute();
 
-    const { latitude, longitude } = useNavigation.getState();
-    if (latitude != null && longitude != null) {
-      addRouteWaypoint({ latitude, longitude });
-    }
+    const position = getPosition();
+    if (position) addRouteWaypoint(position);
 
     if (to) {
-      const [toLon, toLat] = to.split(",").map(Number) as [number, number];
-      addRouteWaypoint({ latitude: toLat, longitude: toLon });
+      const [longitude, latitude] = to.split(",").map(Number) as [number, number];
+      addRouteWaypoint({ latitude, longitude });
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps

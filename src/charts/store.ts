@@ -1,9 +1,8 @@
 import type { CatalogEntry } from "@/charts/catalog/types";
+import { persistProxy } from "@/persistProxy";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Directory, File, Paths } from "expo-file-system";
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { proxy, useSnapshot } from "valtio";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -100,7 +99,7 @@ export function writeCatalog(chartId: string, entry: CatalogEntry): void {
 }
 
 // ---------------------------------------------------------------------------
-// Zustand store
+// Store
 // ---------------------------------------------------------------------------
 
 interface ChartStoreState {
@@ -110,30 +109,29 @@ interface ChartStoreState {
   selectedChartId?: string;
 }
 
-export const useChartStore = create<ChartStoreState>()(
-  persist(
-    (): ChartStoreState => ({
-      charts: {},
-      selectedChartId: undefined,
-    }),
-    {
-      name: "chart-store",
-      storage: createJSONStorage(() => AsyncStorage),
-      // Only persist the selectedChartId — charts are rebuilt from disk
-      partialize: (state) => ({ selectedChartId: state.selectedChartId }),
-      onRehydrateStorage: () => {
-        return (_state?: ChartStoreState, error?: unknown) => {
-          if (!error) {
-            initializeCharts();
-          }
-        };
-      },
-    },
-  ),
-);
+export const chartStoreState = proxy<ChartStoreState>({
+  charts: {},
+  selectedChartId: undefined,
+});
+
+persistProxy<ChartStoreState, { selectedChartId?: string }>(chartStoreState, {
+  name: "chart-store",
+  // Only persist the selectedChartId — `charts` is rebuilt from disk on launch.
+  partialize: (state) => ({ selectedChartId: state.selectedChartId }),
+  hydrate: (state, persisted) => {
+    if (persisted?.selectedChartId) {
+      state.selectedChartId = persisted.selectedChartId;
+    }
+    initializeCharts();
+  },
+});
+
+export function useChartStore() {
+  return useSnapshot(chartStoreState);
+}
 
 // ---------------------------------------------------------------------------
-// Actions (external, following project convention)
+// Actions
 // ---------------------------------------------------------------------------
 
 /** Scan the charts directory and rebuild the index */
@@ -158,40 +156,28 @@ export function initializeCharts(): void {
     };
   }
 
-  const { selectedChartId } = useChartStore.getState();
-  useChartStore.setState({
-    charts,
-    selectedChartId:
-      selectedChartId && charts[selectedChartId]
-        ? selectedChartId
-        : undefined,
-  });
+  chartStoreState.charts = charts;
+  if (chartStoreState.selectedChartId && !charts[chartStoreState.selectedChartId]) {
+    chartStoreState.selectedChartId = undefined;
+  }
 }
 
 /** Add or update a chart in the index */
 export function setChart(chart: InstalledChart): void {
-  useChartStore.setState((state) => ({
-    charts: { ...state.charts, [chart.id]: chart },
-  }));
+  chartStoreState.charts[chart.id] = chart;
 }
 
 /** Remove a chart from the index */
 export function removeChart(chartId: string): void {
-  useChartStore.setState((state) => {
-    const { [chartId]: _, ...rest } = state.charts;
-    return {
-      charts: rest,
-      selectedChartId:
-        state.selectedChartId === chartId
-          ? undefined
-          : state.selectedChartId,
-    };
-  });
+  delete chartStoreState.charts[chartId];
+  if (chartStoreState.selectedChartId === chartId) {
+    chartStoreState.selectedChartId = undefined;
+  }
 }
 
 /** Set the selected chart */
 export function selectChart(chartId: string | undefined): void {
-  useChartStore.setState({ selectedChartId: chartId });
+  chartStoreState.selectedChartId = chartId;
 }
 
 // ---------------------------------------------------------------------------
@@ -200,12 +186,12 @@ export function selectChart(chartId: string | undefined): void {
 
 /** Get all installed charts as an array, ordered by name */
 export function getCharts(): InstalledChart[] {
-  return Object.values(useChartStore.getState().charts).sort((a, b) =>
+  return Object.values(chartStoreState.charts).sort((a, b) =>
     a.name.localeCompare(b.name),
   );
 }
 
 /** Get a single chart by ID */
 export function getChart(chartId: string): InstalledChart | undefined {
-  return useChartStore.getState().charts[chartId];
+  return chartStoreState.charts[chartId];
 }

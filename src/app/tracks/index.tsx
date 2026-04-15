@@ -1,6 +1,7 @@
-import SheetView from "@/ui/SheetView";
+import { type TracksOrder, type TrackWithStats } from "@/database";
 import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
+import { getPosition } from "@/navigation/hooks/useNavigation";
 import { useTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import {
   formatDate,
@@ -9,10 +10,9 @@ import {
   handleExport,
   handleRename,
   trackDisplayName,
-  useLoadTracks,
   useTracks,
 } from "@/tracks/hooks/useTracks";
-import { getTrackDistances, type TrackWithStats } from "@/database";
+import SheetView from "@/ui/SheetView";
 import {
   Button,
   ContextMenu,
@@ -32,12 +32,11 @@ import {
   onTapGesture,
   padding
 } from "@expo/ui/swift-ui/modifiers";
-import * as Location from "expo-location";
 import { router, Stack, StackToolbarMenuActionProps } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 
-type SortBy = "date" | "distance" | "duration" | "speed" | "nearby";
+type SortBy = TracksOrder;
 
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
@@ -58,12 +57,14 @@ function StatItem({ label, value }: { label: string; value: string }) {
 }
 
 export default function TrackList() {
-  const tracks = useTracks((s) => s.tracks);
-  useLoadTracks();
-  const activeTrack = useTrackRecording((s) => s.track);
+  const { track: activeTrack } = useTrackRecording();
   const theme = useTheme();
   const [sort, setSort] = useState<SortBy>("date");
-  const [proximityMap, setProximityMap] = useState<Map<number, number> | null>(null);
+  const [nearbyAnchor, setNearbyAnchor] = useState<
+    { latitude: number; longitude: number } | null
+  >(null);
+  const sortPosition = sort === "nearby" ? nearbyAnchor : undefined;
+  const tracks = useTracks({ order: sort, position: sortPosition });
 
   const sortOptions: { label: string, value: SortBy, icon: StackToolbarMenuActionProps["icon"] }[] = [
     { label: "Recent", value: "date", icon: "clock" },
@@ -74,39 +75,10 @@ export default function TrackList() {
   ]
 
   useEffect(() => {
-    if (sort !== "nearby") return;
-    Location.getLastKnownPositionAsync().then((pos) => {
-      if (!pos) return;
-      getTrackDistances(pos.coords.latitude, pos.coords.longitude).then(setProximityMap);
-    });
-  }, [sort]);
+    if (sort !== "nearby" || nearbyAnchor) return;
+    setNearbyAnchor(getPosition());
+  }, [sort, nearbyAnchor]);
 
-  const sortedTracks = useMemo(() => {
-    return [...tracks].sort((a, b) => {
-      switch (sort) {
-        case "distance":
-          return b.distance - a.distance;
-        case "duration": {
-          const durA = a.ended_at
-            ? new Date(a.ended_at).getTime() - new Date(a.started_at).getTime()
-            : Date.now() - new Date(a.started_at).getTime();
-          const durB = b.ended_at
-            ? new Date(b.ended_at).getTime() - new Date(b.started_at).getTime()
-            : Date.now() - new Date(b.started_at).getTime();
-          return durB - durA;
-        }
-        case "speed":
-          return (b.avg_speed ?? 0) - (a.avg_speed ?? 0);
-        case "nearby": {
-          const distA = proximityMap?.get(a.id) ?? Infinity;
-          const distB = proximityMap?.get(b.id) ?? Infinity;
-          return distA - distB;
-        }
-        default:
-          return new Date(b.started_at).getTime() - new Date(a.started_at).getTime();
-      }
-    });
-  }, [tracks, sort, proximityMap]);
 
   function confirmDelete(track: TrackWithStats) {
     Alert.alert(
@@ -154,7 +126,7 @@ export default function TrackList() {
       <Host style={{ flex: 1 }}>
         <List modifiers={[listStyle("plain")]}>
           <List.ForEach>
-            {sortedTracks.map((track) => {
+            {tracks.map((track) => {
               const isActiveRecording = activeTrack?.id === track.id;
               const dist = toDistance(track.distance);
               const avgSpd = track.avg_speed != null ? toSpeed(track.avg_speed) : null;

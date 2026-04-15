@@ -1,11 +1,11 @@
-import { AnnotationIcon } from "@/map/components/AnnotationIcon";
-import SheetView from "@/ui/SheetView";
-import { deleteMarker, loadMarkers, updateMarker, useMarkers } from "@/markers/hooks/useMarkers";
-import { usePosition } from "@/navigation/hooks/useNavigation";
+import type { Marker, MarkersOrder } from "@/database";
+import { formatBearing } from "@/geo";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
-import type { Marker } from "@/database";
-import { formatBearing } from "@/geo";
+import { AnnotationIcon } from "@/map/components/AnnotationIcon";
+import { deleteMarker, updateMarker, useMarkers } from "@/markers/hooks/useMarkers";
+import { getPosition } from "@/navigation/hooks/useNavigation";
+import SheetView from "@/ui/SheetView";
 import {
   Button,
   ContextMenu,
@@ -29,10 +29,8 @@ import {
 import { CoordinateFormat } from "coordinate-format";
 import { router, Stack, StackToolbarMenuActionProps } from "expo-router";
 import { getDistance, getGreatCircleBearing } from "geolib";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Alert, View } from "react-native";
-
-type SortBy = "name" | "created" | "nearby";
 
 const coordFormat = new CoordinateFormat("minutes");
 
@@ -42,45 +40,15 @@ function formatCoords(lat: number, lon: number): string {
 }
 
 export default function MarkerList() {
-  const markers = useMarkers((s) => s.markers);
-  const position = usePosition();
   const theme = useTheme();
-  const [sort, setSort] = useState<SortBy>("created");
+  const [order, setOrder] = useState<MarkersOrder>("created");
+  const markers = useMarkers({ order });
 
-  const sortOptions: { label: string, value: SortBy, icon: StackToolbarMenuActionProps["icon"] }[] = [
+  const sortOptions: { label: string, value: MarkersOrder, icon: StackToolbarMenuActionProps["icon"] }[] = [
     { label: "Recent", value: "created", icon: "clock" },
     { label: "Name", value: "name", icon: "character" },
     { label: "Nearby", value: "nearby", icon: "location" },
   ]
-
-  useEffect(() => {
-    loadMarkers();
-  }, []);
-
-  const proximityMap = useMemo(() => {
-    if (sort !== "nearby" || !position) return null;
-    const map = new Map<number, number>();
-    for (const m of markers) {
-      map.set(m.id, getDistance(position, m));
-    }
-    return map;
-  }, [sort, markers, position]);
-
-  const sortedMarkers = useMemo(() => {
-    return [...markers].sort((a, b) => {
-      switch (sort) {
-        case "name":
-          return (a.name ?? "").localeCompare(b.name ?? "");
-        case "nearby": {
-          const distA = proximityMap?.get(a.id) ?? Infinity;
-          const distB = proximityMap?.get(b.id) ?? Infinity;
-          return distA - distB;
-        }
-        default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
-    });
-  }, [markers, sort, proximityMap]);
 
   function confirmDelete(marker: Marker) {
     Alert.alert(
@@ -104,9 +72,9 @@ export default function MarkerList() {
   }
 
   function getDistanceLabel(marker: Marker): string | null {
+    const position = getPosition();
     if (!position) return null;
-    const dist = proximityMap?.get(marker.id)
-      ?? getDistance(position, marker);
+    const dist = getDistance(position, marker);
     const formatted = toDistance(dist);
     const bearing = getGreatCircleBearing(position, marker);
     return `${formatted.value} ${formatted.abbr} ${formatBearing(bearing)}`;
@@ -121,8 +89,8 @@ export default function MarkerList() {
             <Stack.Toolbar.MenuAction
               key={value}
               icon={icon}
-              isOn={sort === value}
-              onPress={() => setSort(value)}
+              isOn={order === value}
+              onPress={() => setOrder(value)}
             >
               {label}
             </Stack.Toolbar.MenuAction>
@@ -138,7 +106,7 @@ export default function MarkerList() {
       <Host style={{ flex: 1 }}>
         <List modifiers={[listStyle("plain")]}>
           <List.ForEach>
-            {sortedMarkers.map((marker) => {
+            {markers.map((marker) => {
               const distLabel = getDistanceLabel(marker);
               const coordsLabel = formatCoords(marker.latitude, marker.longitude);
 

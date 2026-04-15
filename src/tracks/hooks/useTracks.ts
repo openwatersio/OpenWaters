@@ -1,14 +1,18 @@
 import {
   deleteTrack,
   getAllTracksWithStats,
+  getTrack,
+  getTrackPoints,
   renameTrack,
   type Track,
+  type TrackPoint,
+  type TracksOrder,
   type TrackWithStats,
 } from "@/database";
-import { exportTrackAsGPX } from "@/tracks/export";
 import { formatDate, formatDuration } from "@/format";
-import { useEffect } from "react";
-import { create } from "zustand";
+import { useDbQuery } from "@/hooks/useDbQuery";
+import { exportTrackAsGPX } from "@/tracks/export";
+import { useCallback } from "react";
 
 export { formatDate, formatDuration };
 
@@ -16,38 +20,49 @@ export function trackDisplayName(track: Track): string {
   return track.name || `Track ${track.id}`;
 }
 
-interface TracksState {
-  tracks: TrackWithStats[];
+type UseTracksOptions = {
+  order?: TracksOrder;
+  /** Used when `order === "nearby"`; ignored otherwise. Falls back to
+   *  default ordering when missing. */
+  position?: { latitude: number; longitude: number } | null;
+};
+
+/**
+ * Reactive list of all tracks (with derived stats), sorted in SQL by the
+ * requested order. Re-runs automatically whenever the `tracks` or
+ * `track_points` tables change.
+ */
+export function useTracks(options: UseTracksOptions = {}): TrackWithStats[] {
+  const { order = "date", position } = options;
+  const fetch = useCallback(
+    () => getAllTracksWithStats(order, position),
+    [order, position],
+  );
+  return useDbQuery(["tracks", "track_points"], fetch) ?? [];
 }
 
-export const useTracks = create<TracksState>(() => ({
-  tracks: [],
-}));
+/** Reactive points for a track. Re-runs as new fixes arrive. */
+export function useTrackPoints(id: number): TrackPoint[] {
+  const fetch = useCallback(() => getTrackPoints(id), [id]);
+  return useDbQuery(["track_points"], fetch) ?? [];
+}
 
-export async function loadTracks() {
-  const result = await getAllTracksWithStats();
-  useTracks.setState({ tracks: result });
+/** Reactive single-track query. Returns null until loaded or if missing. */
+export function useTrack(id: number): Track | null {
+  const fetch = useCallback(() => getTrack(id), [id]);
+  return useDbQuery(["tracks"], fetch) ?? null;
 }
 
 export async function handleDelete(trackId: number) {
   await deleteTrack(trackId);
-  await loadTracks();
 }
 
 export async function handleRename(trackId: number, name: string) {
   if (name.trim()) {
     await renameTrack(trackId, name.trim());
-    await loadTracks();
   }
 }
 
 export function handleExport(trackId: number) {
   exportTrackAsGPX(trackId);
-}
-
-/** Hook to load tracks on mount */
-export function useLoadTracks() {
-  useEffect(() => {
-    loadTracks();
-  }, []);
 }

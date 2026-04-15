@@ -1,4 +1,4 @@
-import { flushAIS, useAIS } from "@/ais/hooks/useAIS";
+import { aisState, clearAIS, flushAIS } from "@/ais/hooks/useAIS";
 import { getInstrumentData, resetInstrumentStore } from "@/instruments/hooks/useInstruments";
 import { type NMEATCPClientState, NMEATCPClient } from "@/instruments/nmea-tcp";
 
@@ -19,12 +19,9 @@ jest.mock("react-native-tcp-socket", () => ({
 
 const SOURCE = "nmea.tcp.test";
 
-// Reset stores and mocks between tests
-const initialAIS = useAIS.getState();
-
 beforeEach(() => {
   resetInstrumentStore();
-  useAIS.setState(initialAIS, true);
+  clearAIS();
   mockSocket.on.mockReset();
   mockSocket.setEncoding.mockReset();
   mockSocket.destroy.mockReset();
@@ -132,8 +129,7 @@ describe("NMEATCPClient", () => {
 
     flushAIS();
 
-    const vessels = useAIS.getState().vessels;
-    expect(vessels["265557232"]).toBeDefined();
+    expect(aisState.vessels["265557232"]).toBeDefined();
 
     client.disconnect();
   });

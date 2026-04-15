@@ -9,7 +9,7 @@ const PADDING = 8;
 const BORDER_RADIUS = 16;
 
 export function DownloadRegionOverlay() {
-  const visible = useDownloadOverlay((s) => s.visible);
+  const { visible } = useDownloadOverlay();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const sheetHeight = useTopSheetHeight();

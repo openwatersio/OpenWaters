@@ -26,8 +26,8 @@ function bearingToDirection(bearing: number): string {
 const NS_ID = 'map-controls';
 
 export function Compass() {
-  const bearing = useCameraView((s) => s.bearing);
-  const trackingMode = useCameraState((s) => s.trackingMode);
+  const { bearing } = useCameraView();
+  const { trackingMode } = useCameraState();
 
   if (!trackingMode || trackingMode === "default") {
     return null;

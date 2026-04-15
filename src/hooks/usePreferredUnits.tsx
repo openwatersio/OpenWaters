@@ -1,6 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { create } from 'zustand';
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persistProxy } from '@/persistProxy';
+import { proxy, useSnapshot } from 'valtio';
 
 export type SpeedUnit = 'knot' | 'mph' | 'km/h';
 export type DistanceUnit = 'nm' | 'mi' | 'km';
@@ -53,40 +52,30 @@ interface State {
   arriveOnCircleOnly: boolean;
 }
 
-export const usePreferredUnits = create<State>()(
-  persist(
-    (): State => ({
-      speed: 'knot',
-      distance: 'nm',
-      depth: 'm',
-      temperature: 'C',
-      arrivalRadius: 50,
-      arriveOnCircleOnly: false,
-    }),
-    {
-      name: "preferred-units",
-      version: 2,
-      storage: createJSONStorage(() => AsyncStorage),
-      migrate(persisted, version) {
-        const state = persisted as Record<string, unknown>;
-        if (version === 0) {
-          // Map old convert-units keys to new keys
-          if (state.distance === 'nMi') state.distance = 'nm';
-          if (state.speed === 'm/s') state.speed = 'knot';
-        }
-        if (version < 2) {
-          // v2 adds navigation preferences.
-          if (state.arrivalRadius == null) state.arrivalRadius = 50;
-          if (state.arriveOnCircleOnly == null) state.arriveOnCircleOnly = false;
-        }
-        return state as unknown as State;
-      },
-    }
-  )
-)
+const INITIAL_STATE: State = {
+  speed: 'knot',
+  distance: 'nm',
+  depth: 'm',
+  temperature: 'C',
+  arrivalRadius: 50,
+  arriveOnCircleOnly: false,
+};
+
+export const preferredUnitsState = proxy<State>({ ...INITIAL_STATE });
+
+/** Reset to defaults. Exposed for tests. */
+export function resetPreferredUnits() {
+  Object.assign(preferredUnitsState, INITIAL_STATE);
+}
+
+persistProxy(preferredUnitsState, { name: "preferred-units" });
+
+export function usePreferredUnits() {
+  return useSnapshot(preferredUnitsState);
+}
 
 export function setPreferredUnits(state: Partial<State>) {
-  usePreferredUnits.setState(state);
+  Object.assign(preferredUnitsState, state);
 }
 
 export function getSpeedUnits(): SpeedUnit[] {
@@ -113,26 +102,26 @@ export function describeUnit(unit: SpeedUnit | DistanceUnit | DepthUnit | Temper
 }
 
 export function toSpeed(measure: number | undefined, { decimals = 1 } = {}): { value: string } & UnitInfo {
-  const unit = speedUnits[usePreferredUnits.getState().speed];
+  const unit = speedUnits[preferredUnitsState.speed];
   const value = ((measure ?? 0) * unit.fromMps).toFixed(decimals);
   return { value, ...unit };
 }
 
 export function toDistance(meters: number | undefined, { decimals = 1 } = {}): { value: string } & UnitInfo {
-  const def = distanceUnitDefs[usePreferredUnits.getState().distance];
+  const def = distanceUnitDefs[preferredUnitsState.distance];
   const value = ((meters ?? 0) * def.fromMeters).toFixed(decimals);
   return { value, ...def };
 }
 
 export function toDepth(meters: number | undefined, { decimals = 1 } = {}): { value: string } & UnitInfo {
-  const def = depthUnitDefs[usePreferredUnits.getState().depth];
+  const def = depthUnitDefs[preferredUnitsState.depth];
   const value = ((meters ?? 0) * def.fromMeters).toFixed(decimals);
   return { value, ...def };
 }
 
 /** Convert Kelvin to preferred temperature unit */
 export function toTemperature(kelvin: number | undefined, { decimals = 1 } = {}): { value: string } & UnitInfo {
-  const unit = usePreferredUnits.getState().temperature;
+  const unit = preferredUnitsState.temperature;
   const def = temperatureUnitDefs[unit];
   const celsius = (kelvin ?? 273.15) - 273.15;
   const converted = unit === 'F' ? celsius * 9 / 5 + 32 : celsius;

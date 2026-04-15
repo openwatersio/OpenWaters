@@ -1,7 +1,6 @@
+import { persistProxy } from "@/persistProxy";
 import { OfflineManager } from "@maplibre/maplibre-react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { proxy, useSnapshot } from "valtio";
 
 interface OfflineSettingsState {
   /** Maximum ambient cache size in bytes. MapLibre default is 50 MB. */
@@ -13,23 +12,22 @@ interface OfflineSettingsState {
 const DEFAULT_AMBIENT_CACHE = 250 * 1024 * 1024; // 250 MB
 const DEFAULT_TILE_LIMIT = Infinity;
 
-export const useOfflineSettings = create<OfflineSettingsState>()(
-  persist(
-    (): OfflineSettingsState => ({
-      ambientCacheSize: DEFAULT_AMBIENT_CACHE,
-      tileCountLimit: DEFAULT_TILE_LIMIT,
-    }),
-    {
-      name: "offline-settings",
-      storage: createJSONStorage(() => AsyncStorage),
-      onRehydrateStorage: () => {
-        return (state) => {
-          if (state) applyOfflineSettings(state);
-        };
-      },
-    },
-  ),
-);
+export const offlineSettingsState = proxy<OfflineSettingsState>({
+  ambientCacheSize: DEFAULT_AMBIENT_CACHE,
+  tileCountLimit: DEFAULT_TILE_LIMIT,
+});
+
+persistProxy(offlineSettingsState, {
+  name: "offline-settings",
+  hydrate: (state, persisted) => {
+    if (persisted) Object.assign(state, persisted);
+    applyOfflineSettings(state);
+  },
+});
+
+export function useOfflineSettings() {
+  return useSnapshot(offlineSettingsState);
+}
 
 /** Apply settings to MapLibre's OfflineManager */
 function applyOfflineSettings(state: OfflineSettingsState): void {
@@ -42,12 +40,12 @@ function applyOfflineSettings(state: OfflineSettingsState): void {
 }
 
 export function setAmbientCacheSize(bytes: number): void {
-  useOfflineSettings.setState({ ambientCacheSize: bytes });
+  offlineSettingsState.ambientCacheSize = bytes;
   OfflineManager.setMaximumAmbientCacheSize(bytes);
 }
 
 export function setTileCountLimit(limit: number): void {
-  useOfflineSettings.setState({ tileCountLimit: limit });
+  offlineSettingsState.tileCountLimit = limit;
   OfflineManager.setTileCountLimit(
     Number.isFinite(limit) ? limit : Number.MAX_SAFE_INTEGER,
   );

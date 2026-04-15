@@ -1,14 +1,14 @@
-import { useCameraPosition } from "@/map/hooks/useCameraPosition";
-import { usePreferredUnits } from "@/hooks/usePreferredUnits";
 import type { CatalogSource } from "@/charts/catalog/types";
 import { generateStyle } from "@/charts/install";
-import { readLocalPaths } from "@/charts/style";
 import {
   readCatalog,
   useChartStore,
   type InstalledChart,
 } from "@/charts/store";
+import { readLocalPaths } from "@/charts/style";
 import { resolveTheme, useThemePreference } from "@/charts/theme";
+import { usePreferredUnits } from "@/hooks/usePreferredUnits";
+import { useCameraPosition } from "@/map/hooks/useCameraPosition";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { useEffect, useMemo, useState } from "react";
 
@@ -16,16 +16,19 @@ export type { InstalledChart };
 
 /** Get all installed charts as a sorted array */
 export function useCharts(): InstalledChart[] {
-  const charts = useChartStore((s) => s.charts);
+  const { charts } = useChartStore();
   return useMemo(
-    () => Object.values(charts).sort((a, b) => a.name.localeCompare(b.name)),
+    () =>
+      (Object.values(charts) as InstalledChart[]).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      ),
     [charts],
   );
 }
 
 /** Get a single installed chart by ID */
 export function useChart(chartId: string): InstalledChart | undefined {
-  return useChartStore((s) => s.charts[chartId]);
+  return useChartStore().charts[chartId] as InstalledChart | undefined;
 }
 
 /**
@@ -40,8 +43,8 @@ const AUTO_THEME_TICK_MS = 5 * 60_000;
  * known camera position as a proxy for location when in "auto" mode.
  */
 export function useActiveTheme() {
-  const preference = useThemePreference((s) => s.preference);
-  const center = useCameraPosition((s) => s.center);
+  const { preference } = useThemePreference();
+  const { center } = useCameraPosition();
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -61,7 +64,7 @@ export function useActiveTheme() {
 /** Get the active source filters (theme + preferred depth units). */
 export function useSourceFilters() {
   const theme = useActiveTheme();
-  const units = usePreferredUnits((s) => s.depth);
+  const { depth: units } = usePreferredUnits();
   return useMemo(() => ({ theme, units }), [theme, units]);
 }
 
@@ -84,7 +87,7 @@ const EMPTY_STYLE: StyleSpecification = {
  */
 export function useMapStyle(): StyleSpecification | string {
   const charts = useCharts();
-  const selectedChartId = useChartStore((s) => s.selectedChartId);
+  const { selectedChartId } = useChartStore();
   const filters = useSourceFilters();
 
   const chart = useMemo(

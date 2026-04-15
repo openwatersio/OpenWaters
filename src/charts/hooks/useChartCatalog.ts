@@ -13,7 +13,7 @@ export function useChartCatalog(): {
 } {
   const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const charts = useChartStore((s) => s.charts);
+  const { charts } = useChartStore();
 
   useEffect(() => {
     let cancelled = false;

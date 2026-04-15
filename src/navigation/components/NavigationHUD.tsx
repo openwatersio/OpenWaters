@@ -58,11 +58,7 @@ export default function NavigationHUD() {
   const [expanded, setExpanded] = useState(false);
 
   // Unified navigation data (works with device GPS or Signal K)
-  const speed = useNavigation((s) => s.speed);
-  const course = useNavigation((s) => s.course);
-  const heading = useNavigation((s) => s.heading);
-  const navState = useNavigation((s) => s.state);
-  const navSource = useNavigation((s) => s.source);
+  const { speed, course, heading, state: navState, source: navSource } = useNavigation();
   const { isRecording } = useTrackRecording();
 
   // Instrument-only data (Signal K only, no device equivalent)

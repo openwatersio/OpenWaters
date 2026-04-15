@@ -1,24 +1,23 @@
-import { flyTo } from "@/navigation/components/NavigationCamera";
-import SheetHeader from "@/ui/SheetHeader";
-import { useNavigationState } from "@/navigation/hooks/useNavigationState";
+import { calculateRouteLegs, formatBearing } from "@/geo";
 import { toDistance } from "@/hooks/usePreferredUnits";
+import useTheme from "@/hooks/useTheme";
+import { flyTo } from "@/navigation/components/NavigationCamera";
+import { navigationState } from "@/navigation/hooks/useNavigation";
+import WaypointBadge from "@/routes/components/WaypointBadge";
 import {
   clearActiveRoute,
   handleDeleteRoute,
   moveRouteWaypoint,
   removeRouteWaypoint,
-  RouteMode,
   saveActiveRoute,
   setActiveIndex,
   setActiveRoute,
   setRouteName,
   startNavigation,
   useActiveRoute,
-  type ActiveRoute,
 } from "@/routes/hooks/useRoutes";
-import useTheme from "@/hooks/useTheme";
 import { exportRouteAsGPX } from "@/tracks/export";
-import { calculateRouteLegs, formatBearing } from "@/geo";
+import SheetHeader from "@/ui/SheetHeader";
 import {
   Button,
   Host,
@@ -44,18 +43,17 @@ import {
   padding,
   tint
 } from "@expo/ui/swift-ui/modifiers";
-import * as Haptics from "expo-haptics";
 import { CoordinateFormat } from "coordinate-format";
+import * as Haptics from "expo-haptics";
 import { router, Stack } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { Alert } from "react-native";
-import WaypointBadge from "@/routes/components/WaypointBadge";
 
 const coordFormat = new CoordinateFormat("minutes");
 
-function routeDisplayName(active: ActiveRoute): string {
-  if (active.name) return active.name;
-  if (active.id != null) return `Route ${active.id}`;
+function routeDisplayName(id: number | null, name: string | null): string {
+  if (name) return name;
+  if (id != null) return `Route ${id}`;
   return "New Route";
 }
 
@@ -69,19 +67,18 @@ function routeDisplayName(active: ActiveRoute): string {
  * before mounting this component.
  */
 export default function RouteEditor() {
-  const active = useActiveRoute();
+  const { isActive } = useActiveRoute();
 
   // While the active route is being loaded (between screen mount and the
   // useRoute(id) effect resolving), render nothing.
-  if (!active) return null;
+  if (!isActive) return null;
 
-  return <RouteEditorContent active={active} />;
+  return <RouteEditorContent />;
 }
 
-function RouteEditorContent({ active }: { active: ActiveRoute }) {
-  const { points, name, id, mode } = active;
+function RouteEditorContent() {
+  const { id, name, points, isEditing } = useActiveRoute();
   const isExisting = id != null;
-  const isEditing = mode === RouteMode.Editing;
   const theme = useTheme();
 
   const legs = useMemo(() => calculateRouteLegs(points), [points]);
@@ -159,7 +156,7 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
     if (id == null) return;
     Alert.alert(
       "Delete Route",
-      `Delete "${routeDisplayName(active)}"?`,
+      `Delete "${routeDisplayName(id, name)}"?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -173,16 +170,16 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
         },
       ],
     );
-  }, [id, active]);
+  }, [id, name]);
 
   const handleNavigate = useCallback(async () => {
     if (id == null) return;
     // Snap the starting waypoint to the leg the vessel is currently on, so
     // resuming mid-route picks up where you actually are.
-    const coords = useNavigationState.getState().coords;
+    const { latitude, longitude } = navigationState;
     const from =
-      coords?.latitude != null && coords?.longitude != null
-        ? { latitude: coords.latitude, longitude: coords.longitude }
+      latitude != null && longitude != null
+        ? { latitude, longitude }
         : undefined;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await startNavigation(id, { from });
@@ -194,7 +191,7 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
   return (
     <>
       <SheetHeader
-        title={routeDisplayName(active)}
+        title={routeDisplayName(id, name)}
         onPressTitle={handleRename}
       />
       {isEditing ?
@@ -205,7 +202,7 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
         <Stack.Toolbar placement="left">
           <Stack.Toolbar.Button
             icon="square.and.arrow.up"
-            onPress={() => exportRouteAsGPX(active.id!)}
+            onPress={() => exportRouteAsGPX(id!)}
           />
         </Stack.Toolbar>
       }
@@ -225,7 +222,7 @@ function RouteEditorContent({ active }: { active: ActiveRoute }) {
       <Host style={{ flex: 1 }}>
         <List modifiers={[
           listStyle("automatic"),
-          environment("editMode", active.mode === RouteMode.Editing ? "active" : "inactive"),
+          environment("editMode", isEditing ? "active" : "inactive"),
           animation(Animation.default, isEditing),
         ]}
         >

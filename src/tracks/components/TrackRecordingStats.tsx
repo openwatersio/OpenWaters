@@ -1,38 +1,21 @@
-import { StatItem } from "@/ui/StatItem";
+import { formatElapsedMs } from "@/format";
+import { useElapsedMs } from "@/hooks/useElapsedMs";
 import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
 import { useTrackRecording } from "@/tracks/hooks/useTrackRecording";
-import { formatElapsedTime } from "@/format";
+import { StatItem } from "@/ui/StatItem";
 import { HStack } from "@expo/ui/swift-ui";
-import { useEffect, useState } from "react";
 
 export default function TrackRecordingStats() {
   const { track, distance, averageSpeed } = useTrackRecording();
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
+  const elapsedMs = useElapsedMs(track?.started_at ?? null);
   const dist = toDistance(distance);
   const avgSpd = toSpeed(averageSpeed);
 
   return (
     <HStack spacing={16}>
-      <StatItem
-        label="Average"
-        value={avgSpd.value}
-        suffix={avgSpd.abbr}
-      />
-      <StatItem
-        label="Elapsed"
-        value={formatElapsedTime(track?.started_at ?? null)}
-      />
-      <StatItem
-        label="Distance"
-        value={dist.value}
-        suffix={dist.abbr}
-      />
+      <StatItem label="Average" value={avgSpd.value} suffix={avgSpd.abbr} />
+      <StatItem label="Elapsed" value={formatElapsedMs(elapsedMs)} />
+      <StatItem label="Distance" value={dist.value} suffix={dist.abbr} />
     </HStack>
   );
 }
