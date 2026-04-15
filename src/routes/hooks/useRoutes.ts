@@ -12,6 +12,7 @@ import {
 import { findNearestLegIndex } from "@/geo";
 import { useDbQuery } from "@/hooks/useDbQuery";
 import { setFollowUserLocation } from "@/map/hooks/useCameraState";
+import { getPosition } from "@/navigation/hooks/useNavigation";
 import { persistProxy } from "@/persistProxy";
 import { startTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import { getDistance } from "geolib";
@@ -190,12 +191,19 @@ export async function setActiveRoute(
   });
 }
 
+type UseRoutesOptions = {
+  order: RoutesOrder;
+};
+
 /**
  * Reactive list of all routes, sorted in SQL by the requested order.
  * Re-runs automatically whenever the `routes` table changes.
  */
-export function useRoutes({ order }: { order: RoutesOrder }): Route[] {
-  const fetch = useCallback(() => getAllRoutes(order), [order]);
+export function useRoutes({ order }: UseRoutesOptions): Route[] {
+  const fetch = useCallback(
+    () => getAllRoutes(order, order === "nearby" ? getPosition() : undefined),
+    [order],
+  );
   return useDbQuery(["routes"], fetch) ?? [];
 }
 

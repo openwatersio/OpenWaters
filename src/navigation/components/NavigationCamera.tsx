@@ -1,3 +1,4 @@
+import { isInsideBounds } from "@/geo";
 import { cameraPositionState, saveViewport } from "@/map/hooks/useCameraPosition";
 import { cameraState, setFollowUserLocation } from "@/map/hooks/useCameraState";
 import { cameraViewState, onRegionDidChange, onRegionIsChanging } from "@/map/hooks/useCameraView";
@@ -137,4 +138,17 @@ export function flyTo(
 ) {
   setFollowUserLocation(false);
   _cameraRef.current?.flyTo(options);
+}
+
+/**
+ * Fly to a position only if it falls outside the current camera viewport.
+ */
+export function ensureVisible(
+  position: { latitude: number; longitude: number },
+  duration = 600,
+) {
+  const { bounds } = cameraViewState;
+  if (!bounds || !isInsideBounds(position, bounds)) {
+    flyTo({ center: [position.longitude, position.latitude], duration });
+  }
 }

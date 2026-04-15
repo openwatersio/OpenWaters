@@ -385,7 +385,23 @@ export function boundsIntersect(
 ): boolean {
   const [aWest, aSouth, aEast, aNorth] = a;
   const [bWest, bSouth, bEast, bNorth] = b;
-  return aWest <= bEast && aEast >= bWest && aSouth <= bNorth && aNorth >= bSouth;
+  return (
+    aWest <= bEast && aEast >= bWest && aSouth <= bNorth && aNorth >= bSouth
+  );
+}
+
+/**
+ * Expand a bounds box [west, south, east, north] by a fraction of its
+ * width/height on each side.
+ */
+export function expandBounds(
+  bounds: Readonly<[number, number, number, number]>,
+  buffer: number,
+): [number, number, number, number] {
+  const [west, south, east, north] = bounds;
+  const latBuf = (north - south) * buffer;
+  const lngBuf = (east - west) * buffer;
+  return [west - lngBuf, south - latBuf, east + lngBuf, north + latBuf];
 }
 
 /**

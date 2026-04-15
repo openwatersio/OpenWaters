@@ -9,13 +9,13 @@ import {
   type MarkersOrder,
 } from "@/database";
 import { useDbQuery } from "@/hooks/useDbQuery";
+import { getPosition } from "@/navigation/hooks/useNavigation";
 import { useCallback } from "react";
 
 type UseMarkersOptions = {
   order?: MarkersOrder;
-  /** Used when `order === "nearby"`; ignored otherwise. Falls back to
-   *  default ordering when missing. */
-  position?: { latitude: number; longitude: number } | null;
+  /** Optional viewport bounds filter [west, south, east, north]. */
+  bounds?: Readonly<[number, number, number, number]>;
 };
 
 /**
@@ -24,11 +24,16 @@ type UseMarkersOptions = {
  */
 export function useMarkers({
   order = "created",
-  position,
+  bounds,
 }: UseMarkersOptions = {}): Marker[] {
   const fetch = useCallback(
-    () => getAllMarkers(order, position),
-    [order, position],
+    () =>
+      getAllMarkers(
+        order,
+        order === "nearby" ? getPosition() : undefined,
+        bounds,
+      ),
+    [order, bounds],
   );
   return useDbQuery(["markers"], fetch) ?? [];
 }

@@ -1,4 +1,4 @@
-import type { Marker } from "@/database";
+import type { Marker, MarkersOrder } from "@/database";
 import { formatBearing } from "@/geo";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
@@ -27,13 +27,10 @@ import {
   padding
 } from "@expo/ui/swift-ui/modifiers";
 import { CoordinateFormat } from "coordinate-format";
-import { getLastKnownPositionAsync } from "expo-location";
 import { router, Stack, StackToolbarMenuActionProps } from "expo-router";
 import { getDistance, getGreatCircleBearing } from "geolib";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Alert, View } from "react-native";
-
-type SortBy = "name" | "created" | "nearby";
 
 const coordFormat = new CoordinateFormat("minutes");
 
@@ -44,46 +41,14 @@ function formatCoords(lat: number, lon: number): string {
 
 export default function MarkerList() {
   const theme = useTheme();
-  const [sort, setSort] = useState<SortBy>("created");
-  const [nearbyAnchor, setNearbyAnchor] = useState<
-    { latitude: number; longitude: number } | null
-  >(null);
-  const sortPosition = sort === "nearby" ? nearbyAnchor : undefined;
-  const markers = useMarkers({ order: sort, position: sortPosition });
+  const [order, setOrder] = useState<MarkersOrder>("created");
+  const markers = useMarkers({ order });
 
-  const sortOptions: { label: string, value: SortBy, icon: StackToolbarMenuActionProps["icon"] }[] = [
+  const sortOptions: { label: string, value: MarkersOrder, icon: StackToolbarMenuActionProps["icon"] }[] = [
     { label: "Recent", value: "created", icon: "clock" },
     { label: "Name", value: "name", icon: "character" },
     { label: "Nearby", value: "nearby", icon: "location" },
   ]
-
-  useEffect(() => {
-    if (sort !== "nearby" || nearbyAnchor) return;
-
-    const live = getPosition();
-    if (live) {
-      setNearbyAnchor(live);
-      return;
-    }
-
-    let cancelled = false;
-    getLastKnownPositionAsync()
-      .then((pos) => {
-        if (cancelled || !pos) return;
-        setNearbyAnchor({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        });
-      })
-      .catch(() => {
-        // Keep nearby fallback behavior when no location is available.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [sort, nearbyAnchor]);
-
 
   function confirmDelete(marker: Marker) {
     Alert.alert(
@@ -107,7 +72,7 @@ export default function MarkerList() {
   }
 
   function getDistanceLabel(marker: Marker): string | null {
-    const position = sort === "nearby" ? nearbyAnchor : getPosition();
+    const position = getPosition();
     if (!position) return null;
     const dist = getDistance(position, marker);
     const formatted = toDistance(dist);
@@ -124,8 +89,8 @@ export default function MarkerList() {
             <Stack.Toolbar.MenuAction
               key={value}
               icon={icon}
-              isOn={sort === value}
-              onPress={() => setSort(value)}
+              isOn={order === value}
+              onPress={() => setOrder(value)}
             >
               {label}
             </Stack.Toolbar.MenuAction>

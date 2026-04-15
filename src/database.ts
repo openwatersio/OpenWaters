@@ -332,34 +332,83 @@ export type MarkersOrder = "created" | "name" | "nearby";
 export async function getAllMarkers(
   order: MarkersOrder = "created",
   position?: { latitude: number; longitude: number } | null,
+  bounds?: Readonly<[number, number, number, number]>,
 ): Promise<Marker[]> {
   const db = await getDatabase();
 
   // "nearby" without a position falls back to default ordering — keeps
   // call sites simple when the GPS hasn't reported in yet.
   if (order === "nearby" && position) {
+    if (!bounds) {
+      // Squared planar distance is fine for sorting — we never compare across
+      // wildly different latitudes and we never need true distance here.
+      return db.getAllAsync<Marker>(
+        `SELECT *,
+           (latitude - ?) * (latitude - ?) + (longitude - ?) * (longitude - ?) as dist_sq
+         FROM markers
+         ORDER BY dist_sq ASC`,
+        position.latitude,
+        position.latitude,
+        position.longitude,
+        position.longitude,
+      );
+    }
+
+    const [west, south, east, north] = bounds;
     // Squared planar distance is fine for sorting — we never compare across
     // wildly different latitudes and we never need true distance here.
     return db.getAllAsync<Marker>(
       `SELECT *,
          (latitude - ?) * (latitude - ?) + (longitude - ?) * (longitude - ?) as dist_sq
        FROM markers
+       WHERE longitude >= ? AND longitude <= ? AND latitude >= ? AND latitude <= ?
        ORDER BY dist_sq ASC`,
       position.latitude,
       position.latitude,
       position.longitude,
       position.longitude,
+      west,
+      east,
+      south,
+      north,
     );
   }
 
   if (order === "name") {
+    if (!bounds) {
+      return db.getAllAsync<Marker>(
+        "SELECT * FROM markers ORDER BY COALESCE(name, '') ASC, created_at DESC",
+      );
+    }
+
+    const [west, south, east, north] = bounds;
     return db.getAllAsync<Marker>(
-      "SELECT * FROM markers ORDER BY COALESCE(name, '') ASC, created_at DESC",
+      `SELECT * FROM markers
+       WHERE longitude >= ? AND longitude <= ? AND latitude >= ? AND latitude <= ?
+       ORDER BY COALESCE(name, '') ASC, created_at DESC`,
+      west,
+      east,
+      south,
+      north,
     );
   }
 
+  if (!bounds) {
+    return db.getAllAsync<Marker>(
+      "SELECT * FROM markers ORDER BY created_at DESC",
+    );
+  }
+
+  const [west, south, east, north] = bounds;
+
   return db.getAllAsync<Marker>(
-    "SELECT * FROM markers ORDER BY created_at DESC",
+    `SELECT * FROM markers
+     WHERE longitude >= ? AND longitude <= ? AND latitude >= ? AND latitude <= ?
+     ORDER BY created_at DESC`,
+    west,
+    east,
+    south,
+    north,
   );
 }
 
@@ -404,9 +453,9 @@ export type RoutePoint = {
   longitude: number;
 };
 
-export type RoutesOrder = "recent" | "name" | "distance";
+export type RoutesOrder = "recent" | "name" | "distance" | "nearby";
 
-const ROUTES_ORDER_BY: Record<RoutesOrder, string> = {
+const ROUTES_ORDER_BY: Record<Exclude<RoutesOrder, "nearby">, string> = {
   recent: "updated_at DESC",
   name: "name COLLATE NOCASE ASC",
   distance: "distance DESC",
@@ -435,11 +484,30 @@ export async function getRoute(id: number): Promise<Route | null> {
 
 export async function getAllRoutes(
   order: RoutesOrder = "recent",
+  position?: { latitude: number; longitude: number } | null,
 ): Promise<Route[]> {
   const db = await getDatabase();
-  return db.getAllAsync<Route>(
-    `SELECT * FROM routes ORDER BY ${ROUTES_ORDER_BY[order]}`,
-  );
+
+  if (order === "nearby" && position) {
+    // Min squared planar distance from any route_point to the user. Routes
+    // with no points sort to the end via COALESCE -> 1e308.
+    return db.getAllAsync<Route>(
+      `SELECT r.*,
+         COALESCE(MIN((rp.latitude - ?) * (rp.latitude - ?)
+                    + (rp.longitude - ?) * (rp.longitude - ?)), 1e308) as dist_sq
+       FROM routes r
+       LEFT JOIN route_points rp ON rp.route_id = r.id
+       GROUP BY r.id
+       ORDER BY dist_sq ASC`,
+      position.latitude,
+      position.latitude,
+      position.longitude,
+      position.longitude,
+    );
+  }
+
+  const orderBy = ROUTES_ORDER_BY[order as Exclude<RoutesOrder, "nearby">];
+  return db.getAllAsync<Route>(`SELECT * FROM routes ORDER BY ${orderBy}`);
 }
 
 export async function updateRoute(

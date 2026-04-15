@@ -1,9 +1,10 @@
 import DistanceAndBearingText from "@/map/components/DistanceAndBearingText";
-import RouteButton from "@/routes/components/RouteButton";
 import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
-import SheetHeader from "@/ui/SheetHeader";
 import { deleteMarker, useMarker } from "@/markers/hooks/useMarkers";
+import { ensureVisible } from "@/navigation/components/NavigationCamera";
+import RouteButton from "@/routes/components/RouteButton";
 import { exportMarkerAsGPX } from "@/tracks/export";
+import SheetHeader from "@/ui/SheetHeader";
 import {
   Button,
   Form,
@@ -12,7 +13,7 @@ import {
   Text
 } from "@expo/ui/swift-ui";
 import { CoordinateFormat } from "coordinate-format";
-import { router, Stack } from "expo-router";
+import { router, Stack, useFocusEffect } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { Alert } from "react-native";
 import { showLocation } from "react-native-map-link";
@@ -31,6 +32,12 @@ export default function MarkerDetail({ id }: { id: string }) {
   const [latStr, lonStr] = useMemo(
     () => marker ? formatCoords(marker.latitude, marker.longitude) : ["—", "—"],
     [marker],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (marker) ensureVisible(marker);
+    }, [marker]),
   );
 
   const handleShare = useCallback(async () => {

@@ -52,6 +52,7 @@ export default function RouteList() {
       { label: "Recent", value: "recent", icon: "clock" },
       { label: "Name", value: "name", icon: "character" },
       { label: "Distance", value: "distance", icon: "lines.measurement.vertical" },
+      { label: "Nearby", value: "nearby", icon: "location" },
     ];
 
   /**

@@ -1,6 +1,7 @@
 import { getInstrumentData } from "@/instruments/hooks/useInstruments";
 import {
   Accuracy,
+  getLastKnownPositionAsync,
   watchPositionAsync,
   type LocationObject,
 } from "expo-location";
@@ -216,7 +217,19 @@ export function getPosition(): { latitude: number; longitude: number } | null {
   return { latitude, longitude };
 }
 
+async function seedFromLastKnownPosition() {
+  try {
+    const location = await getLastKnownPositionAsync();
+    if (!location) return;
+    updateFromDevice(location);
+  } catch (error) {
+    console.warn("Failed to read last known navigation position:", error);
+  }
+}
+
 // --- Wire device GPS listener at module scope ---
+
+seedFromLastKnownPosition();
 
 watchPositionAsync(
   {
