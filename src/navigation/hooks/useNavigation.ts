@@ -1,7 +1,9 @@
 import { getInstrumentData } from "@/instruments/hooks/useInstruments";
 import {
   Accuracy,
+  getForegroundPermissionsAsync,
   getLastKnownPositionAsync,
+  requestForegroundPermissionsAsync,
   watchPositionAsync,
   type LocationObject,
 } from "expo-location";
@@ -231,13 +233,27 @@ async function seedFromLastKnownPosition() {
 
 seedFromLastKnownPosition();
 
-watchPositionAsync(
-  {
-    accuracy: Accuracy.BestForNavigation,
-    distanceInterval: 1,
-    timeInterval: 1000,
-  },
-  updateFromDevice,
-).catch((error) => {
+let _locationSub: { remove(): void } | null = null;
+
+async function startLocationWatcher() {
+  let { status } = await getForegroundPermissionsAsync();
+  if (status !== "granted") {
+    ({ status } = await requestForegroundPermissionsAsync());
+  }
+  if (status !== "granted") {
+    console.warn("Location permission not granted; GPS watcher not started.");
+    return;
+  }
+  _locationSub = await watchPositionAsync(
+    {
+      accuracy: Accuracy.BestForNavigation,
+      distanceInterval: 1,
+      timeInterval: 1000,
+    },
+    updateFromDevice,
+  );
+}
+
+startLocationWatcher().catch((error) => {
   console.warn("Failed to start navigation location watcher:", error);
 });

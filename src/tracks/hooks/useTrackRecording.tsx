@@ -94,18 +94,18 @@ export function useTrackRecordingPoints(): Array<[number, number]> {
       setPoints([]);
       return;
     }
-    let cancelled = false;
-    getTrackPoints(trackId).then((rows) => {
-      if (cancelled) return;
-      setPoints(rows.map((p) => [p.longitude, p.latitude]));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [trackId]);
 
-  useEffect(() => {
-    if (trackId == null) return;
+    // Load existing points from the DB
+    getTrackPoints(trackId).then((rows) => {
+      const dbCoords = rows.map(
+        (p): [number, number] => [p.longitude, p.latitude],
+      );
+      // Prepend historical points before any that the subscription already
+      // appended while the query was in flight.
+      setPoints((prev) => [...dbCoords, ...prev]);
+    });
+
+    // Subscribe to new points as they come in
     return subscribeKey(trackRecordingState, "lastPoint", (point) => {
       if (!point || point.track_id !== trackId) return;
       setPoints((prev) => [...prev, [point.longitude, point.latitude]]);

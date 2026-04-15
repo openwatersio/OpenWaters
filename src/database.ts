@@ -234,13 +234,14 @@ export async function getAllTracksWithStats(
 
   // Use COALESCE(ended_at, datetime('now')) so in-progress tracks compare
   // against "now" for duration sort instead of being treated as 0-length.
+  const effectiveOrder = order === "nearby" ? "date" : order;
   const orderBy = {
     date: "t.started_at DESC",
     distance: "t.distance DESC",
     duration:
       "(julianday(COALESCE(t.ended_at, datetime('now'))) - julianday(t.started_at)) DESC",
     speed: "avg_speed DESC",
-  }[order as Exclude<TracksOrder, "nearby">];
+  }[effectiveOrder];
 
   return db.getAllAsync<TrackWithStats>(`
     SELECT t.*,

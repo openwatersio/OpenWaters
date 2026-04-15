@@ -43,6 +43,9 @@ jest.mock("@maplibre/maplibre-react-native", () => ({
 
 // expo-location uses native modules
 jest.mock("expo-location", () => ({
+  getForegroundPermissionsAsync: jest.fn(async () => ({
+    status: "granted",
+  })),
   requestForegroundPermissionsAsync: jest.fn(async () => ({
     status: "granted",
   })),
