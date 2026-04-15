@@ -1,4 +1,4 @@
-import SheetView from "@/ui/SheetView";
+import { getTrackDistances, type TrackWithStats } from "@/database";
 import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
 import { useTrackRecording } from "@/tracks/hooks/useTrackRecording";
@@ -12,7 +12,7 @@ import {
   useLoadTracks,
   useTracks,
 } from "@/tracks/hooks/useTracks";
-import { getTrackDistances, type TrackWithStats } from "@/database";
+import SheetView from "@/ui/SheetView";
 import {
   Button,
   ContextMenu,
@@ -60,7 +60,7 @@ function StatItem({ label, value }: { label: string; value: string }) {
 export default function TrackList() {
   const tracks = useTracks((s) => s.tracks);
   useLoadTracks();
-  const activeTrack = useTrackRecording((s) => s.track);
+  const { track: activeTrack } = useTrackRecording();
   const theme = useTheme();
   const [sort, setSort] = useState<SortBy>("date");
   const [proximityMap, setProximityMap] = useState<Map<number, number> | null>(null);

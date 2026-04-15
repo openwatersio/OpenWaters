@@ -7,7 +7,7 @@ import { useEffect } from "react";
 export default function Index() {
   const pathname = usePathname();
   const isNavigating = useActiveRoute((r) => r?.mode === RouteMode.Navigating);
-  const isRecording = useTrackRecording((s) => s.isRecording);
+  const { isRecording } = useTrackRecording();
 
   // Re-present activity screen when dismissed back to index
   useEffect(() => {

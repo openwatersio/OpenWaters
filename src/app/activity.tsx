@@ -9,7 +9,7 @@ import {
   stopNavigation,
   useActiveRoute
 } from "@/routes/hooks/useRoutes";
-import { stopTrackRecording, useTrackRecording } from "@/tracks/hooks/useTrackRecording";
+import { stopTrackRecording, trackRecordingState, useTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import {
   calculateDestinationProgress,
   calculateWaypointProgress,
@@ -27,7 +27,7 @@ export default function ActivityScreen() {
   const activePointIndex = route?.activeIndex ?? 0;
   const points = useMemo(() => route?.points ?? [], [route?.points]);
   const nav = useNavigation();
-  const isRecording = useTrackRecording((s) => s.isRecording);
+  const { isRecording } = useTrackRecording();
 
   const targetPoint = points[activePointIndex] ?? null;
   const previousPoint = activePointIndex > 0 ? points[activePointIndex - 1] ?? null : null;
@@ -165,7 +165,7 @@ function handleStopNavigation() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           stopNavigation();
 
-          if (useTrackRecording.getState().isRecording) {
+          if (trackRecordingState.isRecording) {
             Alert.alert(
               "Stop Recording?",
               "You are still recording a track. Would you like to stop recording too?",

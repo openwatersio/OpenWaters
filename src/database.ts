@@ -162,10 +162,11 @@ export async function endTrack(
 export async function insertTrackPoint(
   trackId: number,
   { coords, timestamp }: LocationObject,
-): Promise<void> {
+): Promise<TrackPoint> {
   const { latitude, longitude, speed, heading, accuracy } = coords;
   const db = await getDatabase();
-  await db.runAsync(
+  const isoTimestamp = new Date(timestamp).toISOString();
+  const result = await db.runAsync(
     `INSERT INTO track_points (track_id, latitude, longitude, speed, heading, accuracy, timestamp)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     trackId,
@@ -174,8 +175,18 @@ export async function insertTrackPoint(
     speed,
     heading,
     accuracy,
-    new Date(timestamp).toISOString(),
+    isoTimestamp,
   );
+  return {
+    id: result.lastInsertRowId,
+    track_id: trackId,
+    latitude,
+    longitude,
+    speed,
+    heading,
+    accuracy,
+    timestamp: isoTimestamp,
+  };
 }
 
 export async function getTrack(trackId: number): Promise<Track | null> {

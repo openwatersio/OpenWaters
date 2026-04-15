@@ -1,19 +1,19 @@
 import { resetInstrumentStore, updatePaths } from '@/instruments/hooks/useInstruments';
 import { NavigationState, useNavigation } from '@/navigation/hooks/useNavigation';
 import { usePreferredUnits } from '@/hooks/usePreferredUnits';
-import { useTrackRecording } from '@/tracks/hooks/useTrackRecording';
+import { trackRecordingState } from '@/tracks/hooks/useTrackRecording';
 import NavigationHUD from '@/navigation/components/NavigationHUD';
 import { render, screen } from '@testing-library/react-native';
 
 const initialNavState = useNavigation.getState();
 const initialUnitsState = usePreferredUnits.getState();
-const initialTrackState = useTrackRecording.getState();
+const initialTrackState = { ...trackRecordingState };
 
 beforeEach(() => {
   useNavigation.setState(initialNavState, true);
   resetInstrumentStore();
   usePreferredUnits.setState(initialUnitsState, true);
-  useTrackRecording.setState(initialTrackState, true);
+  Object.assign(trackRecordingState, initialTrackState);
 });
 
 describe('NavigationHUD', () => {
@@ -38,8 +38,7 @@ describe('NavigationHUD', () => {
 
   it('is visible when recording even if moored', () => {
     useNavigation.setState({ state: NavigationState.Moored });
-    useTrackRecording.setState({
-      isRecording: true,
+    Object.assign(trackRecordingState, {
       track: { id: 1, name: null, started_at: new Date().toISOString(), ended_at: null, distance: 0, color: null },
     });
     render(<NavigationHUD />);
