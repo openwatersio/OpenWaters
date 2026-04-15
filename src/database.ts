@@ -204,26 +204,44 @@ export type TrackWithStats = Track & {
   max_speed: number | null; // m/s
 };
 
-export async function getTrackDistances(
-  lat: number,
-  lng: number,
-): Promise<Map<number, number>> {
-  const db = await getDatabase();
-  const rows = await db.getAllAsync<{ track_id: number; dist_sq: number }>(
-    `SELECT track_id,
-       MIN((latitude - ?) * (latitude - ?) + (longitude - ?) * (longitude - ?)) as dist_sq
-     FROM track_points
-     GROUP BY track_id`,
-    lat,
-    lat,
-    lng,
-    lng,
-  );
-  return new Map(rows.map((r) => [r.track_id, r.dist_sq]));
-}
+export type TracksOrder = "date" | "distance" | "duration" | "speed" | "nearby";
 
-export async function getAllTracksWithStats(): Promise<TrackWithStats[]> {
+export async function getAllTracksWithStats(
+  order: TracksOrder = "date",
+  position?: { latitude: number; longitude: number } | null,
+): Promise<TrackWithStats[]> {
   const db = await getDatabase();
+
+  if (order === "nearby" && position) {
+    // Min squared planar distance from any track_point to the user. Tracks
+    // with no points sort to the end via COALESCE → 1e308.
+    return db.getAllAsync<TrackWithStats>(
+      `SELECT t.*,
+         AVG(tp.speed) as avg_speed,
+         MAX(tp.speed) as max_speed,
+         COALESCE(MIN((tp.latitude - ?) * (tp.latitude - ?)
+                    + (tp.longitude - ?) * (tp.longitude - ?)), 1e308) as dist_sq
+       FROM tracks t
+       LEFT JOIN track_points tp ON tp.track_id = t.id
+       GROUP BY t.id
+       ORDER BY dist_sq ASC`,
+      position.latitude,
+      position.latitude,
+      position.longitude,
+      position.longitude,
+    );
+  }
+
+  // Use COALESCE(ended_at, datetime('now')) so in-progress tracks compare
+  // against "now" for duration sort instead of being treated as 0-length.
+  const orderBy = {
+    date: "t.started_at DESC",
+    distance: "t.distance DESC",
+    duration:
+      "(julianday(COALESCE(t.ended_at, datetime('now'))) - julianday(t.started_at)) DESC",
+    speed: "avg_speed DESC",
+  }[order as Exclude<TracksOrder, "nearby">];
+
   return db.getAllAsync<TrackWithStats>(`
     SELECT t.*,
       AVG(tp.speed) as avg_speed,
@@ -231,7 +249,7 @@ export async function getAllTracksWithStats(): Promise<TrackWithStats[]> {
     FROM tracks t
     LEFT JOIN track_points tp ON tp.track_id = t.id AND tp.speed IS NOT NULL
     GROUP BY t.id
-    ORDER BY t.started_at DESC
+    ORDER BY ${orderBy}
   `);
 }
 
@@ -309,8 +327,37 @@ export async function getMarker(id: number): Promise<Marker | null> {
   return db.getFirstAsync<Marker>("SELECT * FROM markers WHERE id = ?", id);
 }
 
-export async function getAllMarkers(): Promise<Marker[]> {
+export type MarkersOrder = "created" | "name" | "nearby";
+
+export async function getAllMarkers(
+  order: MarkersOrder = "created",
+  position?: { latitude: number; longitude: number } | null,
+): Promise<Marker[]> {
   const db = await getDatabase();
+
+  // "nearby" without a position falls back to default ordering — keeps
+  // call sites simple when the GPS hasn't reported in yet.
+  if (order === "nearby" && position) {
+    // Squared planar distance is fine for sorting — we never compare across
+    // wildly different latitudes and we never need true distance here.
+    return db.getAllAsync<Marker>(
+      `SELECT *,
+         (latitude - ?) * (latitude - ?) + (longitude - ?) * (longitude - ?) as dist_sq
+       FROM markers
+       ORDER BY dist_sq ASC`,
+      position.latitude,
+      position.latitude,
+      position.longitude,
+      position.longitude,
+    );
+  }
+
+  if (order === "name") {
+    return db.getAllAsync<Marker>(
+      "SELECT * FROM markers ORDER BY COALESCE(name, '') ASC, created_at DESC",
+    );
+  }
+
   return db.getAllAsync<Marker>(
     "SELECT * FROM markers ORDER BY created_at DESC",
   );

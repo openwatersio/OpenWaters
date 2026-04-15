@@ -1,4 +1,5 @@
 import SheetView from "@/ui/SheetView";
+import type { LngLatBounds } from "@maplibre/maplibre-react-native";
 import { useCameraView } from "@/map/hooks/useCameraView";
 import { useChart } from "@/charts/hooks/useCharts";
 import { hideDownloadOverlay, showDownloadOverlay } from "@/charts/hooks/useDownloadOverlay";
@@ -43,9 +44,12 @@ export default function DownloadRegion() {
     return () => hideDownloadOverlay();
   }, []);
 
-  // Get current viewport from the map behind the sheet
-  const bounds = useCameraView((s) => s.bounds);
-  const zoom = useCameraView((s) => s.zoom);
+  // Get current viewport from the map behind the sheet. Snapshot bounds
+  // are deeply readonly; clone so we can pass them to MapLibre APIs that
+  // expect a mutable tuple.
+  const snap = useCameraView();
+  const bounds = snap.bounds ? ([...snap.bounds] as LngLatBounds) : undefined;
+  const { zoom } = snap;
 
   // Zoom range state — defaults from current map zoom
   const [minZoom] = useState(

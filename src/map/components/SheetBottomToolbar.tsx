@@ -1,4 +1,4 @@
-import { getTopSheetHeight, useSheetStore } from "@/map/hooks/useSheetPosition";
+import { getTopSheetHeight } from "@/map/hooks/useSheetPosition";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { Stack, useNavigation } from "expo-router";
 import { ReactNode, useEffect, useState } from "react";
@@ -16,7 +16,7 @@ export default function SheetBottomToolbar({ children }: { children: ReactNode }
       data: { index: number; stable: boolean };
     }) => {
       if (!e.data.stable) return;
-      const height = getTopSheetHeight(useSheetStore.getState().sheets);
+      const height = getTopSheetHeight();
       setHidden(height < headerHeight + TOOLBAR_HEIGHT);
     }) as never);
     return unsubscribe;

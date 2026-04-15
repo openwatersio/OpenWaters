@@ -1,8 +1,8 @@
 import { getAvailableDownloads } from "@/charts/hooks/useAvailableDownloads";
 import { useCharts } from "@/charts/hooks/useCharts";
 import { useOfflinePacks } from "@/charts/hooks/useOfflinePacks";
-import useTheme from "@/hooks/useTheme";
 import { useChartStore } from "@/charts/store";
+import useTheme from "@/hooks/useTheme";
 import { Button, Image } from "@expo/ui/swift-ui";
 import {
   frame,
@@ -18,8 +18,8 @@ type OfflineStatus = "full" | "partial" | "none";
 
 function useOfflineStatus(): { status: OfflineStatus; chartId: string | undefined } {
   const charts = useCharts();
-  const selectedChartId = useChartStore((s) => s.selectedChartId);
-  const packs = useOfflinePacks((s) => s.packs);
+  const { selectedChartId } = useChartStore();
+  const { packs } = useOfflinePacks();
 
   const chart = charts.find((c) => c.id === selectedChartId) ?? charts[0];
 

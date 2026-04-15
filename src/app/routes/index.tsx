@@ -1,5 +1,6 @@
-import SheetView from "@/ui/SheetView";
+import { type Route, type RoutesOrder } from "@/database";
 import { toDistance } from "@/hooks/usePreferredUnits";
+import useTheme from "@/hooks/useTheme";
 import {
   getActiveRoute,
   handleDeleteRoute,
@@ -8,9 +9,8 @@ import {
   useActiveRoute,
   useRoutes,
 } from "@/routes/hooks/useRoutes";
-import useTheme from "@/hooks/useTheme";
-import { type Route, type RoutesOrder } from "@/database";
 import { exportRouteAsGPX } from "@/tracks/export";
+import SheetView from "@/ui/SheetView";
 import {
   Button,
   ContextMenu,
@@ -40,7 +40,8 @@ export function routeDisplayName(route: Route): string {
 export default function RouteList() {
   const [sort, setSort] = useState<RoutesOrder>("recent");
   const routes = useRoutes({ order: sort });
-  const activeRouteId = useActiveRoute((a) => (a?.mode === RouteMode.Navigating ? a.id : null));
+  const { id: activeId, isNavigating } = useActiveRoute();
+  const activeRouteId = isNavigating ? activeId ?? null : null;
   const theme = useTheme();
 
   const sortOptions: {
@@ -62,18 +63,18 @@ export default function RouteList() {
     const active = getActiveRoute();
     const targetPath = { pathname: "/route/[id]" as const, params: { id: String(route.id) } };
 
-    if (!active || active.id === route.id) {
+    if (active.mode === null || active.id === route.id) {
       router.dismissTo(targetPath);
       return;
     }
 
-    const activeName = active.name || (active.id != null ? `Route ${active.id}` : "the new route");
+    const currentName = active.name || (active.id != null ? `Route ${active.id}` : "the new route");
     const newName = routeDisplayName(route);
 
     if (active.mode === RouteMode.Editing) {
       Alert.alert(
         "Discard Changes?",
-        `You have unsaved changes to "${activeName}". Discard and open "${newName}"?`,
+        `You have unsaved changes to "${currentName}". Discard and open "${newName}"?`,
         [
           { text: "Cancel", style: "cancel" },
           {
@@ -89,7 +90,7 @@ export default function RouteList() {
     } else {
       Alert.alert(
         "Replace Route?",
-        `Replace the currently open route ("${activeName}")?`,
+        `Replace the currently open route ("${currentName}")?`,
         [
           { text: "Cancel", style: "cancel" },
           {

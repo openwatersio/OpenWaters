@@ -40,7 +40,7 @@ npm run lint               # run eslint
 | Framework  | React Native + Expo                   |
 | Language   | TypeScript (strict mode)              |
 | Navigation | expo-router (file-based routing)      |
-| State      | Zustand with AsyncStorage persistence |
+| State      | Valtio with AsyncStorage persistence  |
 | Map Engine | MapLibre React Native v11             |
 | Testing    | Jest                                  |
 | Linting    | ESLint (expo config)                  |
@@ -55,7 +55,7 @@ app/                 Expo Router screens (file-based routing)
 components/          React components
   ui/                Shared, platform-abstracted UI primitives (Button, BottomSheet, OverlayButton)
   ChartView.tsx      Main map view (orchestrates all overlays)
-hooks/               Zustand stores and custom hooks
+hooks/               Valtio stores and custom hooks
 styles/              Map style configs (JSON) and style index
 lib/                 Utility libraries (WMS/WMTS format helpers)
 assets/              Images and fonts
@@ -72,83 +72,142 @@ import { useCameraState } from "@/hooks/useCameraState";
 import mapStyles from "@/styles";
 ```
 
-#### State Management (Zustand)
+#### State Management (Valtio)
 
-Stores hold **state only**. Actions are **plain exported functions** that call `setState`/`getState` on the store. This keeps actions callable from anywhere (components, effects, callbacks, background tasks) without needing `getState()` at the call site.
+Stores are **Valtio proxies** holding state only. Actions are **plain exported functions** that mutate the proxy directly. This keeps actions callable from anywhere (components, effects, callbacks, background tasks) without needing a hook at the call site.
+
+Each store file exports:
+
+- `xyzState` — the live proxy (use from imperative code, background tasks, mutators)
+- `useXyz()` — a tracked snapshot hook (use from React render)
 
 ```typescript
-import { create } from "zustand";
+import { proxy, useSnapshot } from "valtio";
 
 type State = {
   items: Item[];
 };
 
-// Store: state only
-export const useItems = create<State>()(() => ({
-  items: [],
-}));
+export const itemsState = proxy<State>({ items: [] });
 
-// Actions: plain functions
+export function useItems() {
+  return useSnapshot(itemsState);
+}
+
+// Actions: mutate the proxy directly
 export async function loadItems() {
-  const items = await fetchItems();
-  useItems.setState({ items });
+  itemsState.items = await fetchItems();
 }
 
 export async function addItem(fields: ItemFields) {
   const item = await insertItem(fields);
-  useItems.setState((s) => ({ items: [item, ...s.items] }));
+  itemsState.items.unshift(item);
   return item;
 }
 ```
 
-Components subscribe to state via selectors and import actions directly:
+Components destructure the snapshot. `useSnapshot` tracks each property access, so components only re-render when the fields they actually read change:
 
 ```typescript
 import { useItems, loadItems, addItem } from "@/hooks/useItems";
 
 function MyComponent() {
-  const items = useItems((s) => s.items); // subscribes to state
-  // Call actions directly — no hook needed
+  const { items } = useItems();
   useEffect(() => { loadItems(); }, []);
   return <Button onPress={() => addItem({ name: "New" })} />;
 }
 ```
 
-For persisted stores, wrap the initializer with `persist` middleware — `setState` works with the middleware automatically:
+**Computed values** are getters on the proxy. They're tracked through their inputs:
 
 ```typescript
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+export const trackRecordingState = proxy({
+  track: null as Track | null,
+  distance: 0,
+  get isRecording(): boolean {
+    return this.track !== null;
+  },
+  get averageSpeed(): number {
+    return this.distance > 0 ? this.distance / elapsed : 0;
+  },
+});
+```
 
-export const useSomeState = create<State>()(
-  persist(
-    (): State => ({
-      someValue: "default",
-    }),
-    {
-      name: "some-state", // AsyncStorage key, kebab-case
-      storage: createJSONStorage(() => AsyncStorage),
-    },
-  ),
-);
+**Persistence** uses `persistProxy` from `@/persistProxy`, which writes the snapshot to AsyncStorage on every change and hydrates on first call. Getter-only properties are skipped automatically.
+
+```typescript
+import { persistProxy } from "@/persistProxy";
+import { proxy, useSnapshot } from "valtio";
+
+export const someState = proxy<State>({ someValue: "default" });
+
+persistProxy(someState, { name: "some-state" });
+
+export function useSome() {
+  return useSnapshot(someState);
+}
 
 export function setSomeValue(value: string) {
-  useSomeState.setState({ someValue: value });
+  someState.someValue = value;
 }
 ```
 
+For partial persistence (only some fields) or hydration side effects, pass `partialize` and/or `hydrate`:
+
+```typescript
+persistProxy(activeRouteState, {
+  name: "active-route",
+  partialize: (s) => s.route?.id != null ? { id: s.route.id } : null,
+  hydrate: (state, persisted) => {
+    if (persisted?.id != null) loadRoute(persisted.id);
+  },
+});
+```
+
+**Subscriptions** outside React (background tasks, effects that shouldn't re-render):
+
+```typescript
+import { subscribe } from "valtio";
+import { subscribeKey } from "valtio/utils";
+
+// Whole-tree subscription
+const unsub = subscribe(navigationState, () => { ... });
+
+// Single field
+const unsub = subscribeKey(cameraState, "trackingMode", (next) => { ... });
+```
+
+**Database-backed lists** use `useDbQuery` from `@/hooks/useDbQuery` instead of a store — the DB is the source of truth, mutations write directly via the DB layer, and `useDbQuery` re-fetches on table changes. See `useTracks` and `useMarkers` for examples.
+
+**Watch-outs:**
+
+- Snapshots are deeply readonly. Calling `.sort()` or passing to APIs typed as mutable arrays needs a copy or `Readonly<T>` widening at the consumer.
+- Don't pass the live proxy to native components — MapLibre's `initialViewState` (and similar) freeze the input, which freezes the proxy itself. Spread to a plain object: `{ ...proxyState }`.
+- Mutating after `await` is a race if the same code path can run concurrently. Capture state locally before the await, or serialize the work.
+- The proxy itself can't be reassigned. Mutate in place; expose a clear/reset action for tests.
+
 Existing stores:
 
-- `useCameraState` — follow-user mode, tracking mode, last viewport (key: `"camera"`)
-- `useCameraView` — bearing, bounds, zoom, camera ref (not persisted)
-- `useViewOptions` — selected map style (key: `"view-options"`)
-- `usePreferredUnits` — speed/distance unit preference (key: `"preferred-units"`)
-- `useNavigation` — unified vessel position, speed, heading from device GPS or Signal K (not persisted)
-- `useTrackRecording` — recording state, active track (key: `"track-recording"`)
-- `useTracks` — track list from database (not persisted)
-- `useMarkers` — marker list from database (not persisted)
-- `useSheetStore` — sheet height tracking for overlay positioning (not persisted)
+- `cameraState` / `useCameraState` — follow-user mode, tracking mode (key: `"camera"`)
+- `cameraPositionState` / `useCameraPosition` — last viewport center/zoom (key: `"camera-position"`)
+- `cameraViewState` / `useCameraView` — current bearing, bounds, zoom (not persisted)
+- `themePreferenceState` / `useThemePreference` — chart theme preference (key: `"chart-theme"`)
+- `preferredUnitsState` / `usePreferredUnits` — speed/distance/depth/temperature unit preferences (key: `"preferred-units"`)
+- `navigationState` / `useNavigation` — unified vessel position/speed/heading from device GPS or Signal K (not persisted)
+- `trackRecordingState` / `useTrackRecording` — active recording state, computed `isRecording`, `averageSpeed` (key: `"track-recording"`)
+- `useTracks({ order, position })` / `useTrack(id)` / `useTrackPoints(id)` — DB-backed reactive queries
+- `useMarkers({ order, position })` / `useMarker(id)` — DB-backed reactive queries
+- `activeRouteState` / `useActiveRoute` — active route in viewing/editing/navigating modes (key: `"active-route"`)
+- `useRoutes({ order })` / `useRoute(id)` — DB-backed reactive queries
+- `chartStoreState` / `useChartStore` — installed charts index, selected chart (key: `"chart-store"`)
+- `offlinePacksState` / `useOfflinePacks` — tile pack download state (not persisted)
+- `downloadsState` / `useDownloads` — MBTiles download progress (not persisted)
+- `offlineSettingsState` / `useOfflineSettings` — cache size and tile-count limits (key: `"offline-settings"`)
+- `connectionsState` / `useConnections` — Signal K / NMEA TCP connections (key: `"connections"`)
+- `aisState` / `useAIS` — AIS vessel data, keyed by MMSI (not persisted)
+- `atonState` / `useAtoN` — Aids-to-Navigation data, keyed by ID (not persisted)
+- `sheetState` / `useSheets` — sheet height tracking for overlay positioning (not persisted)
+- `downloadOverlayState` / `useDownloadOverlay` — visibility flag for download region overlay (not persisted)
 
 #### Components
 
@@ -201,7 +260,7 @@ Use `toSpeed()` and `toDistance()` from `@/hooks/usePreferredUnits` for all unit
 | -------------- | --------------------- | ----------------------------- |
 | Components     | PascalCase            | `ChartView.tsx`               |
 | Hooks          | camelCase, use-prefix | `useCameraState.tsx`          |
-| Zustand stores | use-prefix export     | `export const useCameraState` |
+| Valtio proxies | `xyzState` + `useXyz` | `cameraState`, `useCameraState` |
 | Store actions  | plain named exports   | `export function loadItems()` |
 | State types    | `State`               | `type State = { ... }`        |
 | Storage keys   | kebab-case string     | `"preferred-units"`           |
@@ -211,7 +270,7 @@ Use `toSpeed()` and `toDistance()` from `@/hooks/usePreferredUnits` for all unit
 ### TypeScript
 
 - Strict mode is enabled
-- Define `State` interface for Zustand stores (actions are standalone functions, not typed on the store)
+- Define `State` interface for Valtio stores (actions are standalone functions, not typed on the store)
 - Use type guards (`'href' in props`) for polymorphic components
 - Use `fontVariant: ['tabular-nums']` for any dynamically changing numeric display
 - Avoid `as` casts where possible; prefer proper type definitions

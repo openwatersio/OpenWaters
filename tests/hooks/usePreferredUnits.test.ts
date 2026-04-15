@@ -2,25 +2,24 @@ import {
   describeUnit,
   getDistanceUnits,
   getSpeedUnits,
+  preferredUnitsState,
+  resetPreferredUnits,
   setPreferredUnits,
   toDistance,
   toSpeed,
-  usePreferredUnits,
 } from "@/hooks/usePreferredUnits";
 
-const initialState = usePreferredUnits.getState();
-
 beforeEach(() => {
-  usePreferredUnits.setState(initialState, true);
+  resetPreferredUnits();
 });
 
 describe("usePreferredUnits", () => {
   it("defaults to knots", () => {
-    expect(usePreferredUnits.getState().speed).toBe("knot");
+    expect(preferredUnitsState.speed).toBe("knot");
   });
 
   it("defaults to nautical miles", () => {
-    expect(usePreferredUnits.getState().distance).toBe("nm");
+    expect(preferredUnitsState.distance).toBe("nm");
   });
 
   describe("toSpeed", () => {

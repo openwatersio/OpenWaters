@@ -1,4 +1,4 @@
-import { useCameraView } from "@/map/hooks/useCameraView";
+import { cameraViewState } from "@/map/hooks/useCameraView";
 import { isInsideBounds } from "@/geo";
 import type {
   InitialViewState,
@@ -27,7 +27,7 @@ export default function ChartPreview({
   bounds,
   style,
 }: ChartPreviewProps) {
-  const cameraBounds = useCameraView.getState().bounds;
+  const cameraBounds = cameraViewState.bounds;
 
   const initialViewState = useMemo((): InitialViewState => {
     if (cameraBounds) {

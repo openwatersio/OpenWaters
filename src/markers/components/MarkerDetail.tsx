@@ -2,7 +2,7 @@ import DistanceAndBearingText from "@/map/components/DistanceAndBearingText";
 import RouteButton from "@/routes/components/RouteButton";
 import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
 import SheetHeader from "@/ui/SheetHeader";
-import { deleteMarker, useMarkers } from "@/markers/hooks/useMarkers";
+import { deleteMarker, useMarker } from "@/markers/hooks/useMarkers";
 import { exportMarkerAsGPX } from "@/tracks/export";
 import {
   Button,
@@ -26,7 +26,7 @@ function formatCoords(lat: number, lon: number): [string, string] {
 
 export default function MarkerDetail({ id }: { id: string }) {
   const markerId = Number(id);
-  const marker = useMarkers((s) => s.markers.find((m) => m.id === markerId) ?? null);
+  const marker = useMarker(markerId);
 
   const [latStr, lonStr] = useMemo(
     () => marker ? formatCoords(marker.latitude, marker.longitude) : ["—", "—"],

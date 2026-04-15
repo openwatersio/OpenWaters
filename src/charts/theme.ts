@@ -1,8 +1,7 @@
 import type { Theme } from "@/charts/catalog/types";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { persistProxy } from "@/persistProxy";
 import SunCalc from "suncalc";
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { proxy, useSnapshot } from "valtio";
 
 export type ThemePreference = Theme | "auto";
 
@@ -11,20 +10,18 @@ interface ThemeState {
   preference: ThemePreference;
 }
 
-export const useThemePreference = create<ThemeState>()(
-  persist(
-    (): ThemeState => ({
-      preference: "auto",
-    }),
-    {
-      name: "chart-theme",
-      storage: createJSONStorage(() => AsyncStorage),
-    },
-  ),
-);
+export const themePreferenceState = proxy<ThemeState>({
+  preference: "auto",
+});
+
+persistProxy(themePreferenceState, { name: "chart-theme" });
+
+export function useThemePreference() {
+  return useSnapshot(themePreferenceState);
+}
 
 export function setThemePreference(preference: ThemePreference): void {
-  useThemePreference.setState({ preference });
+  themePreferenceState.preference = preference;
 }
 
 // ---------------------------------------------------------------------------

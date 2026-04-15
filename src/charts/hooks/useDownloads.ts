@@ -4,7 +4,7 @@ import {
   type DownloadProgress,
 } from "@/charts/download";
 import { regenerateStyle } from "@/charts/style";
-import { create } from "zustand";
+import { proxy, useSnapshot } from "valtio";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,9 +25,13 @@ interface DownloadsStoreState {
 // Store (ephemeral — not persisted)
 // ---------------------------------------------------------------------------
 
-export const useDownloads = create<DownloadsStoreState>()(() => ({
+export const downloadsState = proxy<DownloadsStoreState>({
   downloads: {},
-}));
+});
+
+export function useDownloads() {
+  return useSnapshot(downloadsState);
+}
 
 // ---------------------------------------------------------------------------
 // Actions
@@ -38,16 +42,11 @@ function downloadKey(chartId: string, sourceId: string): string {
 }
 
 function setDownloadState(key: string, state: DownloadState): void {
-  useDownloads.setState((s) => ({
-    downloads: { ...s.downloads, [key]: state },
-  }));
+  downloadsState.downloads[key] = state;
 }
 
 function clearDownloadState(key: string): void {
-  useDownloads.setState((s) => {
-    const { [key]: _, ...rest } = s.downloads;
-    return { downloads: rest };
-  });
+  delete downloadsState.downloads[key];
 }
 
 /**
@@ -113,5 +112,5 @@ export function getDownloadState(
   chartId: string,
   sourceId: string,
 ): DownloadState | undefined {
-  return useDownloads.getState().downloads[downloadKey(chartId, sourceId)];
+  return downloadsState.downloads[downloadKey(chartId, sourceId)];
 }

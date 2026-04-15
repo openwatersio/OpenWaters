@@ -1,11 +1,10 @@
-import SheetHeader from "@/ui/SheetHeader";
-import Stat from "@/ui/Stat";
+import { formatDate, formatElapsedTime, formatTime } from "@/format";
 import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
-import { handleDelete, handleRename, trackDisplayName } from "@/tracks/hooks/useTracks";
-import { getTrack, getTrackPoints, TrackPoint, type Track } from "@/database";
 import { exportTrackAsGPX } from "@/tracks/export";
-import { formatDate, formatElapsedTime, formatTime } from "@/format";
+import { handleDelete, handleRename, trackDisplayName, useTrack, useTrackPoints } from "@/tracks/hooks/useTracks";
+import SheetHeader from "@/ui/SheetHeader";
+import Stat from "@/ui/Stat";
 import type { ChartDataPoint } from "@expo/ui/swift-ui";
 import {
   Button,
@@ -24,21 +23,14 @@ import {
   padding
 } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { Alert } from "react-native";
 
 export default function TrackDetail({ id }: { id: string }) {
   const trackId = Number(id);
   const theme = useTheme();
-
-  const [track, setTrack] = useState<Track | null>(null);
-  const [points, setPoints] = useState<TrackPoint[]>([]);
-
-  // Load track data from DB
-  useEffect(() => {
-    getTrack(trackId).then(setTrack);
-    getTrackPoints(trackId).then(setPoints);
-  }, [trackId]);
+  const track = useTrack(trackId);
+  const points = useTrackPoints(trackId);
 
   const handleExport = useCallback(() => {
     exportTrackAsGPX(trackId);
@@ -48,10 +40,7 @@ export default function TrackDetail({ id }: { id: string }) {
     Alert.prompt(
       "Rename Track",
       undefined,
-      (name: string) => {
-        handleRename(trackId, name);
-        setTrack((t) => t ? { ...t, name } : t);
-      },
+      (name: string) => handleRename(trackId, name),
       "plain-text",
       track?.name || "",
     );

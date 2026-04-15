@@ -1,11 +1,11 @@
-import { AnnotationIcon } from "@/map/components/AnnotationIcon";
-import SheetView from "@/ui/SheetView";
-import { deleteMarker, loadMarkers, updateMarker, useMarkers } from "@/markers/hooks/useMarkers";
-import { usePosition } from "@/navigation/hooks/useNavigation";
-import { toDistance } from "@/hooks/usePreferredUnits";
-import useTheme from "@/hooks/useTheme";
 import type { Marker } from "@/database";
 import { formatBearing } from "@/geo";
+import { toDistance } from "@/hooks/usePreferredUnits";
+import useTheme from "@/hooks/useTheme";
+import { AnnotationIcon } from "@/map/components/AnnotationIcon";
+import { deleteMarker, updateMarker, useMarkers } from "@/markers/hooks/useMarkers";
+import { getPosition } from "@/navigation/hooks/useNavigation";
+import SheetView from "@/ui/SheetView";
 import {
   Button,
   ContextMenu,
@@ -27,9 +27,10 @@ import {
   padding
 } from "@expo/ui/swift-ui/modifiers";
 import { CoordinateFormat } from "coordinate-format";
+import { getLastKnownPositionAsync } from "expo-location";
 import { router, Stack, StackToolbarMenuActionProps } from "expo-router";
 import { getDistance, getGreatCircleBearing } from "geolib";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
 
 type SortBy = "name" | "created" | "nearby";
@@ -42,10 +43,13 @@ function formatCoords(lat: number, lon: number): string {
 }
 
 export default function MarkerList() {
-  const markers = useMarkers((s) => s.markers);
-  const position = usePosition();
   const theme = useTheme();
   const [sort, setSort] = useState<SortBy>("created");
+  const [nearbyAnchor, setNearbyAnchor] = useState<
+    { latitude: number; longitude: number } | null
+  >(null);
+  const sortPosition = sort === "nearby" ? nearbyAnchor : undefined;
+  const markers = useMarkers({ order: sort, position: sortPosition });
 
   const sortOptions: { label: string, value: SortBy, icon: StackToolbarMenuActionProps["icon"] }[] = [
     { label: "Recent", value: "created", icon: "clock" },
@@ -54,33 +58,32 @@ export default function MarkerList() {
   ]
 
   useEffect(() => {
-    loadMarkers();
-  }, []);
+    if (sort !== "nearby" || nearbyAnchor) return;
 
-  const proximityMap = useMemo(() => {
-    if (sort !== "nearby" || !position) return null;
-    const map = new Map<number, number>();
-    for (const m of markers) {
-      map.set(m.id, getDistance(position, m));
+    const live = getPosition();
+    if (live) {
+      setNearbyAnchor(live);
+      return;
     }
-    return map;
-  }, [sort, markers, position]);
 
-  const sortedMarkers = useMemo(() => {
-    return [...markers].sort((a, b) => {
-      switch (sort) {
-        case "name":
-          return (a.name ?? "").localeCompare(b.name ?? "");
-        case "nearby": {
-          const distA = proximityMap?.get(a.id) ?? Infinity;
-          const distB = proximityMap?.get(b.id) ?? Infinity;
-          return distA - distB;
-        }
-        default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      }
-    });
-  }, [markers, sort, proximityMap]);
+    let cancelled = false;
+    getLastKnownPositionAsync()
+      .then((pos) => {
+        if (cancelled || !pos) return;
+        setNearbyAnchor({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        });
+      })
+      .catch(() => {
+        // Keep nearby fallback behavior when no location is available.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sort, nearbyAnchor]);
+
 
   function confirmDelete(marker: Marker) {
     Alert.alert(
@@ -104,9 +107,9 @@ export default function MarkerList() {
   }
 
   function getDistanceLabel(marker: Marker): string | null {
+    const position = sort === "nearby" ? nearbyAnchor : getPosition();
     if (!position) return null;
-    const dist = proximityMap?.get(marker.id)
-      ?? getDistance(position, marker);
+    const dist = getDistance(position, marker);
     const formatted = toDistance(dist);
     const bearing = getGreatCircleBearing(position, marker);
     return `${formatted.value} ${formatted.abbr} ${formatBearing(bearing)}`;
@@ -138,7 +141,7 @@ export default function MarkerList() {
       <Host style={{ flex: 1 }}>
         <List modifiers={[listStyle("plain")]}>
           <List.ForEach>
-            {sortedMarkers.map((marker) => {
+            {markers.map((marker) => {
               const distLabel = getDistanceLabel(marker);
               const coordsLabel = formatCoords(marker.latitude, marker.longitude);
 

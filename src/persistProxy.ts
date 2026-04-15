@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { snapshot, subscribe } from "valtio";
 
 export type PersistOptions<T extends object, S = T> = {
-  /** Storage key. Stored under `proxy:<name>`. */
+  /** AsyncStorage key. */
   name: string;
   /**
    * Map the live state into the value to persist. Return `null` to skip
@@ -28,8 +28,7 @@ export function persistProxy<T extends object, S = T>(
   state: T,
   options: PersistOptions<T, S>,
 ): Promise<void> {
-  const { name, partialize, hydrate } = options;
-  const key = `proxy:${name}`;
+  const { name: key, partialize, hydrate } = options;
 
   const hydration = AsyncStorage.getItem(key)
     .then((raw) => {
@@ -38,7 +37,7 @@ export function persistProxy<T extends object, S = T>(
         try {
           persisted = JSON.parse(raw) as S;
         } catch (err) {
-          console.warn(`persistProxy(${name}): failed to parse storage`, err);
+          console.warn(`persistProxy(${key}): failed to parse storage`, err);
         }
       }
       if (hydrate) {
@@ -48,7 +47,7 @@ export function persistProxy<T extends object, S = T>(
       }
     })
     .catch((err) => {
-      console.warn(`persistProxy(${name}): failed to read storage`, err);
+      console.warn(`persistProxy(${key}): failed to read storage`, err);
       hydrate?.(state, null);
     });
 
@@ -59,12 +58,12 @@ export function persistProxy<T extends object, S = T>(
       : (pickWritable(state, snap) as unknown as S);
     if (value === null) {
       AsyncStorage.removeItem(key).catch((err) =>
-        console.warn(`persistProxy(${name}): failed to clear storage`, err),
+        console.warn(`persistProxy(${key}): failed to clear storage`, err),
       );
       return;
     }
     AsyncStorage.setItem(key, JSON.stringify(value)).catch((err) =>
-      console.warn(`persistProxy(${name}): failed to write storage`, err),
+      console.warn(`persistProxy(${key}): failed to write storage`, err),
     );
   });
 
@@ -80,7 +79,9 @@ export function persistProxy<T extends object, S = T>(
 function assignWritable<T extends object>(target: T, source: object): void {
   for (const key of Object.keys(source)) {
     if (!isWritableKey(target, key)) continue;
-    (target as Record<string, unknown>)[key] = (source as Record<string, unknown>)[key];
+    (target as Record<string, unknown>)[key] = (
+      source as Record<string, unknown>
+    )[key];
   }
 }
 

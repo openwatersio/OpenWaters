@@ -4,8 +4,7 @@ import {
   watchPositionAsync,
   type LocationObject,
 } from "expo-location";
-import { create } from "zustand";
-import { useShallow } from "zustand/shallow";
+import { proxy, useSnapshot } from "valtio";
 
 export enum NavigationState {
   Moored,
@@ -26,7 +25,7 @@ interface State {
   state: NavigationState;
 }
 
-export const useNavigation = create<State>()(() => ({
+const INITIAL_STATE: State = {
   latitude: null,
   longitude: null,
   speed: null,
@@ -34,9 +33,20 @@ export const useNavigation = create<State>()(() => ({
   heading: null,
   accuracy: null,
   timestamp: null,
-  source: "device" as NavigationSource,
+  source: "device",
   state: NavigationState.Moored,
-}));
+};
+
+export const navigationState = proxy<State>({ ...INITIAL_STATE });
+
+/** Reset to defaults. Exposed for tests. */
+export function resetNavigation() {
+  Object.assign(navigationState, INITIAL_STATE);
+}
+
+export function useNavigation() {
+  return useSnapshot(navigationState);
+}
 
 // --- Shadow objects (module-scoped, not in the store) ---
 
@@ -90,7 +100,7 @@ function resolve() {
 
   scheduleMoored(resolvedState);
 
-  useNavigation.setState({
+  Object.assign(navigationState, {
     latitude: src.latitude,
     longitude: src.longitude,
     speed,
@@ -115,7 +125,7 @@ function scheduleMoored(currentState: NavigationState) {
   if (currentState === NavigationState.Underway) {
     mooredTimeout = setTimeout(() => {
       mooredTimeout = undefined;
-      useNavigation.setState({ state: NavigationState.Moored });
+      navigationState.state = NavigationState.Moored;
     }, MOORED_TIMEOUT);
   }
 }
@@ -193,13 +203,17 @@ function resolveFromInstruments() {
 
 /** Select position as a geolib-compatible object, or null */
 export function usePosition(): { latitude: number; longitude: number } | null {
-  return useNavigation(
-    useShallow((s) =>
-      s.latitude !== null && s.longitude !== null
-        ? { latitude: s.latitude, longitude: s.longitude }
-        : null,
-    ),
-  );
+  const { latitude, longitude } = useSnapshot(navigationState);
+  if (latitude === null || longitude === null) return null;
+  return { latitude, longitude };
+}
+
+/** Imperative position read — returns the current value or null. Use from
+ *  event handlers and one-shot reads that shouldn't subscribe to GPS ticks. */
+export function getPosition(): { latitude: number; longitude: number } | null {
+  const { latitude, longitude } = navigationState;
+  if (latitude === null || longitude === null) return null;
+  return { latitude, longitude };
 }
 
 // --- Wire device GPS listener at module scope ---

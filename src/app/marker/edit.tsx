@@ -2,7 +2,7 @@ import { AnnotationIcon, AnnotationIconName, ICONS } from "@/map/components/Anno
 import { flyTo } from "@/navigation/components/NavigationCamera";
 import SheetHeader from "@/ui/SheetHeader";
 import SheetView from "@/ui/SheetView";
-import { updateMarker, useMarkers } from "@/markers/hooks/useMarkers";
+import { updateMarker, useMarker } from "@/markers/hooks/useMarkers";
 import useTheme from "@/hooks/useTheme";
 import {
   ColorPicker,
@@ -25,7 +25,7 @@ export default function EditMarkerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const markerId = Number(id);
 
-  const marker = useMarkers((s) => s.markers.find((m) => m.id === markerId));
+  const marker = useMarker(markerId);
   const theme = useTheme();
 
   const [color, setColor] = useState<string | null>(marker?.color ?? null);

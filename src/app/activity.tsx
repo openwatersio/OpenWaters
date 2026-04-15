@@ -4,11 +4,7 @@ import { Detent } from "@/ui/Detent";
 import SheetView from "@/ui/SheetView";
 import { ArrivalTimeStat, BearingStat, DistanceStat, EtaStat } from "@/ui/StatItem";
 import { useNavigation } from "@/navigation/hooks/useNavigation";
-import {
-  RouteMode,
-  stopNavigation,
-  useActiveRoute
-} from "@/routes/hooks/useRoutes";
+import { stopNavigation, useActiveRoute } from "@/routes/hooks/useRoutes";
 import { stopTrackRecording, trackRecordingState, useTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import {
   calculateDestinationProgress,
@@ -22,10 +18,8 @@ import { useEffect, useMemo } from "react";
 import { Alert } from "react-native";
 
 export default function ActivityScreen() {
-  const route = useActiveRoute();
-  const isNavigating = route?.mode === RouteMode.Navigating;
-  const activePointIndex = route?.activeIndex ?? 0;
-  const points = useMemo(() => route?.points ?? [], [route?.points]);
+  const { points, activeIndex, isNavigating } = useActiveRoute();
+  const activePointIndex = activeIndex ?? 0;
   const nav = useNavigation();
   const { isRecording } = useTrackRecording();
 

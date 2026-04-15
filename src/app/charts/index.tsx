@@ -25,7 +25,7 @@ import { router, Stack } from "expo-router";
 import { Alert, View } from "react-native";
 
 export default function Charts() {
-  const selectedChartId = useChartStore((s) => s.selectedChartId);
+  const { selectedChartId } = useChartStore();
   const charts = useCharts();
   const theme = useTheme();
 

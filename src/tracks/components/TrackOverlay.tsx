@@ -1,7 +1,7 @@
 import { getTrackPoints } from "@/database";
 import useTheme from "@/hooks/useTheme";
 import { useSelection } from "@/map/hooks/useSelection";
-import { useSheetStore } from "@/map/hooks/useSheetPosition";
+import { useSheets } from "@/map/hooks/useSheetPosition";
 import { fitBounds } from "@/navigation/components/NavigationCamera";
 import {
   useTrackRecording,
@@ -42,10 +42,7 @@ function SelectedTrackOverlay() {
   const theme = useTheme();
   const selection = useSelection();
   const selectedId = selection?.type === "track" ? Number(selection.id) : null;
-  const sheetHeight = useSheetStore((s) => {
-    const entry = s.sheets["track"];
-    return entry?.height ?? 0;
-  });
+  const sheetHeight = useSheets()["track"]?.height ?? 0;
   const [coords, setCoords] = useState<Coordinate[]>([]);
   const insets = useSafeAreaInsets();
 

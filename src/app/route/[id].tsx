@@ -1,8 +1,7 @@
-import RouteEditor from "@/routes/components/RouteEditor";
 import { fitBounds } from "@/navigation/components/NavigationCamera";
-import SheetView from "@/ui/SheetView";
+import RouteEditor from "@/routes/components/RouteEditor";
 import { useRoute } from "@/routes/hooks/useRoutes";
-import type { LngLatBounds } from "@maplibre/maplibre-react-native";
+import SheetView from "@/ui/SheetView";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { getBounds } from "geolib";
 
@@ -13,17 +12,14 @@ import { getBounds } from "geolib";
  */
 export default function RouteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const routeId = Number(id);
-
-  const route = useRoute(routeId);
+  const { points } = useRoute(Number(id));
 
   // Fit the camera to the route bounds when the route first loads.
   useFocusEffect(() => {
-    if (!route || route.points.length < 2) return;
+    if (points.length < 2) return;
 
-    const { minLng, minLat, maxLng, maxLat } = getBounds(route.points);
-    const routeBounds: LngLatBounds = [minLng, minLat, maxLng, maxLat];
-    fitBounds(routeBounds, {
+    const { minLng, minLat, maxLng, maxLat } = getBounds([...points]);
+    fitBounds([minLng, minLat, maxLng, maxLat], {
       padding: { top: 60, right: 16, bottom: 300, left: 16 },
       duration: 300,
     });

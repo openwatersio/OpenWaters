@@ -19,7 +19,7 @@ function typeLabel(type: string): string {
 }
 
 export default function Connections() {
-  const connections = useConnections((s) => s.connections);
+  const { connections } = useConnections();
   const [discovered, setDiscovered] = useState<DiscoveredService[]>([]);
   const [addType, setAddType] = useState<"signalk" | "nmea">("signalk");
   const [signalKUrl, setSignalKUrl] = useState("");

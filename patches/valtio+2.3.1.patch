@@ -1,0 +1,26 @@
+diff --git a/node_modules/valtio/esm/vanilla.mjs b/node_modules/valtio/esm/vanilla.mjs
+index 401a8b6..dc95211 100644
+--- a/node_modules/valtio/esm/vanilla.mjs
++++ b/node_modules/valtio/esm/vanilla.mjs
+@@ -36,7 +36,7 @@ const createSnapshotDefault = (target, version) => {
+     }
+     Object.defineProperty(snap, key, desc);
+   });
+-  return Object.preventExtensions(snap);
++  return snap;
+ };
+ const createHandlerDefault = (isInitializing, addPropListener, removePropListener, notifyUpdate) => ({
+   deleteProperty(target, prop) {
+diff --git a/node_modules/valtio/vanilla.js b/node_modules/valtio/vanilla.js
+index 6f24972..c907c32 100644
+--- a/node_modules/valtio/vanilla.js
++++ b/node_modules/valtio/vanilla.js
+@@ -38,7 +38,7 @@ const createSnapshotDefault = (target, version) => {
+     }
+     Object.defineProperty(snap, key, desc);
+   });
+-  return Object.preventExtensions(snap);
++  return snap;
+ };
+ const createHandlerDefault = (isInitializing, addPropListener, removePropListener, notifyUpdate) => ({
+   deleteProperty(target, prop) {

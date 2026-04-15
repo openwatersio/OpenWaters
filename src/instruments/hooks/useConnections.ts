@@ -1,6 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { persistProxy } from "@/persistProxy";
+import { proxy, useSnapshot } from "valtio";
 
 import { pruneStaleVessels } from "@/ais/hooks/useAIS";
 import { pruneStaleAtoNs } from "@/aton/hooks/useAtoN";
@@ -28,29 +27,29 @@ interface State {
   connections: Connection[];
 }
 
-export const useConnections = create<State>()(
-  persist(
-    (): State => ({
-      connections: [],
-    }),
-    {
-      name: "connections",
-      storage: createJSONStorage(() => AsyncStorage),
-      // Don't persist runtime status — reset to disconnected on load
-      partialize: (state) => ({
-        connections: state.connections.map((c) => ({
-          ...c,
-          status: "disconnected" as const,
-          error: undefined,
-        })),
-      }),
-    },
-  ),
-);
+export const connectionsState = proxy<State>({
+  connections: [],
+});
+
+persistProxy<State, State>(connectionsState, {
+  name: "connections",
+  // Don't persist runtime status — reset to disconnected on load.
+  partialize: (state) => ({
+    connections: state.connections.map((c) => ({
+      ...c,
+      status: "disconnected" as const,
+      error: undefined,
+    })),
+  }),
+});
+
+export function useConnections() {
+  return useSnapshot(connectionsState);
+}
 
 /** Select a single connection by ID */
 export function useConnection(id: string) {
-  return useConnections((s) => s.connections.find((c) => c.id === id));
+  return useSnapshot(connectionsState).connections.find((c) => c.id === id);
 }
 
 /** Active client instances, keyed by connection ID */
@@ -64,11 +63,10 @@ function updateConnectionStatus(
   status: ConnectionStatus,
   error?: string,
 ) {
-  useConnections.setState((s) => ({
-    connections: s.connections.map((c) =>
-      c.id === id ? { ...c, status, error } : c,
-    ),
-  }));
+  const conn = connectionsState.connections.find((c) => c.id === id);
+  if (!conn) return;
+  conn.status = status;
+  conn.error = error;
 }
 
 /** Add a new Signal K connection via HTTP discovery and connect to it */
@@ -99,9 +97,7 @@ export async function addSignalKConnection(
     status: "disconnected",
   };
 
-  useConnections.setState((s) => ({
-    connections: [...s.connections, connection],
-  }));
+  connectionsState.connections.push(connection);
 
   connectSignalKClient(id, endpoints.wsUrl);
   return connection;
@@ -128,9 +124,7 @@ export function addDiscoveredSignalKConnection(
     status: "disconnected",
   };
 
-  useConnections.setState((s) => ({
-    connections: [...s.connections, connection],
-  }));
+  connectionsState.connections.push(connection);
 
   connectSignalKClient(id, wsUrl);
   return connection;
@@ -153,9 +147,7 @@ export function addNMEAConnection(
     status: "disconnected",
   };
 
-  useConnections.setState((s) => ({
-    connections: [...s.connections, connection],
-  }));
+  connectionsState.connections.push(connection);
 
   connectNMEAClient(id, host, port);
   return connection;
@@ -164,16 +156,13 @@ export function addNMEAConnection(
 /** Remove a connection and disconnect its client */
 export function removeConnection(id: string) {
   disconnectClient(id);
-  useConnections.setState((s) => ({
-    connections: s.connections.filter((c) => c.id !== id),
-  }));
+  const idx = connectionsState.connections.findIndex((c) => c.id === id);
+  if (idx !== -1) connectionsState.connections.splice(idx, 1);
 }
 
 /** Connect a specific saved connection */
 export async function connectConnection(id: string) {
-  const connection = useConnections
-    .getState()
-    .connections.find((c) => c.id === id);
+  const connection = connectionsState.connections.find((c) => c.id === id);
   if (!connection) return;
 
   if (connection.type === "nmea-tcp") {
@@ -205,8 +194,7 @@ export function disconnectConnection(id: string) {
 
 /** Connect all saved connections (call on app launch) */
 export async function connectAll() {
-  const { connections } = useConnections.getState();
-  for (const connection of connections) {
+  for (const connection of connectionsState.connections) {
     connectConnection(connection.id);
   }
   startPruneTimer();

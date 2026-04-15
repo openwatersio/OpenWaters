@@ -59,7 +59,7 @@ export default function ConnectionDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const connection = useConnection(id);
   const instrumentData = useInstrumentData();
-  const vesselCount = useAIS((s) => Object.keys(s.vessels).length);
+  const vesselCount = Object.keys(useAIS()).length;
 
   const valueMods = [font({ size: 15 }), monospacedDigit(), foregroundStyle("secondary")];
 

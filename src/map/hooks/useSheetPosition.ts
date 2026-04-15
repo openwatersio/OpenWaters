@@ -6,7 +6,7 @@ import {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { create } from "zustand";
+import { proxy, subscribe, useSnapshot } from "valtio";
 
 /**
  * Tracks the height of the topmost formSheet so overlay buttons
@@ -26,88 +26,69 @@ type SheetEntry = {
   presentedAt: number;
 };
 
-export const useSheetStore = create<{
-  sheets: Record<string, SheetEntry>;
-}>(() => ({
-  sheets: {},
-}));
+export const sheetState = proxy<Record<string, SheetEntry>>({});
+
+export function useSheets() {
+  return useSnapshot(sheetState);
+}
 
 export function setSheetHeight(id: string, height: number) {
-  useSheetStore.setState((state) => {
-    const existing = state.sheets[id];
-    const wasOpen = existing && existing.height > 0;
-    const isOpen = height > 0;
-    return {
-      sheets: {
-        ...state.sheets,
-        [id]: {
-          height,
-          presentedAt:
-            !wasOpen && isOpen ? Date.now() : (existing?.presentedAt ?? 0),
-        },
-      },
-    };
-  });
+  const existing = sheetState[id];
+  const wasOpen = existing && existing.height > 0;
+  const isOpen = height > 0;
+  sheetState[id] = {
+    height,
+    presentedAt:
+      !wasOpen && isOpen ? Date.now() : (existing?.presentedAt ?? 0),
+  };
 }
 
 export function removeSheet(id: string) {
-  useSheetStore.setState((state) => {
-    const { [id]: _, ...rest } = state.sheets;
-    return { sheets: rest };
-  });
+  delete sheetState[id];
 }
 
 /** Height of the topmost open sheet (0 if none). */
-export function getTopSheetHeight(sheets: Record<string, SheetEntry>): number {
+export function getTopSheetHeight(
+  sheets: Record<string, SheetEntry> = sheetState,
+): number {
   const entries = Object.values(sheets).filter((e) => e.height > 0);
   if (entries.length === 0) return 0;
   return entries.reduce((a, b) => (a.presentedAt > b.presentedAt ? a : b))
     .height;
 }
 
-/**
- * Returns the topmost sheet height as a plain number, re-renders on change.
- */
+/** Topmost sheet height as a plain number, re-renders on change. */
 export function useTopSheetHeight(): number {
-  return useSheetStore((s) => getTopSheetHeight(s.sheets));
+  return getTopSheetHeight(useSheets());
 }
 
-/**
- * Returns the topmost sheet height as an animated shared value.
- */
+/** Topmost sheet height as an animated shared value. */
 export function useSheetHeight(): SharedValue<number> {
-  const animated = useSharedValue(
-    getTopSheetHeight(useSheetStore.getState().sheets),
-  );
+  const animated = useSharedValue(getTopSheetHeight());
 
   useEffect(() => {
-    return useSheetStore.subscribe((s) => {
-      animated.value = withTiming(getTopSheetHeight(s.sheets), {
-        duration: 50,
-      });
+    return subscribe(sheetState, () => {
+      animated.value = withTiming(getTopSheetHeight(), { duration: 50 });
     });
   }, [animated]);
 
   return animated;
 }
 
-/**
- * Returns a ref that always holds the current topmost sheet height
- * without triggering re-renders.
- */
+/** Ref that always holds the current topmost sheet height without re-renders. */
 export function useSheetHeightRef(): React.RefObject<number> {
-  const ref = useRef(getTopSheetHeight(useSheetStore.getState().sheets));
+  const ref = useRef(getTopSheetHeight());
   useEffect(() => {
-    return useSheetStore.subscribe((s) => {
-      ref.current = getTopSheetHeight(s.sheets);
+    return subscribe(sheetState, () => {
+      ref.current = getTopSheetHeight();
     });
   }, []);
   return ref;
 }
 
 /**
- * Call from each formSheet screen's root View onLayout.
- * Reports the sheet's content height continuously.
+ * Call from each formSheet screen's root View onLayout. Reports the
+ * sheet's content height continuously.
  */
 export function useSheetReporter(id: string) {
   useEffect(() => {
@@ -127,9 +108,7 @@ export function useSheetReporter(id: string) {
   return { onLayout, ref: viewRef };
 }
 
-/**
- * Returns an animated style that shifts content up by the topmost sheet's height.
- */
+/** Animated style that shifts content up by the topmost sheet's height. */
 export function useSheetOffset() {
   const sheetHeight = useSheetHeight();
 

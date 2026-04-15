@@ -1,20 +1,18 @@
 import {
+  aisState,
   clearAIS,
   flushAIS,
   pruneStaleVessels,
   updateAISVessel,
-  useAIS,
 } from "@/ais/hooks/useAIS";
 
-const initialState = useAIS.getState();
-
 beforeEach(() => {
-  useAIS.setState(initialState, true);
+  clearAIS();
 });
 
 describe("useAIS", () => {
   it("starts with no vessels", () => {
-    expect(useAIS.getState().vessels).toEqual({});
+    expect(aisState.vessels).toEqual({});
   });
 
   describe("updateAISVessel", () => {
@@ -28,7 +26,7 @@ describe("useAIS", () => {
       });
       flushAIS();
 
-      const vessel = useAIS.getState().vessels["211234567"];
+      const vessel = aisState.vessels["211234567"];
       expect(vessel).toBeDefined();
       expect(vessel.mmsi).toBe("211234567");
       expect(vessel.data["navigation.position"]?.value).toEqual({
@@ -49,7 +47,7 @@ describe("useAIS", () => {
       flushAIS();
       const after = Date.now();
 
-      const vessel = useAIS.getState().vessels["211234567"];
+      const vessel = aisState.vessels["211234567"];
       expect(vessel.lastSeen).toBeGreaterThanOrEqual(before);
       expect(vessel.lastSeen).toBeLessThanOrEqual(after);
     });
@@ -71,7 +69,7 @@ describe("useAIS", () => {
       });
       flushAIS();
 
-      const vessel = useAIS.getState().vessels["211234567"];
+      const vessel = aisState.vessels["211234567"];
       expect(vessel.data["navigation.position"]).toBeDefined();
       expect(vessel.data["navigation.speedOverGround"]?.value).toBe(3.5);
     });
@@ -93,10 +91,9 @@ describe("useAIS", () => {
       });
       flushAIS();
 
-      const vessels = useAIS.getState().vessels;
-      expect(Object.keys(vessels)).toHaveLength(2);
-      expect(vessels["211234567"].data["navigation.speedOverGround"]?.value).toBe(3.5);
-      expect(vessels["311234567"].data["navigation.speedOverGround"]?.value).toBe(5.0);
+      expect(Object.keys(aisState.vessels)).toHaveLength(2);
+      expect(aisState.vessels["211234567"].data["navigation.speedOverGround"]?.value).toBe(3.5);
+      expect(aisState.vessels["311234567"].data["navigation.speedOverGround"]?.value).toBe(5.0);
     });
   });
 
@@ -119,21 +116,12 @@ describe("useAIS", () => {
       flushAIS();
 
       // Manually backdate
-      useAIS.setState((s) => ({
-        vessels: {
-          ...s.vessels,
-          "311234567": {
-            ...s.vessels["311234567"],
-            lastSeen: Date.now() - 15 * 60 * 1000, // 15 min ago
-          },
-        },
-      }));
+      aisState.vessels["311234567"].lastSeen = Date.now() - 15 * 60 * 1000;
 
       pruneStaleVessels(10 * 60 * 1000); // 10 min threshold
 
-      const vessels = useAIS.getState().vessels;
-      expect(vessels["211234567"]).toBeDefined();
-      expect(vessels["311234567"]).toBeUndefined();
+      expect(aisState.vessels["211234567"]).toBeDefined();
+      expect(aisState.vessels["311234567"]).toBeUndefined();
     });
 
     it("keeps all vessels if none are stale", () => {
@@ -147,7 +135,7 @@ describe("useAIS", () => {
       flushAIS();
 
       pruneStaleVessels(10 * 60 * 1000);
-      expect(Object.keys(useAIS.getState().vessels)).toHaveLength(1);
+      expect(Object.keys(aisState.vessels)).toHaveLength(1);
     });
   });
 
@@ -162,7 +150,7 @@ describe("useAIS", () => {
       });
       flushAIS();
       clearAIS();
-      expect(useAIS.getState().vessels).toEqual({});
+      expect(aisState.vessels).toEqual({});
     });
   });
 });

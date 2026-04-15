@@ -1,4 +1,4 @@
-import { useCameraPosition } from "@/map/hooks/useCameraPosition";
+import { cameraPositionState } from "@/map/hooks/useCameraPosition";
 import { useMapStyle } from "@/charts/hooks/useCharts";
 import { mapRef } from "@/map/hooks/useMapRef";
 import {
@@ -54,7 +54,7 @@ export default function ChartView() {
     // Scale the leg-hit threshold with zoom so it's always ~LEG_HIT_PIXELS
     // of screen slop regardless of how zoomed in/out the map is.
     const LEG_HIT_PIXELS = 44;
-    const zoom = useCameraPosition.getState().zoom ?? 10;
+    const zoom = cameraPositionState.zoom ?? 10;
     const thresholdMeters = metersPerPixel(zoom, lat) * LEG_HIT_PIXELS;
 
     // Check if near a leg line — insert between waypoints, otherwise append

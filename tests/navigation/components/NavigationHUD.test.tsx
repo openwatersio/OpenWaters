@@ -1,43 +1,39 @@
 import { resetInstrumentStore, updatePaths } from '@/instruments/hooks/useInstruments';
-import { NavigationState, useNavigation } from '@/navigation/hooks/useNavigation';
-import { usePreferredUnits } from '@/hooks/usePreferredUnits';
-import { trackRecordingState } from '@/tracks/hooks/useTrackRecording';
+import { NavigationState, navigationState, resetNavigation } from '@/navigation/hooks/useNavigation';
+import { resetPreferredUnits } from '@/hooks/usePreferredUnits';
+import { resetTrackRecording, trackRecordingState } from '@/tracks/hooks/useTrackRecording';
 import NavigationHUD from '@/navigation/components/NavigationHUD';
 import { render, screen } from '@testing-library/react-native';
 
-const initialNavState = useNavigation.getState();
-const initialUnitsState = usePreferredUnits.getState();
-const initialTrackState = { ...trackRecordingState };
-
 beforeEach(() => {
-  useNavigation.setState(initialNavState, true);
+  resetNavigation();
   resetInstrumentStore();
-  usePreferredUnits.setState(initialUnitsState, true);
-  Object.assign(trackRecordingState, initialTrackState);
+  resetPreferredUnits();
+  resetTrackRecording();
 });
 
 describe('NavigationHUD', () => {
   it('is hidden when moored, not recording, and no instrument data', () => {
-    useNavigation.setState({ state: NavigationState.Moored });
+    Object.assign(navigationState, { state: NavigationState.Moored });
     const { toJSON } = render(<NavigationHUD />);
     expect(toJSON()).toBeNull();
   });
 
   it('renders SOG when underway', () => {
-    useNavigation.setState({ state: NavigationState.Underway });
+    Object.assign(navigationState, { state: NavigationState.Underway });
     render(<NavigationHUD />);
     expect(screen.getByText('SOG')).toBeTruthy();
   });
 
   it('converts speed to the preferred unit', () => {
-    useNavigation.setState({ state: NavigationState.Underway, speed: 1 });
+    Object.assign(navigationState, { state: NavigationState.Underway, speed: 1 });
     render(<NavigationHUD />);
     // 1 m/s ≈ 1.9 knots (default unit)
     expect(screen.getByText('1.9')).toBeTruthy();
   });
 
   it('is visible when recording even if moored', () => {
-    useNavigation.setState({ state: NavigationState.Moored });
+    Object.assign(navigationState, { state: NavigationState.Moored });
     Object.assign(trackRecordingState, {
       track: { id: 1, name: null, started_at: new Date().toISOString(), ended_at: null, distance: 0, color: null },
     });
@@ -46,7 +42,7 @@ describe('NavigationHUD', () => {
   });
 
   it('is visible when instrument data exists even if moored', () => {
-    useNavigation.setState({ state: NavigationState.Moored });
+    Object.assign(navigationState, { state: NavigationState.Moored });
     updatePaths({
       "environment.depth.belowTransducer": {
         value: 8.5,
@@ -59,7 +55,7 @@ describe('NavigationHUD', () => {
   });
 
   it('shows depth from instruments when available', () => {
-    useNavigation.setState({ state: NavigationState.Underway });
+    Object.assign(navigationState, { state: NavigationState.Underway });
     updatePaths({
       "environment.depth.belowTransducer": {
         value: 8.5,

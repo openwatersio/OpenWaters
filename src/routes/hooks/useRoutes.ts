@@ -1,6 +1,3 @@
-import { setFollowUserLocation } from "@/map/hooks/useCameraState";
-import { useDbQuery } from "@/hooks/useDbQuery";
-import { startTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import {
   deleteRoute as dbDeleteRoute,
   getAllRoutes,
@@ -13,15 +10,13 @@ import {
   type RoutesOrder,
 } from "@/database";
 import { findNearestLegIndex } from "@/geo";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useDbQuery } from "@/hooks/useDbQuery";
+import { setFollowUserLocation } from "@/map/hooks/useCameraState";
+import { persistProxy } from "@/persistProxy";
+import { startTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import { getDistance } from "geolib";
 import { useCallback, useEffect } from "react";
-import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
-
-type Nullable<T> = { [K in keyof T]: T[K] | null };
-
-// -- Active route store --
+import { proxy, useSnapshot } from "valtio";
 
 let nextWaypointKey = 0;
 
@@ -47,17 +42,28 @@ export enum RouteMode {
 }
 
 /**
- * The single "active" route the app is currently working with. Mirrors the
- * `Route` type with `id` / timestamps nullable until the first save, plus
- * the in-memory drafting + navigation state.
+ * The active route — route metadata flattened alongside in-memory drafting
+ * and navigation state. `mode === null` means "no active route".
+ * `id === null` means the route is an unsaved draft.
  */
-export type ActiveRoute = Nullable<Route> & {
+export type ActiveRoute = {
+  /** `null` for an unsaved draft; DB id once saved. */
+  id: number | null;
+  name: string | null;
+  created_at: string;
+  updated_at: string;
+  distance: number;
   points: ActiveWaypoint[];
-
-  mode: RouteMode;
-
-  /** The currently selected waypoint in viewing/editing, or the current target waypoint in navigating. */
+  mode: RouteMode | null;
+  /** The currently selected waypoint in viewing/editing, or the current
+   *  target waypoint in navigating. */
   activeIndex: number | null;
+
+  // -- computed --
+  readonly isActive: boolean;
+  readonly isNavigating: boolean;
+  readonly isEditing: boolean;
+  readonly isViewing: boolean;
 };
 
 type SlimPersistedRoute = {
@@ -66,46 +72,81 @@ type SlimPersistedRoute = {
   activeIndex: number | null;
 };
 
-export const useActiveRoute = create<ActiveRoute | null>()(
-  persist((): ActiveRoute | null => null, {
-    name: "active-route",
-    storage: createJSONStorage(() => AsyncStorage),
-    // Only persist a slim subset, and only when mid-navigation. The rest is
-    // rehydrated from the DB on app start.
-    partialize: (state) => {
-      if (!state || state.mode !== RouteMode.Navigating || state.id == null)
-        return null;
-      return {
-        id: state.id,
-        mode: state.mode,
-        activeIndex: state.activeIndex,
-      };
-    },
-    // The default merge does `{ ...current, ...persisted }`, which turns a
-    // `null` store into `{}`. Bypass that: leave the store `null`
-    // synchronously, and kick off an async reload from the DB if there was
-    // anything persisted.
-    merge: (persistedState, currentState) => {
-      const slim = persistedState as SlimPersistedRoute | null | undefined;
-      if (slim?.id != null) {
-        setActiveRoute(slim.id, {
-          mode: slim.mode ?? RouteMode.Navigating,
-          activeIndex: slim.activeIndex ?? 0,
-        });
-      }
-      return currentState;
-    },
-  }),
-);
+const EMPTY: Omit<
+  ActiveRoute,
+  "isActive" | "isNavigating" | "isEditing" | "isViewing"
+> = {
+  id: null,
+  name: null,
+  created_at: "",
+  updated_at: "",
+  distance: 0,
+  points: [],
+  mode: null,
+  activeIndex: null,
+};
 
-/** Direct (non-hook) access for imperative call sites. */
-export function getActiveRoute(): ActiveRoute | null {
-  return useActiveRoute.getState();
+export const activeRouteState = proxy<ActiveRoute>({
+  ...EMPTY,
+  get isActive(): boolean {
+    return this.mode !== null;
+  },
+  get isNavigating(): boolean {
+    return this.mode === RouteMode.Navigating;
+  },
+  get isEditing(): boolean {
+    return this.mode === RouteMode.Editing;
+  },
+  get isViewing(): boolean {
+    return this.mode === RouteMode.Viewing;
+  },
+});
+
+persistProxy<ActiveRoute, SlimPersistedRoute | null>(activeRouteState, {
+  name: "active-route",
+  // Only persist a slim subset, and only when mid-navigation. Everything
+  // else is rehydrated from the DB on app start.
+  partialize: (state) => {
+    if (state.mode !== RouteMode.Navigating || state.id == null) {
+      return null;
+    }
+    return {
+      id: state.id,
+      mode: state.mode,
+      activeIndex: state.activeIndex,
+    };
+  },
+  // Async reload from the DB if there was anything persisted.
+  hydrate: (_state, persisted) => {
+    if (persisted?.id != null) {
+      setActiveRoute(persisted.id, {
+        mode: persisted.mode ?? RouteMode.Navigating,
+        activeIndex: persisted.activeIndex ?? 0,
+      });
+    }
+  },
+});
+
+/**
+ * React hook — returns a tracked snapshot of the active route state.
+ * Destructure what you need; reads are tracked per-field:
+ *
+ *   const { id, name, points, mode, activeIndex,
+ *           isActive, isNavigating, isEditing, isViewing } = useActiveRoute();
+ */
+export function useActiveRoute() {
+  return useSnapshot(activeRouteState);
 }
 
-/** Internal: fully replace the store value. */
-function setStore(next: ActiveRoute | null): void {
-  useActiveRoute.setState(next, true);
+/** Direct (non-hook) access for imperative call sites. Returns the live
+ *  proxy itself — read `.mode`, `.name`, `.points`, etc. */
+export function getActiveRoute() {
+  return activeRouteState;
+}
+
+/** Internal: reset to the empty (no active route) state. */
+function clearStore() {
+  Object.assign(activeRouteState, { ...EMPTY });
 }
 
 // -- Hooks --
@@ -113,12 +154,11 @@ function setStore(next: ActiveRoute | null): void {
 /**
  * Loads the route with the given id into the active store on mount.
  * Subsequent calls with the same id are no-ops (preserve in-flight edits).
- * Returns the active route value.
+ * Returns the DB-backed route (or null while loading).
  */
-export function useRoute(id: number): ActiveRoute | null {
+export function useRoute(id: number) {
   useEffect(() => {
-    const current = getActiveRoute();
-    if (current?.id === id) return; // already loaded — preserve edits
+    if (activeRouteState.id === id) return; // already loaded
     setActiveRoute(id);
   }, [id]);
   return useActiveRoute();
@@ -135,15 +175,11 @@ export async function setActiveRoute(
 ) {
   const [route, points] = await Promise.all([getRoute(id), getRoutePoints(id)]);
   if (!route) {
-    setStore(null);
+    clearStore();
     return;
   }
-  setStore({
-    id: route.id,
-    name: route.name,
-    created_at: route.created_at,
-    updated_at: route.updated_at,
-    distance: route.distance,
+  Object.assign(activeRouteState, {
+    ...route,
     points: points.map((p) => ({
       key: nextWaypointKey++,
       latitude: p.latitude,
@@ -170,59 +206,30 @@ export function useRoutes({ order }: { order: RoutesOrder }): Route[] {
  * `/route/new` screen as the entry point for creating a new route.
  */
 export function startRoute() {
-  setStore({
-    id: null,
-    name: null,
-    created_at: null,
-    updated_at: null,
-    distance: 0,
-    points: [],
+  Object.assign(activeRouteState, {
+    ...EMPTY,
     mode: RouteMode.Editing,
-    activeIndex: null,
   });
 }
 
 /** Clear the active route. Called by route screens on dismiss/cancel. */
 export function clearActiveRoute() {
-  setStore(null);
+  clearStore();
 }
 
 export function setRouteName(name: string | null) {
-  updateActiveRoute({ name });
-}
-
-/**
- * Helper for mutations that modify the waypoint list. Provides a shallow
- * copy of `points` so callers can mutate it in-place with splice/push/etc.
- * without touching the store's original array.
- *
- * The callback can:
- * - Just mutate `points` and return nothing (void) — the new array is
- *   written back automatically.
- * - Return additional route fields (e.g. `{ activeIndex }`) to update
- *   alongside the points change.
- */
-function updateRouteWaypoints(
-  callback: (route: ActiveRoute) => Partial<ActiveRoute> | void,
-) {
-  updateActiveRoute((route) => {
-    const { points: oldPoints, ...rest } = route;
-    // Create a new points array to trigger updates.
-    const points = [...oldPoints];
-    return {
-      points,
-      ...(callback({ ...rest, points }) ?? {}),
-    };
-  });
+  editActiveRoute({ name });
 }
 
 export function addRouteWaypoint(
   point: { latitude: number; longitude: number },
-  index?: number,
+  insertAt: number = activeRouteState.points.length,
 ) {
-  updateRouteWaypoints(({ points }) => {
-    const insertAt = index ?? points.length;
-    points.splice(insertAt, 0, { ...point, key: nextWaypointKey++ });
+  editActiveRoute(({ points }) => {
+    points.splice(insertAt, 0, {
+      ...point,
+      key: nextWaypointKey++,
+    });
   });
 }
 
@@ -230,58 +237,59 @@ export function updateRouteWaypoint(
   index: number,
   fields: Partial<Pick<ActiveWaypoint, "latitude" | "longitude">>,
 ) {
-  updateRouteWaypoints(({ points }) => {
+  editActiveRoute(({ points }) => {
     points.splice(index, 1, { ...points[index], ...fields });
   });
 }
 
 export function moveRouteWaypoint(fromIndex: number, toIndex: number) {
-  updateRouteWaypoints(({ points, activeIndex }) => {
+  editActiveRoute(({ points, activeIndex }) => {
     const [moved] = points.splice(fromIndex, 1);
     points.splice(toIndex, 0, moved);
 
     if (activeIndex === fromIndex) {
-      activeIndex = toIndex;
+      return { activeIndex: toIndex };
     } else if (activeIndex !== null) {
       // Shift activeIndex to account for the removal and insertion
       if (activeIndex > fromIndex) activeIndex--;
       if (activeIndex >= toIndex) activeIndex++;
+      return { activeIndex };
     }
-
-    return { points, activeIndex };
   });
 }
 
 export function removeRouteWaypoint(index: number) {
-  updateRouteWaypoints(({ points, activeIndex }) => {
+  editActiveRoute(({ points, activeIndex }) => {
     points.splice(index, 1);
     if (activeIndex === index) {
-      activeIndex = null;
+      return { activeIndex: null };
     } else if (activeIndex !== null && activeIndex > index) {
-      activeIndex = activeIndex - 1;
+      return { activeIndex: activeIndex - 1 };
     }
-    return { points, activeIndex };
   });
 }
 
 export function setActiveIndex(index: number | null) {
-  updateActiveRoute({ activeIndex: index });
+  editActiveRoute({ activeIndex: index });
 }
 
-/** Internal: apply a mutation to the active route. */
-function updateActiveRoute(
-  mutation:
+/** Internal: apply a mutation, flipping to editing mode by default. Only
+ *  runs if there's an active route context (mode !== null).
+ *
+ *  Accepts either a partial update object or a callback that receives the
+ *  current route and returns a partial update.
+ */
+function editActiveRoute(
+  callback:
     | Partial<ActiveRoute>
-    | ((current: ActiveRoute) => Partial<ActiveRoute>),
+    | ((route: ActiveRoute) => Partial<ActiveRoute> | void),
 ) {
-  // Single setState call to avoid intermediate renders where mode has
-  // flipped to Editing but the mutation hasn't been applied yet.
-  useActiveRoute.setState((state) => {
-    if (!state) return state;
-    const delta = typeof mutation === "function" ? mutation(state) : mutation;
-    // Any mutation flips to editing mode by default,
-    // but can be overridden by the mutator if needed.
-    return { mode: RouteMode.Editing, ...delta };
+  if (activeRouteState.mode === null) return;
+  Object.assign(activeRouteState, {
+    mode: RouteMode.Editing,
+    ...(typeof callback === "function"
+      ? (callback(activeRouteState) ?? {})
+      : callback),
   });
 }
 
@@ -295,43 +303,37 @@ function updateActiveRoute(
  * Returns the route id.
  */
 export async function saveActiveRoute(): Promise<number> {
-  const active = getActiveRoute();
-  if (!active) throw new Error("No active route to save");
+  if (activeRouteState.mode === null) {
+    throw new Error("No active route to save");
+  }
 
-  const distance = computeTotalDistance(active.points);
-  const points = active.points.map(({ latitude, longitude }) => ({
+  const distance = computeTotalDistance(activeRouteState.points);
+  const points = activeRouteState.points.map(({ latitude, longitude }) => ({
     latitude,
     longitude,
   }));
+  const { id: existingId, name } = activeRouteState;
 
   let routeId: number;
-  if (active.id == null) {
-    const created = await insertRoute(active.name ?? undefined);
+  if (existingId == null) {
+    const created = await insertRoute(name ?? undefined);
     routeId = created.id;
-    if (active.name != null || distance > 0) {
-      await updateRoute(routeId, { distance, name: active.name ?? null });
+    if (name != null || distance > 0) {
+      await updateRoute(routeId, { distance, name });
     }
     await replaceRoutePoints(routeId, points);
   } else {
-    routeId = active.id;
-    await updateRoute(routeId, { name: active.name, distance });
+    routeId = existingId;
+    await updateRoute(routeId, { name, distance });
     await replaceRoutePoints(routeId, points);
   }
 
   // Refresh active route metadata from DB (id/timestamps/distance) but keep
   // the in-memory points (and their stable keys) intact.
   const fresh = await getRoute(routeId);
-  const latest = getActiveRoute();
-  if (fresh && latest) {
-    setStore({
-      ...latest,
-      id: fresh.id,
-      name: fresh.name,
-      created_at: fresh.created_at,
-      updated_at: fresh.updated_at,
-      distance: fresh.distance,
-      mode: RouteMode.Viewing,
-    });
+  if (fresh && activeRouteState.mode !== null) {
+    Object.assign(activeRouteState, fresh);
+    activeRouteState.mode = RouteMode.Viewing;
   }
 
   return routeId;
@@ -361,32 +363,21 @@ export type StartNavigationOptions = {
   from?: { latitude: number; longitude: number };
 };
 
-/**
- * Begin navigating the given route. Loads the route into the active store
- * if it isn't already, then sets `mode = "navigating"` and picks the
- * starting waypoint.
- *
- * If `from` is provided, snaps the active waypoint to the end of the leg
- * the vessel is currently on — so resuming mid-route picks up where you
- * actually are, not at the first waypoint.
- */
 export async function startNavigation(
   routeId: number,
   options: StartNavigationOptions = {},
 ) {
-  let route = getActiveRoute();
-  if (route?.id !== routeId) {
+  if (activeRouteState.id !== routeId) {
     await setActiveRoute(routeId);
-    route = getActiveRoute();
   }
-  if (!route) return;
+  if (activeRouteState.id !== routeId) return;
 
   let activeIndex = options.startIndex ?? 0;
-  if (options.from && route.points.length >= 2) {
+  if (options.from && activeRouteState.points.length >= 2) {
     const snapped = findNearestLegIndex(
       options.from.latitude,
       options.from.longitude,
-      route.points,
+      activeRouteState.points as ActiveWaypoint[],
       START_NAV_SNAP_THRESHOLD_M,
     );
     if (snapped != null) {
@@ -394,38 +385,40 @@ export async function startNavigation(
     }
   }
   // Clamp to valid range.
-  if (route.points.length > 0) {
-    activeIndex = Math.max(0, Math.min(activeIndex, route.points.length - 1));
+  if (activeRouteState.points.length > 0) {
+    activeIndex = Math.max(
+      0,
+      Math.min(activeIndex, activeRouteState.points.length - 1),
+    );
   } else {
     activeIndex = 0;
   }
 
-  setStore({ ...route, mode: RouteMode.Navigating, activeIndex });
+  activeRouteState.mode = RouteMode.Navigating;
+  activeRouteState.activeIndex = activeIndex;
   setFollowUserLocation(true);
   startTrackRecording();
 }
 
 export function advanceToNext() {
-  const current = getActiveRoute();
-  if (!current) return;
-  const next = (current.activeIndex ?? 0) + 1;
-  setStore({
-    ...current,
-    activeIndex: Math.min(next, current.points.length - 1),
-  });
+  if (activeRouteState.mode === null) return;
+  const next = (activeRouteState.activeIndex ?? 0) + 1;
+  activeRouteState.activeIndex = Math.min(
+    next,
+    activeRouteState.points.length - 1,
+  );
 }
 
 export function goToPrevious() {
-  const current = getActiveRoute();
-  if (!current) return;
-  const prev = (current.activeIndex ?? 0) - 1;
-  setStore({ ...current, activeIndex: Math.max(0, prev) });
+  if (activeRouteState.mode === null) return;
+  const prev = (activeRouteState.activeIndex ?? 0) - 1;
+  activeRouteState.activeIndex = Math.max(0, prev);
 }
 
 export function stopNavigation() {
-  const current = getActiveRoute();
-  if (!current) return;
-  setStore({ ...current, mode: RouteMode.Viewing, activeIndex: null });
+  if (activeRouteState.mode === null) return;
+  activeRouteState.mode = RouteMode.Viewing;
+  activeRouteState.activeIndex = null;
 }
 
 // -- Route-list mutations --
@@ -433,17 +426,14 @@ export function stopNavigation() {
 export async function handleDeleteRoute(routeId: number) {
   await dbDeleteRoute(routeId);
   // If the deleted route is the active one, clear it.
-  const active = getActiveRoute();
-  if (active?.id === routeId) clearActiveRoute();
+  if (activeRouteState.id === routeId) clearStore();
 }
 
 export async function handleRenameRoute(routeId: number, name: string) {
   const trimmed = name.trim();
   if (!trimmed) return;
   await updateRoute(routeId, { name: trimmed });
-  // If the renamed route is the active one, reflect the change in memory.
-  const active = getActiveRoute();
-  if (active?.id === routeId) {
-    setStore({ ...active, name: trimmed });
+  if (activeRouteState.id === routeId) {
+    activeRouteState.name = trimmed;
   }
 }

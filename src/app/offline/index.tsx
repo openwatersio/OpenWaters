@@ -1,6 +1,5 @@
-import SheetView from "@/ui/SheetView";
-import { useCharts } from "@/charts/hooks/useCharts";
 import { getAvailableDownloads } from "@/charts/hooks/useAvailableDownloads";
+import { useCharts } from "@/charts/hooks/useCharts";
 import { deleteDownload, useDownloads } from "@/charts/hooks/useDownloads";
 import {
   loadPacks,
@@ -10,14 +9,14 @@ import {
 } from "@/charts/hooks/useOfflinePacks";
 import {
   AMBIENT_CACHE_OPTIONS,
-  TILE_LIMIT_OPTIONS,
   setAmbientCacheSize,
   setTileCountLimit,
+  TILE_LIMIT_OPTIONS,
   useOfflineSettings,
 } from "@/charts/hooks/useOfflineSettings";
-import useTheme from "@/hooks/useTheme";
 import { formatBytes } from "@/format";
-import { getFreeDiskStorageAsync } from "expo-file-system/legacy";
+import useTheme from "@/hooks/useTheme";
+import SheetView from "@/ui/SheetView";
 import {
   Button,
   Host,
@@ -34,22 +33,22 @@ import {
   foregroundStyle,
   tag,
 } from "@expo/ui/swift-ui/modifiers";
+import { getFreeDiskStorageAsync } from "expo-file-system/legacy";
 import { router, Stack } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 
 export default function OfflineManagement() {
   const charts = useCharts();
-  const allPacks = useOfflinePacks((s) => s.packs);
-  const allDownloads = useDownloads((s) => s.downloads);
-  const ambientCacheSize = useOfflineSettings((s) => s.ambientCacheSize);
-  const tileCountLimit = useOfflineSettings((s) => s.tileCountLimit);
+  const { packs: allPacks } = useOfflinePacks();
+  const { downloads: allDownloads } = useDownloads();
+  const { ambientCacheSize, tileCountLimit } = useOfflineSettings();
   const theme = useTheme();
   const [freeSpace, setFreeSpace] = useState<number | null>(null);
 
   useEffect(() => {
     loadPacks();
-    getFreeDiskStorageAsync().then(setFreeSpace).catch(() => {});
+    getFreeDiskStorageAsync().then(setFreeSpace).catch(() => { });
   }, []);
 
   // Aggregate offline data per chart

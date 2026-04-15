@@ -49,7 +49,7 @@ function atonName(aton: AtoN): string {
 }
 
 export default function AtoNLayer() {
-  const atons = useAtoN((s) => s.atons);
+  const atons = useAtoN();
 
   const geojson = useMemo((): GeoJSON.FeatureCollection => {
     const features: GeoJSON.Feature[] = Object.values(atons)
