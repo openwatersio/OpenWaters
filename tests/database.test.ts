@@ -55,6 +55,12 @@ const mockDb = {
       const id = args[0];
       return rows.route_points.find((p) => p.id === id) ?? null;
     }
+    if (sql.includes("MAX(sequence)")) {
+      const trackId = args[0];
+      const points = rows.track_points.filter((p) => p.track_id === trackId);
+      const max = points.reduce((m, p) => Math.max(m, p.sequence ?? -1), -1);
+      return { next: max + 1 };
+    }
     if (sql.includes("sqlite_master")) {
       // No charts table in test mock — skip migration
       return { count: 0 };
@@ -67,7 +73,9 @@ const mockDb = {
     }
     if (sql.includes("FROM track_points WHERE track_id")) {
       const trackId = args[0];
-      return rows.track_points.filter((p) => p.track_id === trackId);
+      return rows.track_points
+        .filter((p) => p.track_id === trackId)
+        .sort((a: any, b: any) => a.sequence - b.sequence);
     }
     if (sql.includes("FROM markers ORDER BY")) {
       return [...rows.markers].reverse();
@@ -102,7 +110,7 @@ const mockDb = {
     return [];
   }),
   runAsync: jest.fn(async (sql: string, ...args: any[]) => {
-    if (sql.includes("INSERT INTO tracks")) {
+    if (sql.includes("INSERT INTO tracks (started_at)")) {
       const id = ++autoIncrement.tracks;
       rows.tracks.push({
         id,
@@ -115,18 +123,41 @@ const mockDb = {
       return { lastInsertRowId: id };
     }
     if (sql.includes("INSERT INTO track_points")) {
-      const id = ++autoIncrement.track_points;
-      rows.track_points.push({
+      // Multi-row INSERT: 8 args per row.
+      let lastId = 0;
+      for (let i = 0; i < args.length; i += 8) {
+        const id = ++autoIncrement.track_points;
+        lastId = id;
+        rows.track_points.push({
+          id,
+          track_id: args[i + 0],
+          sequence: args[i + 1],
+          latitude: args[i + 2],
+          longitude: args[i + 3],
+          speed: args[i + 4],
+          heading: args[i + 5],
+          accuracy: args[i + 6],
+          timestamp: args[i + 7],
+        });
+      }
+      return { lastInsertRowId: lastId };
+    }
+    if (sql.includes("INSERT INTO tracks (name,")) {
+      const id = ++autoIncrement.tracks;
+      rows.tracks.push({
         id,
-        track_id: args[0],
-        latitude: args[1],
-        longitude: args[2],
-        speed: args[3],
-        heading: args[4],
-        accuracy: args[5],
-        timestamp: args[6],
+        name: args[0],
+        started_at: args[1],
+        ended_at: args[2],
+        distance: args[3] ?? 0,
+        color: null,
       });
       return { lastInsertRowId: id };
+    }
+    if (sql.match(/UPDATE tracks SET distance = \? WHERE id/)) {
+      const track = rows.tracks.find((t) => t.id === args[1]);
+      if (track) track.distance = args[0];
+      return { changes: track ? 1 : 0 };
     }
     if (sql.includes("INSERT INTO markers")) {
       const id = ++autoIncrement.markers;
@@ -278,6 +309,7 @@ const mockDb = {
   withTransactionAsync: jest.fn(async (task: () => Promise<void>) => {
     await task();
   }),
+  closeAsync: jest.fn(async () => {}),
 };
 
 jest.mock("expo-sqlite", () => ({

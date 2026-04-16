@@ -34,12 +34,16 @@ export function segmentDistance({ previous, current }: SegmentInputs): number {
   const meters = haversine(previous, current);
   if (meters === 0) return 0;
 
-  const elapsedMs =
-    new Date(current.timestamp).getTime() -
-    new Date(previous.timestamp).getTime();
-  if (elapsedMs > 0) {
-    const segmentSpeed = (meters / elapsedMs) * 1000;
-    if (segmentSpeed > MAX_SEGMENT_SPEED_MS) return 0;
+  // Timestamps are optional (imported tracks may lack them). Only run the
+  // impossible-speed check when both endpoints have timing.
+  if (current.timestamp && previous.timestamp) {
+    const elapsedMs =
+      new Date(current.timestamp).getTime() -
+      new Date(previous.timestamp).getTime();
+    if (elapsedMs > 0) {
+      const segmentSpeed = (meters / elapsedMs) * 1000;
+      if (segmentSpeed > MAX_SEGMENT_SPEED_MS) return 0;
+    }
   }
 
   const noiseFloor =

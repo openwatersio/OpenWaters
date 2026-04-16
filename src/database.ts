@@ -7,10 +7,18 @@ let db: SQLite.SQLiteDatabase | null = null;
 
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (db) return db;
+  // Run migrations on a connection without change listeners — schema changes
+  // that rebuild tables (DROP/RENAME) fail with "database table is locked"
+  // when the change-listener session holds references.
+  const migrationDb = await SQLite.openDatabaseAsync(DATABASE_NAME);
+  try {
+    await migrate(migrationDb);
+  } finally {
+    await migrationDb.closeAsync();
+  }
   db = await SQLite.openDatabaseAsync(DATABASE_NAME, {
     enableChangeListener: true,
   });
-  await migrate(db);
   return db;
 }
 
@@ -109,6 +117,40 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
   if (currentVersion < 8) {
     await db.execAsync("PRAGMA user_version = 8;");
   }
+
+  // Add track_points.sequence so imported tracks without timestamps can still
+  // be ordered. Make timestamp nullable since GPX <time> is optional. SQLite
+  // can't DROP NOT NULL in-place, so we rebuild the table. Order backfill uses
+  // ROW_NUMBER() over (track_id, timestamp, id) during the copy. The DROP+
+  // RENAME sequence requires change listeners to be paused, otherwise their
+  // internal triggers keep the old table open and we hit "table is locked".
+  if (currentVersion < 9) {
+    await db.execAsync(`
+      DROP TABLE IF EXISTS track_points_new;
+      CREATE TABLE track_points_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        track_id INTEGER NOT NULL,
+        sequence INTEGER NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        speed REAL,
+        heading REAL,
+        accuracy REAL,
+        timestamp TEXT,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+      );
+      INSERT INTO track_points_new (id, track_id, sequence, latitude, longitude, speed, heading, accuracy, timestamp)
+        SELECT id, track_id,
+               ROW_NUMBER() OVER (PARTITION BY track_id ORDER BY timestamp, id) - 1 AS sequence,
+               latitude, longitude, speed, heading, accuracy, timestamp
+        FROM track_points;
+      DROP TABLE track_points;
+      ALTER TABLE track_points_new RENAME TO track_points;
+      CREATE INDEX IF NOT EXISTS idx_track_points_track_id ON track_points(track_id);
+      CREATE INDEX IF NOT EXISTS idx_track_points_track_seq ON track_points(track_id, sequence);
+      PRAGMA user_version = 9;
+    `);
+  }
 }
 
 // -- Track operations --
@@ -125,12 +167,22 @@ export type Track = {
 export type TrackPoint = {
   id: number;
   track_id: number;
+  sequence: number;
   latitude: number;
   longitude: number;
   speed: number | null;
   heading: number | null;
   accuracy: number | null;
-  timestamp: string;
+  timestamp: string | null;
+};
+
+export type TrackPointFields = {
+  latitude: number;
+  longitude: number;
+  speed?: number | null;
+  heading?: number | null;
+  accuracy?: number | null;
+  timestamp?: string | null;
 };
 
 export async function startTrack(): Promise<Track> {
@@ -138,6 +190,31 @@ export async function startTrack(): Promise<Track> {
   const result = await db.runAsync(
     "INSERT INTO tracks (started_at) VALUES (?)",
     new Date().toISOString(),
+  );
+  const track = await db.getFirstAsync<Track>(
+    "SELECT * FROM tracks WHERE id = ?",
+    result.lastInsertRowId,
+  );
+  return track!;
+}
+
+/**
+ * Insert a pre-existing track (e.g., from GPX import) with an explicit
+ * name/start/end. `distance` is computed by the caller.
+ */
+export async function insertTrack(fields: {
+  name?: string | null;
+  started_at: string;
+  ended_at?: string | null;
+  distance?: number;
+}): Promise<Track> {
+  const db = await getDatabase();
+  const result = await db.runAsync(
+    "INSERT INTO tracks (name, started_at, ended_at, distance) VALUES (?, ?, ?, ?)",
+    fields.name ?? null,
+    fields.started_at,
+    fields.ended_at ?? null,
+    fields.distance ?? 0,
   );
   const track = await db.getFirstAsync<Track>(
     "SELECT * FROM tracks WHERE id = ?",
@@ -166,10 +243,12 @@ export async function insertTrackPoint(
   const { latitude, longitude, speed, heading, accuracy } = coords;
   const db = await getDatabase();
   const isoTimestamp = new Date(timestamp).toISOString();
+  const sequence = await nextSequence(db, trackId);
   const result = await db.runAsync(
-    `INSERT INTO track_points (track_id, latitude, longitude, speed, heading, accuracy, timestamp)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO track_points (track_id, sequence, latitude, longitude, speed, heading, accuracy, timestamp)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     trackId,
+    sequence,
     latitude,
     longitude,
     speed,
@@ -180,6 +259,7 @@ export async function insertTrackPoint(
   return {
     id: result.lastInsertRowId,
     track_id: trackId,
+    sequence,
     latitude,
     longitude,
     speed,
@@ -187,6 +267,65 @@ export async function insertTrackPoint(
     accuracy,
     timestamp: isoTimestamp,
   };
+}
+
+async function nextSequence(
+  db: SQLite.SQLiteDatabase,
+  trackId: number,
+): Promise<number> {
+  const row = await db.getFirstAsync<{ next: number }>(
+    "SELECT COALESCE(MAX(sequence), -1) + 1 AS next FROM track_points WHERE track_id = ?",
+    trackId,
+  );
+  return row?.next ?? 0;
+}
+
+/**
+ * Bulk-insert track points. Uses multi-row INSERTs in chunks to minimize
+ * round trips — important for GPX imports that can bring tens of thousands
+ * of points. Yields to the event loop between chunks so progress updates
+ * paint and the UI stays responsive. Deliberately no outer transaction:
+ * `enableChangeListener: true` already holds an implicit transaction and
+ * nested BEGIN fails.
+ */
+export async function insertTrackPoints(
+  trackId: number,
+  points: TrackPointFields[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<void> {
+  if (points.length === 0) return;
+  const db = await getDatabase();
+  const startSeq = await nextSequence(db, trackId);
+
+  // 1000 rows × 8 params = 8000 params per statement — well under SQLite's
+  // SQLITE_MAX_VARIABLE_NUMBER (32766 in modern builds).
+  // FIXME: can this use new syntax from SQLite 3.7.11? https://stackoverflow.com/questions/1609637/how-can-i-insert-multiple-rows-with-a-single-statement-in-sqlite
+  const CHUNK = 1000;
+  const COLS = 8;
+  for (let offset = 0; offset < points.length; offset += CHUNK) {
+    const batch = points.slice(offset, offset + CHUNK);
+    const placeholders = batch.map(() => "(?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
+    const values: (string | number | null)[] = new Array(batch.length * COLS);
+    for (let i = 0; i < batch.length; i++) {
+      const p = batch[i];
+      const base = i * COLS;
+      values[base + 0] = trackId;
+      values[base + 1] = startSeq + offset + i;
+      values[base + 2] = p.latitude;
+      values[base + 3] = p.longitude;
+      values[base + 4] = p.speed ?? null;
+      values[base + 5] = p.heading ?? null;
+      values[base + 6] = p.accuracy ?? null;
+      values[base + 7] = p.timestamp ?? null;
+    }
+    await db.runAsync(
+      `INSERT INTO track_points (track_id, sequence, latitude, longitude, speed, heading, accuracy, timestamp) VALUES ${placeholders}`,
+      ...values,
+    );
+    onProgress?.(Math.min(offset + batch.length, points.length), points.length);
+    // Yield so setState updates paint and the UI thread can breathe.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
 }
 
 export async function getTrack(trackId: number): Promise<Track | null> {
@@ -257,7 +396,7 @@ export async function getAllTracksWithStats(
 export async function getTrackPoints(trackId: number): Promise<TrackPoint[]> {
   const db = await getDatabase();
   return db.getAllAsync<TrackPoint>(
-    "SELECT * FROM track_points WHERE track_id = ? ORDER BY timestamp ASC",
+    "SELECT * FROM track_points WHERE track_id = ? ORDER BY sequence ASC",
     trackId,
   );
 }

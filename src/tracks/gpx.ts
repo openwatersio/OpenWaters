@@ -16,8 +16,8 @@ export function toGPX(track: Track, points: TrackPoint[]): string {
     const point: Record<string, unknown> = {
       "@_lat": p.latitude,
       "@_lon": p.longitude,
-      time: p.timestamp,
     };
+    if (p.timestamp) point.time = p.timestamp;
 
     if (p.speed != null || p.heading != null) {
       const ext: Record<string, unknown> = {};

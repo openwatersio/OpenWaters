@@ -59,7 +59,7 @@ export const trackRecordingState = proxy<State>({
     // Average over the time we have data for, not wall-clock. `distance`
     // only updates when a fix lands, so dividing by `now` would make the
     // average sag between fixes and snap back when one arrives.
-    if (!this.track || !this.lastPoint) return 0;
+    if (!this.track || !this.lastPoint || !this.lastPoint.timestamp) return 0;
     const ms =
       new Date(this.lastPoint.timestamp).getTime() -
       new Date(this.track.started_at).getTime();

@@ -14,6 +14,7 @@ const points: TrackPoint[] = [
   {
     id: 1,
     track_id: 1,
+    sequence: 0,
     latitude: 47.6062,
     longitude: -122.3321,
     speed: 2.5,
@@ -24,6 +25,7 @@ const points: TrackPoint[] = [
   {
     id: 2,
     track_id: 1,
+    sequence: 1,
     latitude: 47.607,
     longitude: -122.333,
     speed: 3.0,
@@ -79,6 +81,7 @@ describe("toGPX", () => {
       {
         id: 1,
         track_id: 1,
+    sequence: 0,
         latitude: 47.6,
         longitude: -122.3,
         speed: null,
