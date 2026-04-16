@@ -358,16 +358,11 @@ function computeTotalDistance(points: ActiveWaypoint[]): number {
 
 // -- Navigation mutators --
 
-/** Maximum distance (m) from a route that still counts as "on the route"
- *  when snapping to the nearest leg at the start of navigation. */
-const START_NAV_SNAP_THRESHOLD_M = 5000;
-
 export type StartNavigationOptions = {
-  /** Explicit starting waypoint index. Used if `from` is omitted or snap fails. */
+  /** Explicit starting waypoint index. Used if `from` is omitted. */
   startIndex?: number;
   /** Current vessel position. When provided, snaps the active waypoint to
-   *  the end of the nearest leg (within ~5 km). Falls back to `startIndex`
-   *  or the first waypoint if the position is too far from the route. */
+   *  the end of the nearest leg regardless of cross-track distance. */
   from?: { latitude: number; longitude: number };
 };
 
@@ -378,29 +373,24 @@ export async function startNavigation(
   if (activeRouteState.id !== routeId) {
     await setActiveRoute(routeId);
   }
-  if (activeRouteState.id !== routeId) return;
+  if (activeRouteState.points.length < 2) return;
 
   let activeIndex = options.startIndex ?? 0;
-  if (options.from && activeRouteState.points.length >= 2) {
-    const snapped = findNearestLegIndex(
-      options.from.latitude,
-      options.from.longitude,
-      activeRouteState.points as ActiveWaypoint[],
-      START_NAV_SNAP_THRESHOLD_M,
-    );
-    if (snapped != null) {
-      activeIndex = snapped;
-    }
+
+  if (options.from) {
+    activeIndex =
+      findNearestLegIndex(
+        options.from.latitude,
+        options.from.longitude,
+        activeRouteState.points as ActiveWaypoint[],
+      ) ?? 0;
   }
+
   // Clamp to valid range.
-  if (activeRouteState.points.length > 0) {
-    activeIndex = Math.max(
-      0,
-      Math.min(activeIndex, activeRouteState.points.length - 1),
-    );
-  } else {
-    activeIndex = 0;
-  }
+  activeIndex = Math.max(
+    0,
+    Math.min(activeIndex, activeRouteState.points.length - 1),
+  );
 
   activeRouteState.mode = RouteMode.Navigating;
   activeRouteState.activeIndex = activeIndex;

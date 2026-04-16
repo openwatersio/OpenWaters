@@ -96,7 +96,7 @@ export function findNearestLegIndex(
   latitude: number,
   longitude: number,
   points: { latitude: number; longitude: number }[],
-  thresholdMeters: number,
+  thresholdMeters: number = Infinity,
 ): number | null {
   if (points.length < 2) return null;
 
