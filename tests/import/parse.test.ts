@@ -126,6 +126,29 @@ describe("parseGpx", () => {
     const result = parseGpx("<notgpx/>");
     expect(result).toEqual({ waypoints: [], routes: [], tracks: [] });
   });
+
+  it("deduplicates consecutive track points at the same position", () => {
+    const xml = `<?xml version="1.0"?>
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk><trkseg>
+    <trkpt lat="47.6" lon="-122.3"><time>2025-01-01T00:00:00Z</time></trkpt>
+    <trkpt lat="47.6" lon="-122.3"><time>2025-01-01T00:00:01Z</time></trkpt>
+    <trkpt lat="47.6" lon="-122.3"><time>2025-01-01T00:00:02Z</time></trkpt>
+    <trkpt lat="47.7" lon="-122.4"><time>2025-01-01T00:00:03Z</time></trkpt>
+    <trkpt lat="47.7" lon="-122.4"><time>2025-01-01T00:00:04Z</time></trkpt>
+    <trkpt lat="47.6" lon="-122.3"><time>2025-01-01T00:00:05Z</time></trkpt>
+  </trkseg></trk>
+</gpx>`;
+    const { tracks } = parseGpx(xml);
+    // 6 raw points → 3 kept (first at each position, re-visits count)
+    expect(tracks[0].points).toHaveLength(3);
+    expect(tracks[0].points[0].latitude).toBe(47.6);
+    expect(tracks[0].points[1].latitude).toBe(47.7);
+    expect(tracks[0].points[2].latitude).toBe(47.6);
+    // Timestamps from skipped points still contribute to the session span
+    expect(tracks[0].started_at).toBe("2025-01-01T00:00:00Z");
+    expect(tracks[0].ended_at).toBe("2025-01-01T00:00:05Z");
+  });
 });
 
 describe("parseNavionicsMarker", () => {

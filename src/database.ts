@@ -23,6 +23,20 @@ export async function closeDatabase(): Promise<void> {
   await db.closeAsync();
 }
 
+/**
+ * Run PRAGMA optimize to update query planner statistics for tables
+ * whose data has changed significantly. Call after bulk writes (e.g.,
+ * import completion) rather than at close time, since iOS kills apps
+ * without warning and closeDatabase rarely runs.
+ */
+export async function optimizeDatabase(): Promise<void> {
+  const db = await getDatabase();
+  await db.execAsync(`
+    PRAGMA analysis_limit = 400;
+    PRAGMA optimize;
+  `);
+}
+
 async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   // Run migrations on a connection without change listeners — schema changes
   // that rebuild tables (DROP/RENAME) fail with "database table is locked"
@@ -33,9 +47,16 @@ async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   } finally {
     await migrationDb.closeAsync();
   }
-  return SQLite.openDatabaseAsync(DATABASE_NAME, {
+  const db = await SQLite.openDatabaseAsync(DATABASE_NAME, {
     enableChangeListener: true,
   });
+  await db.execAsync(`
+    PRAGMA journal_mode = WAL;
+    PRAGMA synchronous = NORMAL;
+    PRAGMA foreign_keys = ON;
+    PRAGMA busy_timeout = 5000;
+  `);
+  return db;
 }
 
 async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
@@ -311,12 +332,10 @@ async function nextSequence(
 }
 
 /**
- * Bulk-insert track points. Uses multi-row INSERTs in chunks to minimize
- * round trips — important for GPX imports that can bring tens of thousands
- * of points. Yields to the event loop between chunks so progress updates
- * paint and the UI stays responsive. Deliberately no outer transaction:
- * `enableChangeListener: true` already holds an implicit transaction and
- * nested BEGIN fails.
+ * Bulk-insert track points using a prepared multi-row INSERT. Each
+ * executeAsync call inserts 4000 rows (32000 params), reusing a single
+ * prepared statement. The remainder chunk passes its values as an array
+ * (not spread) to avoid call-stack overflow from 32000+ function args.
  */
 export async function insertTrackPoints(
   trackId: number,
@@ -325,19 +344,20 @@ export async function insertTrackPoints(
   if (points.length === 0) return;
   const db = await getDatabase();
   const startSeq = await nextSequence(db, trackId);
-
-  // Multi-row VALUES (SQLite 3.7.11+): 1000 rows × 8 params = 8000 params per
-  // statement — well under SQLITE_MAX_VARIABLE_NUMBER (32766 in modern builds).
-  const CHUNK = 1000;
+  const CHUNK = 4000;
   const COLS = 8;
-  for (let offset = 0; offset < points.length; offset += CHUNK) {
-    const batch = points.slice(offset, offset + CHUNK);
-    const placeholders = batch.map(() => "(?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
-    const values: (string | number | null)[] = new Array(batch.length * COLS);
-    for (let i = 0; i < batch.length; i++) {
-      const p = batch[i];
+  const INSERT_PREFIX =
+    "INSERT INTO track_points (track_id, sequence, latitude, longitude, speed, heading, accuracy, timestamp) VALUES ";
+
+  function buildValues(
+    offset: number,
+    count: number,
+  ): (string | number | null)[] {
+    const values: (string | number | null)[] = new Array(count * COLS);
+    for (let i = 0; i < count; i++) {
+      const p = points[offset + i];
       const base = i * COLS;
-      values[base + 0] = trackId;
+      values[base] = trackId;
       values[base + 1] = startSeq + offset + i;
       values[base + 2] = p.latitude;
       values[base + 3] = p.longitude;
@@ -346,9 +366,34 @@ export async function insertTrackPoints(
       values[base + 6] = p.accuracy ?? null;
       values[base + 7] = p.timestamp ?? null;
     }
+    return values;
+  }
+
+  const fullChunks = Math.floor(points.length / CHUNK);
+  const remainder = points.length % CHUNK;
+
+  if (fullChunks > 0) {
+    const placeholders = Array(CHUNK)
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?)")
+      .join(", ");
+    const stmt = await db.prepareAsync(`${INSERT_PREFIX}${placeholders}`);
+    try {
+      for (let i = 0; i < fullChunks; i++) {
+        await stmt.executeAsync(buildValues(i * CHUNK, CHUNK));
+      }
+    } finally {
+      await stmt.finalizeAsync();
+    }
+  }
+
+  if (remainder > 0) {
+    const offset = fullChunks * CHUNK;
+    const placeholders = Array(remainder)
+      .fill("(?, ?, ?, ?, ?, ?, ?, ?)")
+      .join(", ");
     await db.runAsync(
-      `INSERT INTO track_points (track_id, sequence, latitude, longitude, speed, heading, accuracy, timestamp) VALUES ${placeholders}`,
-      ...values,
+      `${INSERT_PREFIX}${placeholders}`,
+      buildValues(offset, remainder),
     );
   }
 }
@@ -434,8 +479,8 @@ export async function getTrackPoints(trackId: number): Promise<TrackPoint[]> {
 }
 
 export async function deleteTrack(trackId: number): Promise<void> {
+  // track_points are removed by ON DELETE CASCADE (PRAGMA foreign_keys = ON).
   const db = await getDatabase();
-  await db.runAsync("DELETE FROM track_points WHERE track_id = ?", trackId);
   await db.runAsync("DELETE FROM tracks WHERE id = ?", trackId);
 }
 
@@ -584,6 +629,8 @@ export async function getAllMarkers(
   );
 }
 
+const MARKER_COLUMNS = new Set<string>(["name", "notes", "color", "icon", "latitude", "longitude"]);
+
 export async function updateMarker(
   id: number,
   fields: Partial<
@@ -591,7 +638,9 @@ export async function updateMarker(
   >,
 ): Promise<void> {
   const db = await getDatabase();
-  const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
+  const entries = Object.entries(fields).filter(
+    ([k, v]) => MARKER_COLUMNS.has(k) && v !== undefined,
+  );
   if (entries.length === 0) return;
   const setClauses = entries.map(([k]) => `${k} = ?`).join(", ");
   const values = entries.map(([, v]) => v);
@@ -682,12 +731,16 @@ export async function getAllRoutes(
   return db.getAllAsync<Route>(`SELECT * FROM routes ORDER BY ${orderBy}`);
 }
 
+const ROUTE_COLUMNS = new Set<string>(["name", "distance"]);
+
 export async function updateRoute(
   id: number,
   fields: Partial<Pick<Route, "name" | "distance">>,
 ): Promise<void> {
   const db = await getDatabase();
-  const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
+  const entries = Object.entries(fields).filter(
+    ([k, v]) => ROUTE_COLUMNS.has(k) && v !== undefined,
+  );
   if (entries.length === 0) return;
   const setClauses = [
     ...entries.map(([k]) => `${k} = ?`),
@@ -703,8 +756,8 @@ export async function updateRoute(
 }
 
 export async function deleteRoute(id: number): Promise<void> {
+  // route_points are removed by ON DELETE CASCADE (PRAGMA foreign_keys = ON).
   const db = await getDatabase();
-  await db.runAsync("DELETE FROM route_points WHERE route_id = ?", id);
   await db.runAsync("DELETE FROM routes WHERE id = ?", id);
 }
 

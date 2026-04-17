@@ -257,11 +257,16 @@ export default function Import() {
 
               <Section title="Imported Records">
                 {records
-                  .slice()
+                  .slice(-10)
                   .reverse()
                   .map((record, i) => (
                     <RecordRow key={i} {...record} />
                   ))}
+                {records.length > 10 && (
+                  <Text>
+                    {`${records.length - 10} more…`}
+                  </Text>
+                )}
               </Section>
 
               {status.terminalReason === "interrupted" && (

@@ -1,5 +1,3 @@
-import { Directory, File } from "expo-file-system";
-import { unzipSync, strFromU8 } from "fflate";
 import {
   getDatabase,
   insertMarker,
@@ -10,7 +8,12 @@ import {
   updateRoute,
 } from "@/database";
 import { parseGpx, parseNavionicsMarker } from "@/import/parse";
+import log from "@/logger";
+import { Directory, File } from "expo-file-system";
+import { strFromU8, unzipSync } from "fflate";
 import { getDistance } from "geolib";
+
+const logger = log.extend("import");
 
 export type ImportError = {
   file: string;
@@ -89,83 +92,74 @@ export async function importGpxText(
   const { file } = options;
   const summary = options.summary ?? emptySummary();
   const fileName = file?.name ?? "stream";
-
   if (file) file.status = "importing";
 
-  await yieldToUi();
   const parsed = parseGpx(xml);
-
-  // Push records and remember their indices; mutate later through the array
-  // so valtio sees the changes. Local refs to the original objects would
-  // bypass the proxy wrapping done on push.
-  const markerIdxStart = summary.records.length;
-  for (const wpt of parsed.waypoints) {
-    summary.records.push({
-      type: "marker",
-      status: "pending",
-      name: wpt.name ?? fileName,
-      file: fileName,
-    });
-  }
-  const routeIdxStart = summary.records.length;
-  for (const rte of parsed.routes) {
-    summary.records.push({
-      type: "route",
-      status: "pending",
-      name: rte.name ?? fileName,
-      file: fileName,
-    });
-  }
-  const trackIdxStart = summary.records.length;
-  for (const trk of parsed.tracks) {
-    summary.records.push({
-      type: "track",
-      status: "pending",
-      name: trk.name ?? fileName,
-      file: fileName,
-    });
-  }
 
   let anyFailed = false;
 
-  for (let i = 0; i < parsed.waypoints.length; i++) {
-    const idx = markerIdxStart + i;
-    summary.records[idx].status = "importing";
+  // Markers: insert then push as done in a single mutation — avoids
+  // pending→importing→done churn that triggers three re-renders each.
+  for (const wpt of parsed.waypoints) {
     try {
-      const marker = await insertMarker(parsed.waypoints[i]);
-      summary.records[idx].id = marker.id;
-      summary.records[idx].status = "done";
+      const marker = await insertMarker(wpt);
+      summary.records.push({
+        type: "marker",
+        status: "done",
+        id: marker.id,
+        name: wpt.name ?? fileName,
+        file: fileName,
+      });
     } catch (e) {
-      summary.records[idx].status = "failed";
-      summary.records[idx].error = e instanceof Error ? e.message : String(e);
+      logger.error("marker insert failed", e);
+      summary.records.push({
+        type: "marker",
+        status: "failed",
+        name: wpt.name ?? fileName,
+        file: fileName,
+        error: e instanceof Error ? e.message : String(e),
+      });
       anyFailed = true;
     }
   }
-  if (parsed.waypoints.length > 0) await yieldToUi();
 
-  for (let i = 0; i < parsed.routes.length; i++) {
-    const rte = parsed.routes[i];
-    const idx = routeIdxStart + i;
-    summary.records[idx].status = "importing";
+  // Routes: same pattern — insert then push as done.
+  for (const rte of parsed.routes) {
     try {
       const route = await insertRoute(rte.name ?? undefined);
       await replaceRoutePoints(route.id, rte.points);
       await updateRoute(route.id, { distance: sumPathDistance(rte.points) });
-      summary.records[idx].id = route.id;
-      summary.records[idx].status = "done";
+      summary.records.push({
+        type: "route",
+        status: "done",
+        id: route.id,
+        name: rte.name ?? fileName,
+        file: fileName,
+      });
     } catch (e) {
-      summary.records[idx].status = "failed";
-      summary.records[idx].error = e instanceof Error ? e.message : String(e);
+      logger.error("route insert failed", e);
+      summary.records.push({
+        type: "route",
+        status: "failed",
+        name: rte.name ?? fileName,
+        file: fileName,
+        error: e instanceof Error ? e.message : String(e),
+      });
       anyFailed = true;
     }
-    await yieldToUi();
   }
 
+  // Tracks: push as importing (so UI shows the current track name),
+  // then flip to done after the heavy insert completes.
   const db = await getDatabase();
-  for (let i = 0; i < parsed.tracks.length; i++) {
-    const trk = parsed.tracks[i];
-    const idx = trackIdxStart + i;
-    summary.records[idx].status = "importing";
+  for (const trk of parsed.tracks) {
+    summary.records.push({
+      type: "track",
+      status: "importing",
+      name: trk.name ?? fileName,
+      file: fileName,
+    });
+    const idx = summary.records.length - 1;
     try {
       const startedAt = trk.started_at ?? new Date().toISOString();
       const track = await insertTrack({
@@ -173,18 +167,15 @@ export async function importGpxText(
         started_at: startedAt,
         ended_at: trk.ended_at,
       });
-      summary.records[idx].id = track.id;
-      if (!trk.name) summary.records[idx].name = `Track ${track.id}`;
-      await yieldToUi();
 
       await insertTrackPoints(track.id, trk.points);
 
-      const distance = sumPathDistance(trk.points);
-      // Cache max_speed on the track row so the list view doesn't need to
-      // aggregate over track_points. Some GPX files have no <speed> elements
-      // at all — store null in that case.
+      // Single pass for distance + max speed to avoid iterating 200k+ points twice.
+      let distance = 0;
       let maxSpeed: number | null = null;
-      for (const p of trk.points) {
+      for (let j = 0; j < trk.points.length; j++) {
+        const p = trk.points[j];
+        if (j > 0) distance += getDistance(trk.points[j - 1], p);
         if (p.speed != null && (maxSpeed === null || p.speed > maxSpeed)) {
           maxSpeed = p.speed;
         }
@@ -195,8 +186,11 @@ export async function importGpxText(
         maxSpeed,
         track.id,
       );
+      summary.records[idx].id = track.id;
+      if (!trk.name) summary.records[idx].name = `Track ${track.id}`;
       summary.records[idx].status = "done";
     } catch (e) {
+      logger.error("track insert failed", e);
       summary.records[idx].status = "failed";
       summary.records[idx].error = e instanceof Error ? e.message : String(e);
       anyFailed = true;
@@ -204,6 +198,10 @@ export async function importGpxText(
   }
 
   if (file) file.status = anyFailed ? "failed" : "done";
+
+  logger.debug(
+    `${fileName} wpt=${parsed.waypoints.length} rte=${parsed.routes.length} trk=${parsed.tracks.length}`,
+  );
 
   return summary;
 }
@@ -237,11 +235,13 @@ export async function importZipBytes(
   const parentIdx = parent ? summary.files.indexOf(parent) : -1;
   if (parentIdx >= 0) summary.files.splice(parentIdx, 1);
 
-  const gpxEntries = Object.entries(entries).filter(([n]) =>
-    n.toLowerCase().endsWith(".gpx"),
-  );
-  const jsonMarkerEntries = Object.entries(entries).filter(([n]) =>
-    n.toLowerCase().endsWith(".json") && n.includes("markers/"),
+  // Sort GPX entries by compressed size (ascending) so small files (routes)
+  // finish quickly and the user sees progress before big tracks start.
+  const gpxEntries = Object.entries(entries)
+    .filter(([n]) => n.toLowerCase().endsWith(".gpx"))
+    .sort((a, b) => a[1].length - b[1].length);
+  const jsonMarkerEntries = Object.entries(entries).filter(
+    ([n]) => n.toLowerCase().endsWith(".json") && n.includes("markers/"),
   );
 
   // Seed file entries for GPX files (markers are small enough to batch
@@ -260,7 +260,7 @@ export async function importZipBytes(
     markersFile = summary.files[summary.files.length - 1];
   }
 
-  // Import Navionics JSON markers
+  // Import Navionics JSON markers — insert then push as done directly.
   if (markersFile) {
     markersFile.status = "importing";
     let anyMarkerFailed = false;
@@ -278,22 +278,22 @@ export async function importZipBytes(
           anyMarkerFailed = true;
           continue;
         }
-        const markerIdxStart = summary.records.length;
+        const inserted = await insertMarker(marker);
         summary.records.push({
           type: "marker",
-          status: "importing",
+          status: "done",
+          id: inserted.id,
           name: marker.name ?? name.split("/").pop() ?? entryName,
           file: entryName,
         });
-        const inserted = await insertMarker(marker);
-        summary.records[markerIdxStart].id = inserted.id;
-        summary.records[markerIdxStart].status = "done";
       } catch (e) {
-        const idx = summary.records.length - 1;
-        if (idx >= 0 && summary.records[idx].status === "importing") {
-          summary.records[idx].status = "failed";
-          summary.records[idx].error = e instanceof Error ? e.message : String(e);
-        }
+        summary.records.push({
+          type: "marker",
+          status: "failed",
+          name: name.split("/").pop() ?? entryName,
+          file: entryName,
+          error: e instanceof Error ? e.message : String(e),
+        });
         summary.errors.push({
           file: entryName,
           message: e instanceof Error ? e.message : String(e),
@@ -303,10 +303,11 @@ export async function importZipBytes(
       }
     }
     markersFile.status = anyMarkerFailed ? "failed" : "done";
-    await yieldToUi();
+    logger.debug(`${label} markers: ${jsonMarkerEntries.length} processed`);
   }
 
-  // Import GPX files (routes + tracks)
+  // Import GPX files (routes + tracks) — yield every 10 files to let the
+  // UI breathe without paying a setTimeout penalty on every single file.
   for (let i = 0; i < gpxEntries.length; i++) {
     const [, data] = gpxEntries[i];
     const entryFile = gpxFiles[i];
@@ -326,7 +327,9 @@ export async function importZipBytes(
         kind: "file",
       });
     }
+    if (i % 10 === 9) await yieldToUi();
   }
+  logger.debug(`${label}: ${gpxEntries.length} gpx, ${jsonMarkerEntries.length} markers`);
   return summary;
 }
 
@@ -381,7 +384,6 @@ export async function importPickedDirectory(
     const entry = entries[i];
     const errorsBefore = summary.errors.length;
     try {
-      await yieldToUi();
       const xml = await f.text();
       await importGpxText(xml, { ...rest, summary, file: entry });
       for (let j = errorsBefore; j < summary.errors.length; j++) {
@@ -396,7 +398,9 @@ export async function importPickedDirectory(
         kind: "file",
       });
     }
+    if (i % 10 === 9) await yieldToUi();
   }
+  logger.debug(`directory: ${files.length} files`);
   return summary;
 }
 
@@ -418,7 +422,6 @@ export async function importPickedFile(
 
   if (lower.endsWith(".gpx")) {
     try {
-      await yieldToUi();
       const xml = await file.text();
       return await importGpxText(xml, { ...options, summary });
     } catch (e) {
@@ -436,7 +439,6 @@ export async function importPickedFile(
   }
 
   if (lower.endsWith(".zip")) {
-    await yieldToUi();
     const bytes = await file.bytes();
     return await importZipBytes(bytes, fileName, { ...options, summary });
   }

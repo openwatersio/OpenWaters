@@ -109,7 +109,8 @@ const mockDb = {
     }
     return [];
   }),
-  runAsync: jest.fn(async (sql: string, ...args: any[]) => {
+  runAsync: jest.fn(async (sql: string, ...rawArgs: any[]) => {
+    const args = rawArgs.length === 1 && Array.isArray(rawArgs[0]) ? rawArgs[0] : rawArgs;
     if (sql.includes("INSERT INTO tracks (started_at)")) {
       const id = ++autoIncrement.tracks;
       rows.tracks.push({
@@ -217,6 +218,8 @@ const mockDb = {
       return { changes: 0 };
     }
     if (sql.includes("DELETE FROM tracks WHERE id")) {
+      // Simulate ON DELETE CASCADE for track_points
+      rows.track_points = rows.track_points.filter((p) => p.track_id !== args[0]);
       rows.tracks = rows.tracks.filter((t) => t.id !== args[0]);
       return { changes: 0 };
     }
@@ -263,6 +266,8 @@ const mockDb = {
       return { changes: 0 };
     }
     if (sql.includes("DELETE FROM routes WHERE id")) {
+      // Simulate ON DELETE CASCADE for route_points
+      rows.route_points = rows.route_points.filter((p) => p.route_id !== args[0]);
       rows.routes = rows.routes.filter((r) => r.id !== args[0]);
       return { changes: 0 };
     }

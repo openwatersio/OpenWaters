@@ -1,7 +1,11 @@
 import { Directory, File } from "expo-file-system";
 import { router } from "expo-router";
+import log from "@/logger";
+
+const logger = log.extend("import");
 import { proxy, useSnapshot } from "valtio";
 import { persistProxy } from "@/persistProxy";
+import { optimizeDatabase } from "@/database";
 import {
   importPickedDirectory,
   importPickedFile,
@@ -66,7 +70,11 @@ async function runJob(
   startJob(source);
   try {
     await work({ summary: importState.status! });
+    // Update query planner stats after bulk writes so subsequent reads
+    // (track list, map overlays) pick optimal indices.
+    optimizeDatabase().catch(() => {});
   } catch (e) {
+    logger.error("job failed", e);
     if (importState.status) {
       importState.status.terminalReason = "error";
       importState.status.errorMessage =
@@ -115,14 +123,16 @@ export function startDirectoryImport(dir: Directory): void {
 /**
  * Handle a file:// URL from the iOS share sheet or "Open in" action.
  * Creates a File from the URI, starts the import, and navigates to the
- * import screen.
+ * import screen. Navigation is deferred by one tick so that on cold
+ * launch the navigator has time to mount before we push a route.
  */
 export function handleIncomingFileUrl(url: string): void {
   const lower = url.toLowerCase();
   if (!lower.endsWith(".gpx") && !lower.endsWith(".zip")) return;
   const file = new File(url);
   startFileImport(file);
-  router.navigate("/import");
+  // Defer so the navigator is mounted on cold launch.
+  setTimeout(() => router.navigate("/import"), 0);
 }
 
 // Persist the status across app launches. If we find in-flight files/records

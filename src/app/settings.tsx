@@ -1,17 +1,17 @@
-import SheetView from "@/ui/SheetView";
-import { ARRIVAL_RADIUS_OPTIONS, describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits, type ArrivalRadius } from "@/hooks/usePreferredUnits";
 import { setThemePreference, useThemePreference, type ThemePreference } from "@/charts/theme";
+import { closeDatabase } from "@/database";
+import { ARRIVAL_RADIUS_OPTIONS, describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits, type ArrivalRadius } from "@/hooks/usePreferredUnits";
+import SheetView from "@/ui/SheetView";
 import { Button, Host, List, Picker, Section, Text, Toggle, VStack } from "@expo/ui/swift-ui";
 import { tag } from "@expo/ui/swift-ui/modifiers";
-import { router, Stack } from "expo-router";
-import { Alert } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { OfflineManager } from "@maplibre/maplibre-react-native";
-import { Directory, Paths } from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { reloadAppAsync } from "expo";
+import { Directory, Paths } from "expo-file-system";
 import { hasStartedLocationUpdatesAsync, stopLocationUpdatesAsync } from "expo-location";
+import { router, Stack } from "expo-router";
 import * as SQLite from "expo-sqlite";
-import { closeDatabase } from "@/database";
+import { Alert } from "react-native";
 
 function resetAppData() {
   Alert.alert(

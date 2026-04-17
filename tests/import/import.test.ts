@@ -22,7 +22,8 @@ let auto: Record<string, number> = {
 };
 let userVersion = 8; // skip migrations
 
-const mockDb = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockDb: any = {
   execAsync: jest.fn(async (sql: string) => {
     const m = sql.match(/PRAGMA user_version = (\d+)/);
     if (m) userVersion = parseInt(m[1]);
@@ -45,7 +46,12 @@ const mockDb = {
     return null;
   }),
   getAllAsync: jest.fn(async () => []),
-  runAsync: jest.fn(async (sql: string, ...args: any[]) => {
+  runAsync: jest.fn(async (sql: string, ...rawArgs: any[]) => {
+    // Handle both spread params (runAsync(sql, v1, v2)) and array params
+    // (runAsync(sql, [v1, v2])) — the latter is used by insertTrackPoints
+    // for the remainder chunk to avoid call-stack overflow from spreading
+    // 32000+ values.
+    const args = rawArgs.length === 1 && Array.isArray(rawArgs[0]) ? rawArgs[0] : rawArgs;
     if (sql.includes("INSERT INTO tracks (name,")) {
       const id = ++auto.tracks;
       rows.tracks.push({
@@ -150,6 +156,13 @@ const mockDb = {
     }
     return { lastInsertRowId: 0, changes: 0 };
   }),
+  prepareAsync: jest.fn(async (sql: string) => ({
+    executeAsync: jest.fn(async (params: any) => {
+      const values = Array.isArray(params) ? params : [params];
+      return mockDb.runAsync(sql, values);
+    }),
+    finalizeAsync: jest.fn(async () => {}),
+  })),
   withTransactionAsync: jest.fn(async (task: () => Promise<void>) => {
     await task();
   }),
@@ -340,5 +353,27 @@ describe("importGpxText", () => {
     expect(rows.track_points[0].timestamp).toBeNull();
     expect(rows.track_points[0].sequence).toBe(0);
     expect(rows.track_points[1].sequence).toBe(1);
+  });
+
+  it("handles tracks with >4000 points (exercises prepared-statement bulk path)", async () => {
+    const N = 4500;
+    const trkpts = Array.from({ length: N }, (_, i) => {
+      const lat = (47 + i * 0.0001).toFixed(6);
+      const lon = (-122 - i * 0.0001).toFixed(6);
+      return `<trkpt lat="${lat}" lon="${lon}"/>`;
+    }).join("\n");
+    const xml = `<?xml version="1.0"?>
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk><name>Big track</name><trkseg>
+${trkpts}
+  </trkseg></trk>
+</gpx>`;
+    const summary = await importGpxText(xml);
+    const tracks = summary.records.filter((r) => r.type === "track");
+    expect(tracks).toHaveLength(1);
+    expect(tracks[0].status).toBe("done");
+    expect(rows.track_points).toHaveLength(N);
+    expect(rows.track_points[0].sequence).toBe(0);
+    expect(rows.track_points[N - 1].sequence).toBe(N - 1);
   });
 });
