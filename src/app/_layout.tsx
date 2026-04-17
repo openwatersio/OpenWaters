@@ -1,5 +1,6 @@
 import { cancelAllDownloads } from "@/charts/download";
-import { handleIncomingFileUrl } from "@/import/state";
+import "@/import/background"; // Register import background task at module scope
+import { handleIncomingFileUrl, resumeImportIfNeeded } from "@/import/state";
 import { connectAll, disconnectAll } from "@/instruments/hooks/useConnections";
 import "@/navigation/hooks/useNavigation"; // Register LocationManager listener at module scope
 import "@/tracks/hooks/useTrackRecording"; // Register background task at module scope
@@ -37,6 +38,11 @@ export default function RootLayout() {
       handleIncomingFileUrl(url);
     });
     return () => subscription.remove();
+  }, []);
+
+  // Resume any import that was interrupted by an app restart
+  useEffect(() => {
+    resumeImportIfNeeded();
   }, []);
 
   return (
@@ -122,7 +128,7 @@ export default function RootLayout() {
         <Stack.Screen name="menu" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [0.5],
+          sheetAllowedDetents: [0.5, 1],
           sheetGrabberVisible: true,
           headerShown: false,
         }} />

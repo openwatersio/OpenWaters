@@ -3,6 +3,7 @@ import type { ImportFile, ImportRecord, ImportRecordStatus } from "@/import";
 
 const logger = log.extend("import");
 import {
+  cancelImport,
   clearImportStatus,
   isImportRunning,
   startDirectoryImport,
@@ -38,6 +39,7 @@ import {
 } from "@expo/ui/swift-ui/modifiers";
 import { Directory, File } from "expo-file-system";
 import { router, Stack } from "expo-router";
+import { Alert } from "react-native";
 import type { SFSymbol } from "sf-symbols-typescript";
 
 function statusIcon(status: ImportRecordStatus): {
@@ -249,7 +251,26 @@ export default function Import() {
             <>
               <Section title="Status">
                 {files.length > 0 && <FilesSummary files={files} />}
-                {!running && (
+                {running ? (
+                  <Button
+                    modifiers={[tint("red")]}
+                    label="Cancel Import"
+                    onPress={() =>
+                      Alert.alert(
+                        "Cancel Import?",
+                        "Already-imported items will be kept, but remaining files will be discarded.",
+                        [
+                          { text: "Continue Import", style: "cancel" },
+                          {
+                            text: "Cancel Import",
+                            style: "destructive",
+                            onPress: cancelImport,
+                          },
+                        ],
+                      )
+                    }
+                  />
+                ) : (
                   <Button
                     modifiers={[tint("primary")]}
                     label="Start New Import"

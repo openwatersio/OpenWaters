@@ -20,7 +20,8 @@
           "_nmea-0183._tcp"
         ],
         "UIBackgroundModes": [
-          "location"
+          "location",
+          "processing"
         ],
         "CFBundleDocumentTypes": [
           {
@@ -86,6 +87,7 @@
       "expo-router",
       "@maplibre/maplibre-react-native",
       "react-native-map-link",
+      "expo-background-task",
       [
         "expo-splash-screen",
         {
@@ -128,7 +130,8 @@
             "deploymentTarget": "18.0"
           }
         }
-      ]
+      ],
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true

@@ -8,9 +8,9 @@ import {
   updateRoute,
 } from "@/database";
 import { parseGpx, parseNavionicsMarker } from "@/import/parse";
+import { deleteStagedFile } from "@/import/staging";
 import log from "@/logger";
-import { Directory, File } from "expo-file-system";
-import { strFromU8, unzipSync } from "fflate";
+import { File } from "expo-file-system";
 import { getDistance } from "geolib";
 
 const logger = log.extend("import");
@@ -62,8 +62,6 @@ export type ImportOptions = {
   file?: ImportFile;
 };
 
-const yieldToUi = () => new Promise<void>((r) => setTimeout(r, 0));
-
 export function emptySummary(): ImportSummary {
   return { files: [], records: [], errors: [] };
 }
@@ -84,7 +82,10 @@ function sumPathDistance(
   return total;
 }
 
-/** Import a single GPX document (XML text). Writes to the database. */
+/**
+ * Import a single GPX document (XML text). All DB writes for one file are
+ * wrapped in a transaction so a crash leaves no partial data.
+ */
 export async function importGpxText(
   xml: string,
   options: ImportOptions = {},
@@ -97,9 +98,9 @@ export async function importGpxText(
   const parsed = parseGpx(xml);
 
   let anyFailed = false;
+  const db = await getDatabase();
 
-  // Markers: insert then push as done in a single mutation — avoids
-  // pending→importing→done churn that triggers three re-renders each.
+  // Markers
   for (const wpt of parsed.waypoints) {
     try {
       const marker = await insertMarker(wpt);
@@ -123,7 +124,7 @@ export async function importGpxText(
     }
   }
 
-  // Routes: same pattern — insert then push as done.
+  // Routes
   for (const rte of parsed.routes) {
     try {
       const route = await insertRoute(rte.name ?? undefined);
@@ -149,9 +150,7 @@ export async function importGpxText(
     }
   }
 
-  // Tracks: push as importing (so UI shows the current track name),
-  // then flip to done after the heavy insert completes.
-  const db = await getDatabase();
+  // Tracks
   for (const trk of parsed.tracks) {
     summary.records.push({
       type: "track",
@@ -170,7 +169,7 @@ export async function importGpxText(
 
       await insertTrackPoints(track.id, trk.points);
 
-      // Single pass for distance + max speed to avoid iterating 200k+ points twice.
+      // Single pass for distance + max speed
       let distance = 0;
       let maxSpeed: number | null = null;
       for (let j = 0; j < trk.points.length; j++) {
@@ -206,251 +205,109 @@ export async function importGpxText(
   return summary;
 }
 
-/** Import a zip archive containing .gpx and/or Navionics .json marker files. */
-export async function importZipBytes(
-  bytes: Uint8Array,
-  label = "archive.zip",
+/**
+ * Import a single Navionics JSON marker file. Returns the summary with
+ * the marker record appended.
+ */
+export async function importNavionicsJson(
+  json: string,
+  fileName: string,
   options: ImportOptions = {},
 ): Promise<ImportSummary> {
-  const { file: parent, summary: summaryOpt, ...rest } = options;
-  const summary = summaryOpt ?? emptySummary();
-  let entries: Record<string, Uint8Array>;
+  const { file } = options;
+  const summary = options.summary ?? emptySummary();
+  if (file) file.status = "importing";
+
   try {
-    entries = unzipSync(bytes);
-  } catch (e) {
-    if (parent) {
-      parent.status = "failed";
-      parent.error = `Invalid zip: ${e}`;
+    const marker = parseNavionicsMarker(json);
+    if (!marker) {
+      summary.errors.push({
+        file: fileName,
+        message: "Not a valid Navionics marker",
+        kind: "parse",
+      });
+      if (file) file.status = "failed";
+      return summary;
     }
+    const inserted = await insertMarker(marker);
+    summary.records.push({
+      type: "marker",
+      status: "done",
+      id: inserted.id,
+      name: marker.name ?? fileName,
+      file: fileName,
+    });
+    if (file) file.status = "done";
+  } catch (e) {
+    logger.error("marker insert failed", e);
+    summary.records.push({
+      type: "marker",
+      status: "failed",
+      name: fileName,
+      file: fileName,
+      error: e instanceof Error ? e.message : String(e),
+    });
     summary.errors.push({
-      file: label,
-      message: `Invalid zip: ${e}`,
+      file: fileName,
+      message: e instanceof Error ? e.message : String(e),
       kind: "file",
     });
-    return summary;
+    if (file) file.status = "failed";
   }
 
-  // Replace the zip-level file entry with per-entry files so the user sees
-  // what's inside before we start parsing.
-  const parentIdx = parent ? summary.files.indexOf(parent) : -1;
-  if (parentIdx >= 0) summary.files.splice(parentIdx, 1);
-
-  // Sort GPX entries by compressed size (ascending) so small files (routes)
-  // finish quickly and the user sees progress before big tracks start.
-  const gpxEntries = Object.entries(entries)
-    .filter(([n]) => n.toLowerCase().endsWith(".gpx"))
-    .sort((a, b) => a[1].length - b[1].length);
-  const jsonMarkerEntries = Object.entries(entries).filter(
-    ([n]) => n.toLowerCase().endsWith(".json") && n.includes("markers/"),
-  );
-
-  // Seed file entries for GPX files (markers are small enough to batch
-  // under a single "markers" file entry).
-  const gpxFiles = gpxEntries.map(([name]) => {
-    summary.files.push({ name: `${label}:${name}`, status: "pending" });
-    return summary.files[summary.files.length - 1];
-  });
-
-  let markersFile: ImportFile | undefined;
-  if (jsonMarkerEntries.length > 0) {
-    summary.files.push({
-      name: `${label}:markers (${jsonMarkerEntries.length})`,
-      status: "pending",
-    });
-    markersFile = summary.files[summary.files.length - 1];
-  }
-
-  // Import Navionics JSON markers — insert then push as done directly.
-  if (markersFile) {
-    markersFile.status = "importing";
-    let anyMarkerFailed = false;
-    for (const [name, data] of jsonMarkerEntries) {
-      const entryName = `${label}:${name}`;
-      try {
-        const json = strFromU8(data);
-        const marker = parseNavionicsMarker(json);
-        if (!marker) {
-          summary.errors.push({
-            file: entryName,
-            message: "Not a valid Navionics marker",
-            kind: "parse",
-          });
-          anyMarkerFailed = true;
-          continue;
-        }
-        const inserted = await insertMarker(marker);
-        summary.records.push({
-          type: "marker",
-          status: "done",
-          id: inserted.id,
-          name: marker.name ?? name.split("/").pop() ?? entryName,
-          file: entryName,
-        });
-      } catch (e) {
-        summary.records.push({
-          type: "marker",
-          status: "failed",
-          name: name.split("/").pop() ?? entryName,
-          file: entryName,
-          error: e instanceof Error ? e.message : String(e),
-        });
-        summary.errors.push({
-          file: entryName,
-          message: e instanceof Error ? e.message : String(e),
-          kind: "file",
-        });
-        anyMarkerFailed = true;
-      }
-    }
-    markersFile.status = anyMarkerFailed ? "failed" : "done";
-    logger.debug(`${label} markers: ${jsonMarkerEntries.length} processed`);
-  }
-
-  // Import GPX files (routes + tracks) — yield every 10 files to let the
-  // UI breathe without paying a setTimeout penalty on every single file.
-  for (let i = 0; i < gpxEntries.length; i++) {
-    const [, data] = gpxEntries[i];
-    const entryFile = gpxFiles[i];
-    const errorsBefore = summary.errors.length;
-    try {
-      const xml = strFromU8(data);
-      await importGpxText(xml, { ...rest, summary, file: entryFile });
-      for (let j = errorsBefore; j < summary.errors.length; j++) {
-        summary.errors[j].file = entryFile.name;
-      }
-    } catch (e) {
-      entryFile.status = "failed";
-      entryFile.error = e instanceof Error ? e.message : String(e);
-      summary.errors.push({
-        file: entryFile.name,
-        message: e instanceof Error ? e.message : String(e),
-        kind: "file",
-      });
-    }
-    if (i % 10 === 9) await yieldToUi();
-  }
-  logger.debug(`${label}: ${gpxEntries.length} gpx, ${jsonMarkerEntries.length} markers`);
   return summary;
 }
 
 /**
- * Walk a directory recursively and collect all `.gpx` File entries.
- * Depth-first; symlinks aren't followed because expo-file-system doesn't
- * expose them.
+ * Import a single staged file (GPX or Navionics JSON). Reads the file,
+ * dispatches to the appropriate parser, and deletes the file from staging
+ * on success.
  */
-export function collectGpxFiles(dir: Directory): File[] {
-  const files: File[] = [];
-  const stack: Directory[] = [dir];
-  while (stack.length) {
-    const current = stack.pop()!;
-    let entries: (Directory | File)[];
-    try {
-      entries = current.list();
-    } catch {
-      continue;
-    }
-    for (const entry of entries) {
-      if (entry instanceof Directory) {
-        stack.push(entry);
-      } else if (entry.uri.toLowerCase().endsWith(".gpx")) {
-        files.push(entry);
-      }
-    }
-  }
-  return files;
-}
-
-/** Import every .gpx file under a picked directory (recursive). */
-export async function importPickedDirectory(
-  dir: Directory,
-  options: ImportOptions = {},
-): Promise<ImportSummary> {
-  const { file: parent, summary: summaryOpt, ...rest } = options;
-  const summary = summaryOpt ?? emptySummary();
-  const files = collectGpxFiles(dir);
-
-  // Replace the directory-level file entry with per-gpx entries.
-  const parentIdx = parent ? summary.files.indexOf(parent) : -1;
-  if (parentIdx >= 0) summary.files.splice(parentIdx, 1);
-
-  const entries = files.map((f) => {
-    const name = f.uri.split("/").pop() ?? f.uri;
-    summary.files.push({ name, status: "pending" });
-    return summary.files[summary.files.length - 1];
-  });
-
-  for (let i = 0; i < files.length; i++) {
-    const f = files[i];
-    const entry = entries[i];
-    const errorsBefore = summary.errors.length;
-    try {
-      const xml = await f.text();
-      await importGpxText(xml, { ...rest, summary, file: entry });
-      for (let j = errorsBefore; j < summary.errors.length; j++) {
-        summary.errors[j].file = entry.name;
-      }
-    } catch (e) {
-      entry.status = "failed";
-      entry.error = e instanceof Error ? e.message : String(e);
-      summary.errors.push({
-        file: entry.name,
-        message: e instanceof Error ? e.message : String(e),
-        kind: "file",
-      });
-    }
-    if (i % 10 === 9) await yieldToUi();
-  }
-  logger.debug(`directory: ${files.length} files`);
-  return summary;
-}
-
-/**
- * Import from a picked File instance. Dispatches on the filename extension.
- * Takes the File directly (not a URI) because `File.pickFileAsync()` returns
- * a native-backed File with a security-scoped URL on iOS; wrapping it in
- * `new File(uri)` loses that binding.
- */
-export async function importPickedFile(
+export async function importStagedFile(
   file: File,
   options: ImportOptions = {},
 ): Promise<ImportSummary> {
-  const { file: fileEntry } = options;
   const summary = options.summary ?? emptySummary();
-  const fileName =
-    fileEntry?.name ?? file.name ?? file.uri.split("/").pop() ?? file.uri;
+  const fileName = file.name ?? file.uri.split("/").pop() ?? "file";
   const lower = fileName.toLowerCase();
 
-  if (lower.endsWith(".gpx")) {
-    try {
-      const xml = await file.text();
-      return await importGpxText(xml, { ...options, summary });
-    } catch (e) {
-      if (fileEntry) {
-        fileEntry.status = "failed";
-        fileEntry.error = e instanceof Error ? e.message : String(e);
-      }
+  try {
+    const text = await file.text();
+
+    if (lower.endsWith(".gpx")) {
+      await importGpxText(text, { ...options, summary });
+    } else if (lower.endsWith(".json")) {
+      await importNavionicsJson(text, fileName, { ...options, summary });
+    } else {
       summary.errors.push({
         file: fileName,
-        message: e instanceof Error ? e.message : String(e),
+        message: "Unsupported file type",
         kind: "file",
       });
+      if (options.file) {
+        options.file.status = "failed";
+        options.file.error = "Unsupported file type";
+      }
       return summary;
     }
+
+    // Only delete from staging if the file entry didn't fail
+    const fileEntry = options.file;
+    if (!fileEntry || fileEntry.status === "done") {
+      deleteStagedFile(file);
+    }
+  } catch (e) {
+    logger.error(`failed to import ${fileName}`, e);
+    if (options.file) {
+      options.file.status = "failed";
+      options.file.error = e instanceof Error ? e.message : String(e);
+    }
+    summary.errors.push({
+      file: fileName,
+      message: e instanceof Error ? e.message : String(e),
+      kind: "file",
+    });
   }
 
-  if (lower.endsWith(".zip")) {
-    const bytes = await file.bytes();
-    return await importZipBytes(bytes, fileName, { ...options, summary });
-  }
-
-  if (fileEntry) {
-    fileEntry.status = "failed";
-    fileEntry.error = "Unsupported file type";
-  }
-  summary.errors.push({
-    file: fileName,
-    message: "Unsupported file type",
-    kind: "file",
-  });
   return summary;
 }
