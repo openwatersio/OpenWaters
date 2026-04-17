@@ -1,7 +1,5 @@
 import log from "@/logger";
 import type { LngLatBounds, OfflinePack, OfflinePackStatus } from "@maplibre/maplibre-react-native";
-
-const logger = log.extend("charts");
 import {
   createTilePack,
   deleteTilePack,
@@ -12,6 +10,8 @@ import {
 } from "@/charts/offline";
 import { useMemo } from "react";
 import { proxy, useSnapshot } from "valtio";
+
+const logger = log.extend("charts");
 
 // ---------------------------------------------------------------------------
 // Types

@@ -1,7 +1,5 @@
 import log from "@/logger";
 import { persistProxy } from "@/persistProxy";
-
-const logger = log.extend("connections");
 import { proxy, useSnapshot } from "valtio";
 
 import { pruneStaleVessels } from "@/ais/hooks/useAIS";
@@ -12,6 +10,8 @@ import {
   SignalKClient,
   discoverEndpoints,
 } from "@/instruments/signalk";
+
+const logger = log.extend("connections");
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected";
 

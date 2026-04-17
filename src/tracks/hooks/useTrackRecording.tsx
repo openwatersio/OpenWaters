@@ -8,8 +8,6 @@ import {
   type TrackPoint,
 } from "@/database";
 import log from "@/logger";
-
-const logger = log.extend("tracking");
 import { persistProxy } from "@/persistProxy";
 import { computeDistance, segmentDistance } from "@/tracks/distance";
 import {
@@ -25,6 +23,8 @@ import { defineTask } from "expo-task-manager";
 import { useEffect, useState } from "react";
 import { proxy, useSnapshot } from "valtio";
 import { subscribeKey } from "valtio/utils";
+
+const logger = log.extend("tracking");
 
 const TASK_NAME = "track-recording-location";
 const STORAGE_KEY = "track-recording";
@@ -88,9 +88,9 @@ export function useTrackRecording() {
  *
  * Returns an empty array when no recording is active.
  */
-export function useTrackRecordingPoints(): Array<[number, number]> {
+export function useTrackRecordingPoints(): [number, number][] {
   const trackId = useSnapshot(trackRecordingState).track?.id ?? null;
-  const [points, setPoints] = useState<Array<[number, number]>>([]);
+  const [points, setPoints] = useState<[number, number][]>([]);
 
   useEffect(() => {
     if (trackId == null) {

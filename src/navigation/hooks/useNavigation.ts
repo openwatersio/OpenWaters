@@ -1,7 +1,5 @@
 import log from "@/logger";
 import { getInstrumentData } from "@/instruments/hooks/useInstruments";
-
-const logger = log.extend("navigation");
 import {
   Accuracy,
   getForegroundPermissionsAsync,
@@ -11,6 +9,8 @@ import {
   type LocationObject,
 } from "expo-location";
 import { proxy, useSnapshot } from "valtio";
+
+const logger = log.extend("navigation");
 
 export enum NavigationState {
   Moored,

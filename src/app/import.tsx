@@ -1,7 +1,5 @@
 import log from "@/logger";
 import type { ImportFile, ImportRecord, ImportRecordStatus } from "@/import";
-
-const logger = log.extend("import");
 import {
   cancelImport,
   clearImportStatus,
@@ -41,6 +39,8 @@ import { Directory, File } from "expo-file-system";
 import { router, Stack } from "expo-router";
 import { Alert } from "react-native";
 import type { SFSymbol } from "sf-symbols-typescript";
+
+const logger = log.extend("import");
 
 function statusIcon(status: ImportRecordStatus): {
   name: SFSymbol;

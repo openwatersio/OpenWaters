@@ -1,7 +1,5 @@
 import log from "@/logger";
 import { setThemePreference, useThemePreference, type ThemePreference } from "@/charts/theme";
-
-const logger = log.extend("settings");
 import { closeDatabase } from "@/database";
 import { ARRIVAL_RADIUS_OPTIONS, describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits, type ArrivalRadius } from "@/hooks/usePreferredUnits";
 import SheetView from "@/ui/SheetView";
@@ -15,6 +13,8 @@ import { hasStartedLocationUpdatesAsync, stopLocationUpdatesAsync } from "expo-l
 import { router, Stack } from "expo-router";
 import * as SQLite from "expo-sqlite";
 import { Alert } from "react-native";
+
+const logger = log.extend("settings");
 
 function resetAppData() {
   Alert.alert(

@@ -1,7 +1,5 @@
 import log from "@/logger";
 import type { CatalogSource } from "@/charts/catalog/types";
-
-const logger = log.extend("charts");
 import { generateStyle } from "@/charts/install";
 import {
   readCatalog,
@@ -14,6 +12,8 @@ import { usePreferredUnits } from "@/hooks/usePreferredUnits";
 import { useCameraPosition } from "@/map/hooks/useCameraPosition";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { useEffect, useMemo, useState } from "react";
+
+const logger = log.extend("charts");
 
 export type { InstalledChart };
 
