@@ -26,9 +26,10 @@ Open a `.gpx` or `.zip` file in the iOS Files app, Safari, Mail, or any app that
 
 **During and after import:**
 
-- You can dismiss the sheet and continue using the app while the import runs, but keep the app open until it finishes.
+- You can dismiss the sheet, leave the app, or even force quit — the import will automatically resume where it left off the next time you open the app.
 - Re-open the Import screen at any time to check progress or view results.
 - Tap any imported record to navigate to it on the chart.
+- Tap **Cancel Import** to stop a running import. Already-imported items are kept.
 - Tap **Start New Import** when you're done to clear the results and import more.
 
 ## GPX compatibility
@@ -73,8 +74,22 @@ The import will process:
 
 Depending on how much data you have, this may take a while for large collections.
 
-## Limitations
+## Duplicate detection
 
-- **Interruptions** — If the app is closed during an import, it will interrupt the import. You'll see a summary of what was imported when you reopen.
-- **No deduplication** — importing the same file twice creates duplicate records. Delete unwanted duplicates manually from the tracks, markers, or routes lists.
-- **Errors** — if individual files within a zip or folder fail to parse, the import continues with the remaining files. Errors are shown in the import summary.
+Importing the same file twice is safe — duplicates are automatically detected and skipped:
+
+- **Markers** — skipped if the name and coordinates match an existing marker.
+- **Routes** — skipped if the name, first/last points, and point count match an existing route.
+- **Tracks** — skipped if the start and end timestamps match an existing track. For tracks without timestamps, the first and last recorded positions are compared instead.
+
+Skipped records appear in the import summary marked as "Duplicate — skipped."
+
+## Resumable imports
+
+When you start an import, files are first copied into the app's local storage. If the app is closed or interrupted mid-import, the remaining files are automatically picked up and processed the next time you open the app. The import screen will reappear showing progress.
+
+If the app is backgrounded during an import, iOS may grant additional processing time to continue importing in the background.
+
+## Errors
+
+If individual files within a zip or folder fail to parse, the import continues with the remaining files. Errors are shown in the import summary.

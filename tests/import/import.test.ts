@@ -31,7 +31,7 @@ const mockDb: any = {
   getFirstAsync: jest.fn(async (sql: string, ...args: any[]) => {
     if (sql.includes("PRAGMA user_version"))
       return { user_version: userVersion };
-    if (sql.includes("MAX(sequence)")) {
+    if (sql.includes("MAX(sequence)") && !sql.includes("JOIN")) {
       const trackId = args[0];
       const pts = rows.track_points.filter((p) => p.track_id === trackId);
       const max = pts.reduce((m, p) => Math.max(m, p.sequence ?? -1), -1);

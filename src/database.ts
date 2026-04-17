@@ -248,6 +248,40 @@ export async function startTrack(): Promise<Track> {
 }
 
 /**
+ * Check if a track with the same started_at and ended_at already exists.
+ * Falls back to first/last point comparison when timestamps are null.
+ */
+export async function findDuplicateTrack(
+  startedAt: string | null,
+  endedAt: string | null,
+  points: { latitude: number; longitude: number }[],
+): Promise<Track | null> {
+  const db = await getDatabase();
+  if (startedAt && endedAt) {
+    return db.getFirstAsync<Track>(
+      "SELECT * FROM tracks WHERE started_at = ? AND ended_at = ?",
+      startedAt,
+      endedAt,
+    );
+  }
+  if (points.length < 2) return null;
+  const first = points[0];
+  const last = points[points.length - 1];
+  return db.getFirstAsync<Track>(
+    `SELECT t.* FROM tracks t
+     JOIN track_points tp_first ON tp_first.track_id = t.id AND tp_first.sequence = 0
+     JOIN track_points tp_last ON tp_last.track_id = t.id
+       AND tp_last.sequence = (SELECT MAX(sequence) FROM track_points WHERE track_id = t.id)
+     WHERE tp_first.latitude = ? AND tp_first.longitude = ?
+       AND tp_last.latitude = ? AND tp_last.longitude = ?`,
+    first.latitude,
+    first.longitude,
+    last.latitude,
+    last.longitude,
+  );
+}
+
+/**
  * Insert a pre-existing track (e.g., from GPX import) with an explicit
  * name/start/end. `distance` is computed by the caller.
  */
@@ -519,6 +553,19 @@ export type MarkerFields = {
   icon?: string | null;
 };
 
+/** Check if a marker with the same name and coordinates already exists. */
+export async function findDuplicateMarker(
+  fields: MarkerFields,
+): Promise<Marker | null> {
+  const db = await getDatabase();
+  return db.getFirstAsync<Marker>(
+    "SELECT * FROM markers WHERE name = ? AND latitude = ? AND longitude = ?",
+    fields.name ?? null,
+    fields.latitude,
+    fields.longitude,
+  );
+}
+
 export async function insertMarker(fields: MarkerFields): Promise<Marker> {
   const db = await getDatabase();
   const result = await db.runAsync(
@@ -681,6 +728,36 @@ const ROUTES_ORDER_BY: Record<Exclude<RoutesOrder, "nearby">, string> = {
   name: "name COLLATE NOCASE ASC",
   distance: "distance DESC",
 };
+
+/**
+ * Check if a route with the same name, first/last points, and point count
+ * already exists.
+ */
+export async function findDuplicateRoute(
+  name: string | null,
+  points: { latitude: number; longitude: number }[],
+): Promise<Route | null> {
+  if (points.length === 0) return null;
+  const db = await getDatabase();
+  const first = points[0];
+  const last = points[points.length - 1];
+  return db.getFirstAsync<Route>(
+    `SELECT r.* FROM routes r
+     JOIN route_points rp_first ON rp_first.route_id = r.id AND rp_first."order" = 0
+     JOIN route_points rp_last ON rp_last.route_id = r.id
+       AND rp_last."order" = (SELECT MAX("order") FROM route_points WHERE route_id = r.id)
+     WHERE r.name = ?
+       AND rp_first.latitude = ? AND rp_first.longitude = ?
+       AND rp_last.latitude = ? AND rp_last.longitude = ?
+       AND (SELECT COUNT(*) FROM route_points WHERE route_id = r.id) = ?`,
+    name ?? null,
+    first.latitude,
+    first.longitude,
+    last.latitude,
+    last.longitude,
+    points.length,
+  );
+}
 
 export async function insertRoute(name?: string): Promise<Route> {
   const db = await getDatabase();

@@ -49,6 +49,8 @@ function statusIcon(status: ImportRecordStatus): {
   switch (status) {
     case "done":
       return { name: "checkmark", color: "green" };
+    case "skipped":
+      return { name: "arrow.uturn.right", color: "secondary" };
     case "importing":
       return { name: "arrow.triangle.2.circlepath", color: "primary" };
     case "failed":
@@ -78,7 +80,11 @@ function RecordRow(record: ImportRecord) {
   const icon = statusIcon(record.status);
   const tappable = record.status === "done" && record.id != null;
   const subtext =
-    record.status === "failed" && record.error ? record.error : record.file;
+    record.status === "skipped"
+      ? "Duplicate — skipped"
+      : record.status === "failed" && record.error
+        ? record.error
+        : record.file;
   const inProgress =
     record.status === "pending" || record.status === "importing";
 

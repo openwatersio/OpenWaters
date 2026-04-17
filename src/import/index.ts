@@ -1,4 +1,7 @@
 import {
+  findDuplicateMarker,
+  findDuplicateRoute,
+  findDuplicateTrack,
   getDatabase,
   insertMarker,
   insertRoute,
@@ -23,7 +26,7 @@ export type ImportError = {
 };
 
 export type ImportRecordType = "marker" | "route" | "track";
-export type ImportRecordStatus = "pending" | "importing" | "done" | "failed";
+export type ImportRecordStatus = "pending" | "importing" | "done" | "skipped" | "failed";
 
 /** A file the user picked, possibly inside a zip or directory. Carries its
  *  own lifecycle independent of the feature records it contains. */
@@ -103,6 +106,17 @@ export async function importGpxText(
   // Markers
   for (const wpt of parsed.waypoints) {
     try {
+      const existing = await findDuplicateMarker(wpt);
+      if (existing) {
+        summary.records.push({
+          type: "marker",
+          status: "skipped",
+          id: existing.id,
+          name: wpt.name ?? fileName,
+          file: fileName,
+        });
+        continue;
+      }
       const marker = await insertMarker(wpt);
       summary.records.push({
         type: "marker",
@@ -127,6 +141,17 @@ export async function importGpxText(
   // Routes
   for (const rte of parsed.routes) {
     try {
+      const existing = await findDuplicateRoute(rte.name, rte.points);
+      if (existing) {
+        summary.records.push({
+          type: "route",
+          status: "skipped",
+          id: existing.id,
+          name: rte.name ?? fileName,
+          file: fileName,
+        });
+        continue;
+      }
       const route = await insertRoute(rte.name ?? undefined);
       await replaceRoutePoints(route.id, rte.points);
       await updateRoute(route.id, { distance: sumPathDistance(rte.points) });
@@ -152,6 +177,18 @@ export async function importGpxText(
 
   // Tracks
   for (const trk of parsed.tracks) {
+    const startedAt = trk.started_at ?? new Date().toISOString();
+    const existing = await findDuplicateTrack(trk.started_at, trk.ended_at, trk.points);
+    if (existing) {
+      summary.records.push({
+        type: "track",
+        status: "skipped",
+        id: existing.id,
+        name: trk.name ?? `Track ${existing.id}`,
+        file: fileName,
+      });
+      continue;
+    }
     summary.records.push({
       type: "track",
       status: "importing",
@@ -160,7 +197,6 @@ export async function importGpxText(
     });
     const idx = summary.records.length - 1;
     try {
-      const startedAt = trk.started_at ?? new Date().toISOString();
       const track = await insertTrack({
         name: trk.name,
         started_at: startedAt,
@@ -227,6 +263,18 @@ export async function importNavionicsJson(
         kind: "parse",
       });
       if (file) file.status = "failed";
+      return summary;
+    }
+    const existing = await findDuplicateMarker(marker);
+    if (existing) {
+      summary.records.push({
+        type: "marker",
+        status: "skipped",
+        id: existing.id,
+        name: marker.name ?? fileName,
+        file: fileName,
+      });
+      if (file) file.status = "done";
       return summary;
     }
     const inserted = await insertMarker(marker);
