@@ -14,6 +14,10 @@ import {
   stageDirectoryFiles,
   stageFile,
 } from "@/import/staging";
+import {
+  registerImportBackgroundTask,
+  unregisterImportBackgroundTask,
+} from "@/import/background";
 import log from "@/logger";
 import { File, type Directory } from "expo-file-system";
 import { router } from "expo-router";
@@ -37,7 +41,20 @@ export type ImportStatus = {
 
 type ImportState = { status: ImportStatus | null };
 
-export const importState = proxy<ImportState>({ status: null });
+type ImportStateWithComputed = ImportState & {
+  readonly errorCount: number;
+};
+
+export const importState = proxy<ImportStateWithComputed>({
+  status: null,
+  get errorCount(): number {
+    if (!this.status) return 0;
+    return (
+      this.status.errors.length +
+      this.status.records.filter((r) => r.status === "failed").length
+    );
+  },
+});
 
 /** React hook — returns a tracked snapshot of the import state. */
 export function useImport() {
@@ -48,12 +65,12 @@ export function clearImportStatus(): void {
   importState.status = null;
 }
 
-/** Cancel a running import: stop processing and delete all staged files. */
+/** Cancel a running import: stop processing and delete all staged files.
+ *  The `processing` lock is left for `runImportTask`'s `finally` to release. */
 export function cancelImport(): void {
   cancelled = true;
   clearStagingDirectory();
   importState.status = null;
-  processing = false;
 }
 
 /** True when an import is currently running (any file still in flight). */
@@ -84,6 +101,9 @@ export async function runImportTask(source?: string): Promise<boolean> {
   if (processing) return false;
   processing = true;
   cancelled = false;
+
+  // Register with iOS so processing can continue if the app is backgrounded
+  registerImportBackgroundTask().catch(() => {});
 
   try {
     // Ensure we have a status object for the UI
@@ -132,8 +152,11 @@ export async function runImportTask(source?: string): Promise<boolean> {
     // Post-import optimization
     optimizeDatabase().catch(() => {});
 
+    const allDone = !hasStagedFiles();
+    if (allDone) unregisterImportBackgroundTask().catch(() => {});
+
     logger.debug(`import complete: ${staged.length} files`);
-    return !hasStagedFiles();
+    return allDone;
   } catch (e) {
     logger.error("import task failed", e);
     if (importState.status) {

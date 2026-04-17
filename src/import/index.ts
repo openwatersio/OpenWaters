@@ -85,10 +85,7 @@ function sumPathDistance(
   return total;
 }
 
-/**
- * Import a single GPX document (XML text). All DB writes for one file are
- * wrapped in a transaction so a crash leaves no partial data.
- */
+/** Import a single GPX document (XML text). Writes to the database. */
 export async function importGpxText(
   xml: string,
   options: ImportOptions = {},

@@ -153,7 +153,7 @@ export async function extractZipsInStaging(): Promise<void> {
         if (!isGpx && !isJson) continue;
 
         // Flatten nested paths: "folder/sub/file.gpx" → "folder_sub_file.gpx"
-        const flatName = name.replace(/\//g, "_");
+        const flatName = uniqueName(dir, name.replace(/\//g, "_"));
         const dest = new File(dir, flatName);
         dest.write(strFromU8(data));
       }

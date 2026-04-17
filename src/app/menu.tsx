@@ -5,8 +5,7 @@ import { tint } from "@expo/ui/swift-ui/modifiers";
 import { router } from "expo-router";
 
 export default function Menu() {
-  const { status } = useImport();
-  const errorCount = status?.errors.length ?? 0;
+  const { errorCount } = useImport();
   const hasErrors = errorCount > 0;
   const importLabel = hasErrors
     ? `Import (${errorCount} ${errorCount === 1 ? "error" : "errors"})`

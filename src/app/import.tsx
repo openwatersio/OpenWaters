@@ -289,8 +289,11 @@ export default function Import() {
                 {records
                   .slice(-10)
                   .reverse()
-                  .map((record, i) => (
-                    <RecordRow key={i} {...record} />
+                  .map((record) => (
+                    <RecordRow
+                      key={`${record.type}-${record.name}-${record.file}-${record.id ?? record.status}`}
+                      {...record}
+                    />
                   ))}
                 {records.length > 10 && (
                   <Text>

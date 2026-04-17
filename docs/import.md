@@ -6,9 +6,9 @@ Import markers, routes, and tracks from GPX files, zip archives, folders, or Gar
 
 | Format                 | What gets imported                                                    |
 | ---------------------- | --------------------------------------------------------------------- |
-| `.gpx` file            | Waypoints routes, tracks                                              |
-| `.zip` file            | Each `.gpx` inside is imported                                        |
-| Folder                 | Recursively finds and imports all `.gpx` files                        |
+| `.gpx` file            | Waypoints, routes, tracks                                             |
+| `.zip` file            | Each `.gpx` and Navionics `.json` inside is imported                  |
+| Folder                 | Recursively finds and imports `.gpx`, `.json`, and `.zip` files       |
 | Navionics `mobile.zip` | Markers (JSON), routes (GPX), and tracks (GPX) from the Navionics app |
 
 ## How to import

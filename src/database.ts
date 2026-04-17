@@ -10,7 +10,10 @@ let initPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 export function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   if (!initPromise) {
-    initPromise = initDatabase();
+    initPromise = initDatabase().catch((err) => {
+      initPromise = null;
+      throw err;
+    });
   }
   return initPromise;
 }
@@ -559,7 +562,7 @@ export async function findDuplicateMarker(
 ): Promise<Marker | null> {
   const db = await getDatabase();
   return db.getFirstAsync<Marker>(
-    "SELECT * FROM markers WHERE name = ? AND latitude = ? AND longitude = ?",
+    "SELECT * FROM markers WHERE name IS ? AND latitude = ? AND longitude = ?",
     fields.name ?? null,
     fields.latitude,
     fields.longitude,
@@ -746,7 +749,7 @@ export async function findDuplicateRoute(
      JOIN route_points rp_first ON rp_first.route_id = r.id AND rp_first."order" = 0
      JOIN route_points rp_last ON rp_last.route_id = r.id
        AND rp_last."order" = (SELECT MAX("order") FROM route_points WHERE route_id = r.id)
-     WHERE r.name = ?
+     WHERE r.name IS ?
        AND rp_first.latitude = ? AND rp_first.longitude = ?
        AND rp_last.latitude = ? AND rp_last.longitude = ?
        AND (SELECT COUNT(*) FROM route_points WHERE route_id = r.id) = ?`,
