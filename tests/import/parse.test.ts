@@ -1,4 +1,4 @@
-import { parseGpx } from "@/import/parse";
+import { parseGpx, parseNavionicsMarker } from "@/import/parse";
 
 describe("parseGpx", () => {
   it("parses waypoints", () => {
@@ -125,5 +125,48 @@ describe("parseGpx", () => {
   it("returns empty result for malformed input", () => {
     const result = parseGpx("<notgpx/>");
     expect(result).toEqual({ waypoints: [], routes: [], tracks: [] });
+  });
+});
+
+describe("parseNavionicsMarker", () => {
+  it("parses a valid Navionics marker", () => {
+    const json = JSON.stringify({
+      name: "Possible anchorage?",
+      lat: 41.246022,
+      lon: -73.959573,
+      description: null,
+    });
+    const result = parseNavionicsMarker(json);
+    expect(result).toEqual({
+      latitude: 41.246022,
+      longitude: -73.959573,
+      name: "Possible anchorage?",
+      notes: null,
+    });
+  });
+
+  it("maps description to notes", () => {
+    const json = JSON.stringify({
+      name: "Fuel dock",
+      lat: 42.0,
+      lon: -71.0,
+      description: "Open 9-5 daily",
+    });
+    expect(parseNavionicsMarker(json)?.notes).toBe("Open 9-5 daily");
+  });
+
+  it("returns null for missing coordinates", () => {
+    expect(parseNavionicsMarker(JSON.stringify({ name: "No coords" }))).toBeNull();
+  });
+
+  it("returns null for invalid JSON", () => {
+    expect(parseNavionicsMarker("not json")).toBeNull();
+  });
+
+  it("handles missing name gracefully", () => {
+    const json = JSON.stringify({ lat: 42.0, lon: -71.0 });
+    const result = parseNavionicsMarker(json);
+    expect(result?.name).toBeNull();
+    expect(result?.latitude).toBe(42.0);
   });
 });

@@ -8,6 +8,7 @@ Open Waters is an open-source marine navigation app. It provides essential navig
 - [Tracks](tracks.md) — Record the vessel's path, display on the chart, export as GPX
 - [Markers](markers.md) — Drop pins, name and color-code them, navigate with live bearing and distance
 - [Routes](routes.md) — Multi-leg route planning with automatic waypoint advancement and ETA
+- [Import](import.md) — Import markers, routes, and tracks from GPX files, Garmin/Navionics exports
 - [Instruments](instruments.md) — Connect to onboard instruments via Signal K or NMEA 0183
 
 - [Roadmap](https://github.com/orgs/openwatersio/projects/3) — Feature roadmap and priorities

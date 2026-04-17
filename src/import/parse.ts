@@ -1,6 +1,26 @@
 import { XMLParser } from "fast-xml-parser";
 import type { MarkerFields, TrackPointFields } from "@/database";
 
+/**
+ * Parse a Navionics marker JSON file into MarkerFields.
+ * Each file is a single object: `{name, lat, lon, description}`.
+ * Returns null if the JSON doesn't match the expected shape.
+ */
+export function parseNavionicsMarker(json: string): MarkerFields | null {
+  try {
+    const obj = JSON.parse(json);
+    if (typeof obj.lat !== "number" || typeof obj.lon !== "number") return null;
+    return {
+      latitude: obj.lat,
+      longitude: obj.lon,
+      name: obj.name ?? null,
+      notes: obj.description ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export type ParsedRoute = {
   name: string | null;
   points: { latitude: number; longitude: number }[];

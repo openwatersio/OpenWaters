@@ -9,7 +9,7 @@ import {
   replaceRoutePoints,
   updateRoute,
 } from "@/database";
-import { parseGpx } from "@/import/parse";
+import { parseGpx, parseNavionicsMarker } from "@/import/parse";
 import { getDistance } from "geolib";
 
 export type ImportError = {
@@ -208,7 +208,7 @@ export async function importGpxText(
   return summary;
 }
 
-/** Import a zip archive containing one or more .gpx files. */
+/** Import a zip archive containing .gpx and/or Navionics .json marker files. */
 export async function importZipBytes(
   bytes: Uint8Array,
   label = "archive.zip",
@@ -232,7 +232,7 @@ export async function importZipBytes(
     return summary;
   }
 
-  // Replace the zip-level file entry with per-gpx entries so the user sees
+  // Replace the zip-level file entry with per-entry files so the user sees
   // what's inside before we start parsing.
   const parentIdx = parent ? summary.files.indexOf(parent) : -1;
   if (parentIdx >= 0) summary.files.splice(parentIdx, 1);
@@ -240,16 +240,76 @@ export async function importZipBytes(
   const gpxEntries = Object.entries(entries).filter(([n]) =>
     n.toLowerCase().endsWith(".gpx"),
   );
-  const entryFiles = gpxEntries.map(([name]) => {
+  const jsonMarkerEntries = Object.entries(entries).filter(([n]) =>
+    n.toLowerCase().endsWith(".json") && n.includes("markers/"),
+  );
+
+  // Seed file entries for GPX files (markers are small enough to batch
+  // under a single "markers" file entry).
+  const gpxFiles = gpxEntries.map(([name]) => {
     summary.files.push({ name: `${label}:${name}`, status: "pending" });
-    // Return the proxy-wrapped reference; mutations through the pre-push
-    // local would bypass valtio.
     return summary.files[summary.files.length - 1];
   });
 
+  let markersFile: ImportFile | undefined;
+  if (jsonMarkerEntries.length > 0) {
+    summary.files.push({
+      name: `${label}:markers (${jsonMarkerEntries.length})`,
+      status: "pending",
+    });
+    markersFile = summary.files[summary.files.length - 1];
+  }
+
+  // Import Navionics JSON markers
+  if (markersFile) {
+    markersFile.status = "importing";
+    let anyMarkerFailed = false;
+    for (const [name, data] of jsonMarkerEntries) {
+      const entryName = `${label}:${name}`;
+      try {
+        const json = strFromU8(data);
+        const marker = parseNavionicsMarker(json);
+        if (!marker) {
+          summary.errors.push({
+            file: entryName,
+            message: "Not a valid Navionics marker",
+            kind: "parse",
+          });
+          anyMarkerFailed = true;
+          continue;
+        }
+        const markerIdxStart = summary.records.length;
+        summary.records.push({
+          type: "marker",
+          status: "importing",
+          name: marker.name ?? name.split("/").pop() ?? entryName,
+          file: entryName,
+        });
+        const inserted = await insertMarker(marker);
+        summary.records[markerIdxStart].id = inserted.id;
+        summary.records[markerIdxStart].status = "done";
+      } catch (e) {
+        const idx = summary.records.length - 1;
+        if (idx >= 0 && summary.records[idx].status === "importing") {
+          summary.records[idx].status = "failed";
+          summary.records[idx].error = e instanceof Error ? e.message : String(e);
+        }
+        summary.errors.push({
+          file: entryName,
+          message: e instanceof Error ? e.message : String(e),
+          kind: "file",
+        });
+        anyMarkerFailed = true;
+      }
+    }
+    markersFile.status = anyMarkerFailed ? "failed" : "done";
+    await yieldToUi();
+  }
+
+  // Import GPX files (routes + tracks)
   for (let i = 0; i < gpxEntries.length; i++) {
     const [, data] = gpxEntries[i];
-    const entryFile = entryFiles[i];
+    const entryFile = gpxFiles[i];
     const errorsBefore = summary.errors.length;
     try {
       const xml = strFromU8(data);

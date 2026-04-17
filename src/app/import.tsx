@@ -102,6 +102,8 @@ function RecordRow(record: ImportRecord) {
         </Text>
         <Text
           modifiers={[
+            lineLimit(1),
+            truncationMode("middle"),
             font({ size: 12 }),
             foregroundStyle(
               record.status === "failed" ? "red" : "secondary",

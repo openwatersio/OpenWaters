@@ -250,7 +250,7 @@ export async function endTrack(
 ): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
-    "UPDATE tracks SET ended_at = ?, distance = ? WHERE id = ?",
+    "UPDATE tracks SET ended_at = ?, distance = ?, max_speed = ? WHERE id = ?",
     new Date().toISOString(),
     distance,
     maxSpeed,
