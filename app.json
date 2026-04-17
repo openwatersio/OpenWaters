@@ -30,6 +30,22 @@
             "LSItemContentTypes": [
               "io.openwaters.mbtiles"
             ]
+          },
+          {
+            "CFBundleTypeName": "GPX Route",
+            "CFBundleTypeRole": "Viewer",
+            "LSHandlerRank": "Alternate",
+            "LSItemContentTypes": [
+              "com.topografix.gpx"
+            ]
+          },
+          {
+            "CFBundleTypeName": "ZIP Archive",
+            "CFBundleTypeRole": "Viewer",
+            "LSHandlerRank": "Alternate",
+            "LSItemContentTypes": [
+              "public.zip-archive"
+            ]
           }
         ],
         "UTImportedTypeDeclarations": [
@@ -43,6 +59,22 @@
             "UTTypeTagSpecification": {
               "public.filename-extension": [
                 "mbtiles"
+              ]
+            }
+          },
+          {
+            "UTTypeIdentifier": "com.topografix.gpx",
+            "UTTypeDescription": "GPX Route",
+            "UTTypeConformsTo": [
+              "public.xml",
+              "public.text"
+            ],
+            "UTTypeTagSpecification": {
+              "public.filename-extension": [
+                "gpx"
+              ],
+              "public.mime-type": [
+                "application/gpx+xml"
               ]
             }
           }

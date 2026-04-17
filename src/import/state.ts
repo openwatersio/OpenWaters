@@ -1,4 +1,5 @@
 import { Directory, File } from "expo-file-system";
+import { router } from "expo-router";
 import { proxy, useSnapshot } from "valtio";
 import { persistProxy } from "@/persistProxy";
 import {
@@ -109,6 +110,19 @@ export function startDirectoryImport(dir: Directory): void {
     const entry = seedFile(opts.summary, name);
     await importPickedDirectory(dir, { ...opts, file: entry });
   });
+}
+
+/**
+ * Handle a file:// URL from the iOS share sheet or "Open in" action.
+ * Creates a File from the URI, starts the import, and navigates to the
+ * import screen.
+ */
+export function handleIncomingFileUrl(url: string): void {
+  const lower = url.toLowerCase();
+  if (!lower.endsWith(".gpx") && !lower.endsWith(".zip")) return;
+  const file = new File(url);
+  startFileImport(file);
+  router.navigate("/import");
 }
 
 // Persist the status across app launches. If we find in-flight files/records

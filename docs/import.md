@@ -13,12 +13,23 @@ Import markers, routes, and tracks from GPX files, zip archives, folders, or Gar
 
 ## How to import
 
+There are two ways to import:
+
+**From within the app:**
+
 1. Open the main menu and tap **Import**.
 2. Choose **Choose File** (for a single file or zip) or **Choose Folder** (for a directory of GPX files).
-3. You can dismiss the sheet and continue using the app while the import runs, but keep the app open until it finishses.
-4. Re-open the Import screen at any time to check progress or view results.
-5. Tap any imported record to navigate to it on the chart.
-6. Tap **Start New Import** when you're done to clear the results and import more.
+
+**From other apps (share sheet):**
+
+Open a `.gpx` or `.zip` file in the iOS Files app, Safari, Mail, or any app that supports sharing, then choose **Open in Open Waters**. The app will open and begin importing automatically.
+
+**During and after import:**
+
+- You can dismiss the sheet and continue using the app while the import runs, but keep the app open until it finishes.
+- Re-open the Import screen at any time to check progress or view results.
+- Tap any imported record to navigate to it on the chart.
+- Tap **Start New Import** when you're done to clear the results and import more.
 
 ## GPX compatibility
 

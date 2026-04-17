@@ -1,9 +1,11 @@
 import { cancelAllDownloads } from "@/charts/download";
+import { handleIncomingFileUrl } from "@/import/state";
 import { connectAll, disconnectAll } from "@/instruments/hooks/useConnections";
 import "@/navigation/hooks/useNavigation"; // Register LocationManager listener at module scope
 import "@/tracks/hooks/useTrackRecording"; // Register background task at module scope
 import { LocationManager } from "@maplibre/maplibre-react-native";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import * as Linking from "expo-linking";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { useColorScheme } from 'react-native';
@@ -24,6 +26,17 @@ export default function RootLayout() {
   useEffect(() => {
     connectAll();
     return () => disconnectAll();
+  }, []);
+
+  // Handle GPX/ZIP files opened via iOS share sheet or "Open in"
+  useEffect(() => {
+    Linking.getInitialURL().then((url) => {
+      if (url) handleIncomingFileUrl(url);
+    });
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      handleIncomingFileUrl(url);
+    });
+    return () => subscription.remove();
   }, []);
 
   return (
