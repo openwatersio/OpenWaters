@@ -11,6 +11,7 @@ import {
 } from "@/database";
 import { formatDate, formatDuration } from "@/format";
 import { useDbQuery } from "@/hooks/useDbQuery";
+import { getPosition } from "@/navigation/hooks/useNavigation";
 import { exportTrackAsGPX } from "@/tracks/export";
 import { useCallback } from "react";
 
@@ -22,23 +23,21 @@ export function trackDisplayName(track: Track): string {
 
 type UseTracksOptions = {
   order?: TracksOrder;
-  /** Used when `order === "nearby"`; ignored otherwise. Falls back to
-   *  default ordering when missing. */
-  position?: { latitude: number; longitude: number } | null;
 };
 
 /**
  * Reactive list of all tracks (with derived stats), sorted in SQL by the
- * requested order. Re-runs automatically whenever the `tracks` or
- * `track_points` tables change.
+ * requested order. Re-runs automatically whenever the `tracks` table change.
  */
-export function useTracks(options: UseTracksOptions = {}): TrackWithStats[] {
-  const { order = "date", position } = options;
+export function useTracks({
+  order = "date",
+}: UseTracksOptions = {}): TrackWithStats[] {
   const fetch = useCallback(
-    () => getAllTracksWithStats(order, position),
-    [order, position],
+    () =>
+      getAllTracksWithStats(order, order === "nearby" ? getPosition() : null),
+    [order],
   );
-  return useDbQuery(["tracks", "track_points"], fetch) ?? [];
+  return useDbQuery(["tracks"], fetch) ?? [];
 }
 
 /** Reactive points for a track. Re-runs as new fixes arrive. */

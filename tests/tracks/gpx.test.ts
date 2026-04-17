@@ -8,6 +8,7 @@ const track: Track = {
   ended_at: "2025-06-15T10:00:00Z",
   distance: 5000,
   color: null,
+  max_speed: null,
 };
 
 const points: TrackPoint[] = [

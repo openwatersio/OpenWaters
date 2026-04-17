@@ -135,6 +135,14 @@ const mockDb = {
       );
       return { changes: 0 };
     }
+    if (sql.match(/UPDATE tracks SET distance = \?, max_speed = \? WHERE id/)) {
+      const track = rows.tracks.find((t) => t.id === args[2]);
+      if (track) {
+        track.distance = args[0];
+        track.max_speed = args[1];
+      }
+      return { changes: track ? 1 : 0 };
+    }
     if (sql.match(/UPDATE tracks SET distance = \? WHERE id/)) {
       const track = rows.tracks.find((t) => t.id === args[1]);
       if (track) track.distance = args[0];
@@ -277,6 +285,7 @@ describe("importGpxText", () => {
         ended_at: "2025-01-01T00:10:00Z",
         distance: 0,
         color: null,
+        max_speed: null,
       },
       [
         {

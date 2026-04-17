@@ -139,7 +139,12 @@ export async function stopTrackRecording() {
       // Recompute distance from the persisted points so the saved value
       // reflects the canonical algorithm, not the running-sum approximation.
       const points = await getTrackPoints(track.id);
-      await endTrack(track.id, computeDistance(points));
+      const { maxSpeed } = trackRecordingState;
+      await endTrack(
+        track.id,
+        computeDistance(points),
+        maxSpeed > 0 ? maxSpeed : null,
+      );
     }
   }
 

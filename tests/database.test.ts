@@ -119,6 +119,7 @@ const mockDb = {
         ended_at: null,
         distance: 0,
         color: null,
+        max_speed: null,
       });
       return { lastInsertRowId: id };
     }
@@ -151,8 +152,17 @@ const mockDb = {
         ended_at: args[2],
         distance: args[3] ?? 0,
         color: null,
+        max_speed: null,
       });
       return { lastInsertRowId: id };
+    }
+    if (sql.match(/UPDATE tracks SET distance = \?, max_speed = \? WHERE id/)) {
+      const track = rows.tracks.find((t) => t.id === args[2]);
+      if (track) {
+        track.distance = args[0];
+        track.max_speed = args[1];
+      }
+      return { changes: track ? 1 : 0 };
     }
     if (sql.match(/UPDATE tracks SET distance = \? WHERE id/)) {
       const track = rows.tracks.find((t) => t.id === args[1]);
@@ -174,10 +184,11 @@ const mockDb = {
       return { lastInsertRowId: id };
     }
     if (sql.includes("UPDATE tracks SET ended_at")) {
-      const track = rows.tracks.find((t) => t.id === args[2]);
+      const track = rows.tracks.find((t) => t.id === args[3]);
       if (track) {
         track.ended_at = args[0];
         track.distance = args[1];
+        track.max_speed = args[2];
       }
       return { changes: track ? 1 : 0 };
     }

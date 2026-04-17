@@ -3,10 +3,19 @@ import * as SQLite from "expo-sqlite";
 
 const DATABASE_NAME = "app.db";
 
-let db: SQLite.SQLiteDatabase | null = null;
+// Single in-flight initialization promise. All concurrent callers of
+// getDatabase() await the same promise, preventing duplicate migration
+// connections and racing ALTER TABLE statements.
+let initPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
-export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
-  if (db) return db;
+export function getDatabase(): Promise<SQLite.SQLiteDatabase> {
+  if (!initPromise) {
+    initPromise = initDatabase();
+  }
+  return initPromise;
+}
+
+async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   // Run migrations on a connection without change listeners — schema changes
   // that rebuild tables (DROP/RENAME) fail with "database table is locked"
   // when the change-listener session holds references.
@@ -16,10 +25,9 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   } finally {
     await migrationDb.closeAsync();
   }
-  db = await SQLite.openDatabaseAsync(DATABASE_NAME, {
+  return SQLite.openDatabaseAsync(DATABASE_NAME, {
     enableChangeListener: true,
   });
-  return db;
 }
 
 async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
@@ -151,6 +159,17 @@ async function migrate(db: SQLite.SQLiteDatabase): Promise<void> {
       PRAGMA user_version = 9;
     `);
   }
+
+  if (currentVersion < 10) {
+    await db.execAsync(`
+      ALTER TABLE tracks ADD COLUMN max_speed REAL;
+      UPDATE tracks SET max_speed = (
+        SELECT MAX(speed) FROM track_points
+        WHERE track_id = tracks.id AND speed IS NOT NULL
+      );
+      PRAGMA user_version = 10;
+    `);
+  }
 }
 
 // -- Track operations --
@@ -162,6 +181,7 @@ export type Track = {
   ended_at: string | null;
   distance: number;
   color: string | null;
+  max_speed: number | null; // m/s — cached at endTrack / insertTrack time
 };
 
 export type TrackPoint = {
@@ -226,12 +246,14 @@ export async function insertTrack(fields: {
 export async function endTrack(
   trackId: number,
   distance: number,
+  maxSpeed: number | null = null,
 ): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(
     "UPDATE tracks SET ended_at = ?, distance = ? WHERE id = ?",
     new Date().toISOString(),
     distance,
+    maxSpeed,
     trackId,
   );
 }
@@ -291,15 +313,13 @@ async function nextSequence(
 export async function insertTrackPoints(
   trackId: number,
   points: TrackPointFields[],
-  onProgress?: (done: number, total: number) => void,
 ): Promise<void> {
   if (points.length === 0) return;
   const db = await getDatabase();
   const startSeq = await nextSequence(db, trackId);
 
-  // 1000 rows × 8 params = 8000 params per statement — well under SQLite's
-  // SQLITE_MAX_VARIABLE_NUMBER (32766 in modern builds).
-  // FIXME: can this use new syntax from SQLite 3.7.11? https://stackoverflow.com/questions/1609637/how-can-i-insert-multiple-rows-with-a-single-statement-in-sqlite
+  // Multi-row VALUES (SQLite 3.7.11+): 1000 rows × 8 params = 8000 params per
+  // statement — well under SQLITE_MAX_VARIABLE_NUMBER (32766 in modern builds).
   const CHUNK = 1000;
   const COLS = 8;
   for (let offset = 0; offset < points.length; offset += CHUNK) {
@@ -322,9 +342,6 @@ export async function insertTrackPoints(
       `INSERT INTO track_points (track_id, sequence, latitude, longitude, speed, heading, accuracy, timestamp) VALUES ${placeholders}`,
       ...values,
     );
-    onProgress?.(Math.min(offset + batch.length, points.length), points.length);
-    // Yield so setState updates paint and the UI thread can breathe.
-    await new Promise((resolve) => setTimeout(resolve, 0));
   }
 }
 
@@ -339,11 +356,24 @@ export async function getAllTracks(): Promise<Track[]> {
 }
 
 export type TrackWithStats = Track & {
-  avg_speed: number | null; // m/s
-  max_speed: number | null; // m/s
+  avg_speed: number | null; // m/s — computed in SQL from distance/duration
 };
 
 export type TracksOrder = "date" | "distance" | "duration" | "speed" | "nearby";
+
+// Seconds elapsed between started_at and ended_at (or "now" if still
+// recording). Used to compute avg_speed and to sort by duration. The outer
+// parens matter: SQL's `/` and `*` share precedence and are left-associative,
+// so without them `distance / DURATION_SECONDS_SQL` parses as
+// `(distance / days) * 86400` — a factor-of-86400² error.
+const DURATION_SECONDS_SQL =
+  "((julianday(COALESCE(t.ended_at, datetime('now'))) - julianday(t.started_at)) * 86400.0)";
+
+// avg_speed = distance / duration. NULL when distance is 0 so the UI can
+// render "—" instead of a meaningless 0.
+const AVG_SPEED_SQL = `CASE WHEN t.distance > 0 AND ${DURATION_SECONDS_SQL} > 0
+    THEN t.distance / ${DURATION_SECONDS_SQL}
+    ELSE NULL END`;
 
 export async function getAllTracksWithStats(
   order: TracksOrder = "date",
@@ -353,11 +383,12 @@ export async function getAllTracksWithStats(
 
   if (order === "nearby" && position) {
     // Min squared planar distance from any track_point to the user. Tracks
-    // with no points sort to the end via COALESCE → 1e308.
+    // with no points sort to the end via COALESCE → 1e308. This is the one
+    // sort that still needs to touch track_points; revisit with a bbox
+    // cached on the track row if it becomes a bottleneck.
     return db.getAllAsync<TrackWithStats>(
       `SELECT t.*,
-         AVG(tp.speed) as avg_speed,
-         MAX(tp.speed) as max_speed,
+         ${AVG_SPEED_SQL} as avg_speed,
          COALESCE(MIN((tp.latitude - ?) * (tp.latitude - ?)
                     + (tp.longitude - ?) * (tp.longitude - ?)), 1e308) as dist_sq
        FROM tracks t
@@ -371,24 +402,17 @@ export async function getAllTracksWithStats(
     );
   }
 
-  // Use COALESCE(ended_at, datetime('now')) so in-progress tracks compare
-  // against "now" for duration sort instead of being treated as 0-length.
   const effectiveOrder = order === "nearby" ? "date" : order;
   const orderBy = {
     date: "t.started_at DESC",
     distance: "t.distance DESC",
-    duration:
-      "(julianday(COALESCE(t.ended_at, datetime('now'))) - julianday(t.started_at)) DESC",
+    duration: `${DURATION_SECONDS_SQL} DESC`,
     speed: "avg_speed DESC",
   }[effectiveOrder];
 
   return db.getAllAsync<TrackWithStats>(`
-    SELECT t.*,
-      AVG(tp.speed) as avg_speed,
-      MAX(tp.speed) as max_speed
+    SELECT t.*, ${AVG_SPEED_SQL} as avg_speed
     FROM tracks t
-    LEFT JOIN track_points tp ON tp.track_id = t.id AND tp.speed IS NOT NULL
-    GROUP BY t.id
     ORDER BY ${orderBy}
   `);
 }

@@ -180,9 +180,19 @@ export async function importGpxText(
       await insertTrackPoints(track.id, trk.points);
 
       const distance = sumPathDistance(trk.points);
+      // Cache max_speed on the track row so the list view doesn't need to
+      // aggregate over track_points. Some GPX files have no <speed> elements
+      // at all — store null in that case.
+      let maxSpeed: number | null = null;
+      for (const p of trk.points) {
+        if (p.speed != null && (maxSpeed === null || p.speed > maxSpeed)) {
+          maxSpeed = p.speed;
+        }
+      }
       await db.runAsync(
-        "UPDATE tracks SET distance = ? WHERE id = ?",
+        "UPDATE tracks SET distance = ?, max_speed = ? WHERE id = ?",
         distance,
+        maxSpeed,
         track.id,
       );
       summary.records[idx].status = "done";
