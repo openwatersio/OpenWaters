@@ -42,7 +42,7 @@ export default function RootLayout() {
 
   // Resume any import that was interrupted by an app restart
   useEffect(() => {
-    resumeImportIfNeeded();
+    setTimeout(resumeImportIfNeeded, 0);
   }, []);
 
   return (

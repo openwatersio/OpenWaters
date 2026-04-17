@@ -15,8 +15,8 @@ import {
   stageFile,
 } from "@/import/staging";
 import log from "@/logger";
+import { File, type Directory } from "expo-file-system";
 import { router } from "expo-router";
-import { type Directory, File } from "expo-file-system";
 import { proxy, useSnapshot } from "valtio";
 
 const logger = log.extend("import");
@@ -80,9 +80,7 @@ let cancelled = false;
  * Returns true if all files were processed (staging dir empty), false if
  * processing was interrupted or files remain.
  */
-export async function runImportTask(
-  source?: string,
-): Promise<boolean> {
+export async function runImportTask(source?: string): Promise<boolean> {
   if (processing) return false;
   processing = true;
   cancelled = false;
@@ -123,7 +121,9 @@ export async function runImportTask(
       if (cancelled) break;
       const name = staged[i].name ?? staged[i].uri.split("/").pop() ?? "file";
       const fileEntry = summary.files.find(
-        (f) => f.name === name && (f.status === "pending" || f.status === "importing"),
+        (f) =>
+          f.name === name &&
+          (f.status === "pending" || f.status === "importing"),
       );
       await importStagedFile(staged[i], { summary, file: fileEntry });
       if (i % 10 === 9) await yieldToUi();
@@ -219,5 +219,4 @@ export function resumeImportIfNeeded(): void {
   if (!hasStagedFiles()) return;
   logger.debug("resuming import from staged files");
   void runImportTask("Resumed import");
-  setTimeout(() => router.navigate("/import"), 0);
 }
