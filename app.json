@@ -20,7 +20,8 @@
           "_nmea-0183._tcp"
         ],
         "UIBackgroundModes": [
-          "location"
+          "location",
+          "processing"
         ],
         "CFBundleDocumentTypes": [
           {
@@ -29,6 +30,22 @@
             "LSHandlerRank": "Alternate",
             "LSItemContentTypes": [
               "io.openwaters.mbtiles"
+            ]
+          },
+          {
+            "CFBundleTypeName": "GPX Route",
+            "CFBundleTypeRole": "Viewer",
+            "LSHandlerRank": "Alternate",
+            "LSItemContentTypes": [
+              "com.topografix.gpx"
+            ]
+          },
+          {
+            "CFBundleTypeName": "ZIP Archive",
+            "CFBundleTypeRole": "Viewer",
+            "LSHandlerRank": "Alternate",
+            "LSItemContentTypes": [
+              "public.zip-archive"
             ]
           }
         ],
@@ -45,6 +62,22 @@
                 "mbtiles"
               ]
             }
+          },
+          {
+            "UTTypeIdentifier": "com.topografix.gpx",
+            "UTTypeDescription": "GPX Route",
+            "UTTypeConformsTo": [
+              "public.xml",
+              "public.text"
+            ],
+            "UTTypeTagSpecification": {
+              "public.filename-extension": [
+                "gpx"
+              ],
+              "public.mime-type": [
+                "application/gpx+xml"
+              ]
+            }
           }
         ]
       },
@@ -54,6 +87,7 @@
       "expo-router",
       "@maplibre/maplibre-react-native",
       "react-native-map-link",
+      "expo-background-task",
       [
         "expo-splash-screen",
         {
@@ -96,7 +130,8 @@
             "deploymentTarget": "18.0"
           }
         }
-      ]
+      ],
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true

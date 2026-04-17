@@ -1,4 +1,7 @@
+import log from "@/logger";
 import Zeroconf from "react-native-zeroconf";
+
+const logger = log.extend("discovery");
 
 export type DiscoveredService = {
   /** Unique key: "type-host:port" */
@@ -97,7 +100,7 @@ export function startDiscovery(
   });
 
   zc.on("error", (error: Error) => {
-    console.warn("[discovery] scan error:", error);
+    logger.warn("scan error:", error);
   });
 
   // Scan each service type for 3 seconds, then move to the next

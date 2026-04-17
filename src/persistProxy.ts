@@ -1,5 +1,8 @@
+import log from "@/logger";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { snapshot, subscribe } from "valtio";
+
+const logger = log.extend("persist");
 
 export type PersistOptions<T extends object, S = T> = {
   /** AsyncStorage key. */
@@ -37,7 +40,7 @@ export function persistProxy<T extends object, S = T>(
         try {
           persisted = JSON.parse(raw) as S;
         } catch (err) {
-          console.warn(`persistProxy(${key}): failed to parse storage`, err);
+          logger.warn(`${key}: failed to parse storage`, err);
         }
       }
       if (hydrate) {
@@ -47,7 +50,7 @@ export function persistProxy<T extends object, S = T>(
       }
     })
     .catch((err) => {
-      console.warn(`persistProxy(${key}): failed to read storage`, err);
+      logger.warn(`${key}: failed to read storage`, err);
       hydrate?.(state, null);
     });
 
@@ -58,12 +61,12 @@ export function persistProxy<T extends object, S = T>(
       : (pickWritable(state, snap) as unknown as S);
     if (value === null) {
       AsyncStorage.removeItem(key).catch((err) =>
-        console.warn(`persistProxy(${key}): failed to clear storage`, err),
+        logger.warn(`${key}: failed to clear storage`, err),
       );
       return;
     }
     AsyncStorage.setItem(key, JSON.stringify(value)).catch((err) =>
-      console.warn(`persistProxy(${key}): failed to write storage`, err),
+      logger.warn(`${key}: failed to write storage`, err),
     );
   });
 

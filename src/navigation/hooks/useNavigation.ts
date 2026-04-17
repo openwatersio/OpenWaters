@@ -1,3 +1,4 @@
+import log from "@/logger";
 import { getInstrumentData } from "@/instruments/hooks/useInstruments";
 import {
   Accuracy,
@@ -8,6 +9,8 @@ import {
   type LocationObject,
 } from "expo-location";
 import { proxy, useSnapshot } from "valtio";
+
+const logger = log.extend("navigation");
 
 export enum NavigationState {
   Moored,
@@ -225,7 +228,7 @@ async function seedFromLastKnownPosition() {
     if (!location) return;
     updateFromDevice(location);
   } catch (error) {
-    console.warn("Failed to read last known navigation position:", error);
+    logger.warn("Failed to read last known position:", error);
   }
 }
 
@@ -241,7 +244,7 @@ async function startLocationWatcher() {
     ({ status } = await requestForegroundPermissionsAsync());
   }
   if (status !== "granted") {
-    console.warn("Location permission not granted; GPS watcher not started.");
+    logger.warn("Location permission not granted; GPS watcher not started.");
     return;
   }
   _locationSub = await watchPositionAsync(
@@ -255,5 +258,5 @@ async function startLocationWatcher() {
 }
 
 startLocationWatcher().catch((error) => {
-  console.warn("Failed to start navigation location watcher:", error);
+  logger.warn("Failed to start location watcher:", error);
 });

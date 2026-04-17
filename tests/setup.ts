@@ -63,6 +63,17 @@ jest.mock("expo-location", () => ({
 // expo-task-manager uses native modules
 jest.mock("expo-task-manager", () => ({
   defineTask: jest.fn(),
+  isTaskDefined: jest.fn(() => true),
+  isTaskRegisteredAsync: jest.fn(async () => false),
+}));
+
+// expo-background-task uses native modules
+jest.mock("expo-background-task", () => ({
+  registerTaskAsync: jest.fn(async () => {}),
+  unregisterTaskAsync: jest.fn(async () => {}),
+  getStatusAsync: jest.fn(async () => 2), // Available
+  BackgroundTaskResult: { Success: 1, Failed: 2 },
+  BackgroundTaskStatus: { Restricted: 1, Available: 2 },
 }));
 
 // @expo/ui/swift-ui uses native SwiftUI components; mock for tests

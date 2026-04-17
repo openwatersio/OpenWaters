@@ -10,9 +10,11 @@ function point(
   accuracy: number | null = 5,
   speed: number | null = 4,
 ): TrackPoint {
+  const id = nextId++;
   return {
-    id: nextId++,
+    id,
     track_id: 1,
+    sequence: id - 1,
     latitude,
     longitude,
     speed,

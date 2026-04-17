@@ -1,9 +1,12 @@
+import { cancelAllDownloads } from "@/charts/download";
+import "@/import/background"; // Register import background task at module scope
+import { handleIncomingFileUrl, resumeImportIfNeeded } from "@/import/state";
 import { connectAll, disconnectAll } from "@/instruments/hooks/useConnections";
 import "@/navigation/hooks/useNavigation"; // Register LocationManager listener at module scope
 import "@/tracks/hooks/useTrackRecording"; // Register background task at module scope
-import { cancelAllDownloads } from "@/charts/download";
 import { LocationManager } from "@maplibre/maplibre-react-native";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import * as Linking from "expo-linking";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { useColorScheme } from 'react-native';
@@ -24,6 +27,22 @@ export default function RootLayout() {
   useEffect(() => {
     connectAll();
     return () => disconnectAll();
+  }, []);
+
+  // Handle GPX/ZIP files opened via iOS share sheet or "Open in"
+  useEffect(() => {
+    Linking.getInitialURL().then((url) => {
+      if (url) handleIncomingFileUrl(url);
+    });
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      handleIncomingFileUrl(url);
+    });
+    return () => subscription.remove();
+  }, []);
+
+  // Resume any import that was interrupted by an app restart
+  useEffect(() => {
+    setTimeout(resumeImportIfNeeded, 0);
   }, []);
 
   return (
@@ -109,7 +128,7 @@ export default function RootLayout() {
         <Stack.Screen name="menu" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [0.5],
+          sheetAllowedDetents: [0.5, 1],
           sheetGrabberVisible: true,
           headerShown: false,
         }} />
@@ -164,6 +183,13 @@ export default function RootLayout() {
           sheetAllowedDetents: [1],
           sheetInitialDetentIndex: 0,
           sheetGrabberVisible: true,
+        }} />
+        <Stack.Screen name="import" options={{
+          presentation: "formSheet",
+          sheetLargestUndimmedDetentIndex: "last",
+          sheetAllowedDetents: [1],
+          sheetGrabberVisible: true,
+          title: "Import",
         }} />
         <Stack.Screen name="connections" options={{
           presentation: "formSheet",

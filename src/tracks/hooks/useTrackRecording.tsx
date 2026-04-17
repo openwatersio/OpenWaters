@@ -7,6 +7,7 @@ import {
   type Track,
   type TrackPoint,
 } from "@/database";
+import log from "@/logger";
 import { persistProxy } from "@/persistProxy";
 import { computeDistance, segmentDistance } from "@/tracks/distance";
 import {
@@ -22,6 +23,8 @@ import { defineTask } from "expo-task-manager";
 import { useEffect, useState } from "react";
 import { proxy, useSnapshot } from "valtio";
 import { subscribeKey } from "valtio/utils";
+
+const logger = log.extend("tracking");
 
 const TASK_NAME = "track-recording-location";
 const STORAGE_KEY = "track-recording";
@@ -59,7 +62,7 @@ export const trackRecordingState = proxy<State>({
     // Average over the time we have data for, not wall-clock. `distance`
     // only updates when a fix lands, so dividing by `now` would make the
     // average sag between fixes and snap back when one arrives.
-    if (!this.track || !this.lastPoint) return 0;
+    if (!this.track || !this.lastPoint || !this.lastPoint.timestamp) return 0;
     const ms =
       new Date(this.lastPoint.timestamp).getTime() -
       new Date(this.track.started_at).getTime();
@@ -85,9 +88,9 @@ export function useTrackRecording() {
  *
  * Returns an empty array when no recording is active.
  */
-export function useTrackRecordingPoints(): Array<[number, number]> {
+export function useTrackRecordingPoints(): [number, number][] {
   const trackId = useSnapshot(trackRecordingState).track?.id ?? null;
-  const [points, setPoints] = useState<Array<[number, number]>>([]);
+  const [points, setPoints] = useState<[number, number][]>([]);
 
   useEffect(() => {
     if (trackId == null) {
@@ -139,7 +142,12 @@ export async function stopTrackRecording() {
       // Recompute distance from the persisted points so the saved value
       // reflects the canonical algorithm, not the running-sum approximation.
       const points = await getTrackPoints(track.id);
-      await endTrack(track.id, computeDistance(points));
+      const { maxSpeed } = trackRecordingState;
+      await endTrack(
+        track.id,
+        computeDistance(points),
+        maxSpeed > 0 ? maxSpeed : null,
+      );
     }
   }
 
@@ -193,7 +201,7 @@ async function requestPermissions(): Promise<boolean> {
 
 async function startBackgroundTracking(): Promise<void> {
   if (await hasStartedLocationUpdatesAsync(TASK_NAME)) return;
-  console.log("Starting background location tracking");
+  logger.info("Starting background location tracking");
   await startLocationUpdatesAsync(TASK_NAME, {
     accuracy: Accuracy.BestForNavigation,
     // Coarser sampling reduces how much GPS noise gets summed into the
@@ -211,7 +219,7 @@ async function startBackgroundTracking(): Promise<void> {
 
 async function stopBackgroundTracking(): Promise<void> {
   if (!(await hasStartedLocationUpdatesAsync(TASK_NAME))) return;
-  console.log("Stopping background location tracking");
+  logger.info("Stopping background location tracking");
   await stopLocationUpdatesAsync(TASK_NAME);
 }
 
@@ -225,7 +233,7 @@ defineTask<{ locations: LocationObject[] }>(
   TASK_NAME,
   async ({ data, error }) => {
     if (error) {
-      console.warn("Background location error:", error.message);
+      logger.warn("Background location error:", error.message);
       return;
     }
     if (!trackRecordingState.isRecording) {

@@ -1,3 +1,4 @@
+import log from "@/logger";
 import type { LngLatBounds, OfflinePack, OfflinePackStatus } from "@maplibre/maplibre-react-native";
 import {
   createTilePack,
@@ -9,6 +10,8 @@ import {
 } from "@/charts/offline";
 import { useMemo } from "react";
 import { proxy, useSnapshot } from "valtio";
+
+const logger = log.extend("charts");
 
 // ---------------------------------------------------------------------------
 // Types
@@ -102,7 +105,7 @@ export async function downloadVisibleArea(
       }
     },
     (_pack: OfflinePack, error) => {
-      console.warn(`Tile pack error for ${chartId}:`, error.message);
+      logger.warn(`Tile pack error for ${chartId}:`, error.message);
     },
   );
 

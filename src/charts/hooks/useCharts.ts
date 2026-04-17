@@ -1,3 +1,4 @@
+import log from "@/logger";
 import type { CatalogSource } from "@/charts/catalog/types";
 import { generateStyle } from "@/charts/install";
 import {
@@ -11,6 +12,8 @@ import { usePreferredUnits } from "@/hooks/usePreferredUnits";
 import { useCameraPosition } from "@/map/hooks/useCameraPosition";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { useEffect, useMemo, useState } from "react";
+
+const logger = log.extend("charts");
 
 export type { InstalledChart };
 
@@ -124,7 +127,7 @@ export function useMapStyle(): StyleSpecification | string {
         const next = await generateStyle(sources, filters);
         if (!cancelled) setStyle(next);
       } catch (err) {
-        console.warn(`Failed to generate style for ${chart.id}:`, err);
+        logger.warn(`Failed to generate style for ${chart.id}:`, err);
       }
     })();
 
