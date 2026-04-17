@@ -15,6 +15,14 @@ export function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   return initPromise;
 }
 
+/** Close the open database connection so it can be deleted. */
+export async function closeDatabase(): Promise<void> {
+  if (!initPromise) return;
+  const db = await initPromise;
+  initPromise = null;
+  await db.closeAsync();
+}
+
 async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   // Run migrations on a connection without change listeners — schema changes
   // that rebuild tables (DROP/RENAME) fail with "database table is locked"
