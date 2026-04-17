@@ -1,4 +1,7 @@
+import log from "@/logger";
 import type { LngLatBounds, OfflinePack, OfflinePackStatus } from "@maplibre/maplibre-react-native";
+
+const logger = log.extend("charts");
 import {
   createTilePack,
   deleteTilePack,
@@ -102,7 +105,7 @@ export async function downloadVisibleArea(
       }
     },
     (_pack: OfflinePack, error) => {
-      console.warn(`Tile pack error for ${chartId}:`, error.message);
+      logger.warn(`Tile pack error for ${chartId}:`, error.message);
     },
   );
 

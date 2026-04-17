@@ -7,6 +7,9 @@ import {
   type Track,
   type TrackPoint,
 } from "@/database";
+import log from "@/logger";
+
+const logger = log.extend("tracking");
 import { persistProxy } from "@/persistProxy";
 import { computeDistance, segmentDistance } from "@/tracks/distance";
 import {
@@ -198,7 +201,7 @@ async function requestPermissions(): Promise<boolean> {
 
 async function startBackgroundTracking(): Promise<void> {
   if (await hasStartedLocationUpdatesAsync(TASK_NAME)) return;
-  console.log("Starting background location tracking");
+  logger.info("Starting background location tracking");
   await startLocationUpdatesAsync(TASK_NAME, {
     accuracy: Accuracy.BestForNavigation,
     // Coarser sampling reduces how much GPS noise gets summed into the
@@ -216,7 +219,7 @@ async function startBackgroundTracking(): Promise<void> {
 
 async function stopBackgroundTracking(): Promise<void> {
   if (!(await hasStartedLocationUpdatesAsync(TASK_NAME))) return;
-  console.log("Stopping background location tracking");
+  logger.info("Stopping background location tracking");
   await stopLocationUpdatesAsync(TASK_NAME);
 }
 
@@ -230,7 +233,7 @@ defineTask<{ locations: LocationObject[] }>(
   TASK_NAME,
   async ({ data, error }) => {
     if (error) {
-      console.warn("Background location error:", error.message);
+      logger.warn("Background location error:", error.message);
       return;
     }
     if (!trackRecordingState.isRecording) {

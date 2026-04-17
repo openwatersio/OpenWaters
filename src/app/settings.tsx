@@ -1,4 +1,7 @@
+import log from "@/logger";
 import { setThemePreference, useThemePreference, type ThemePreference } from "@/charts/theme";
+
+const logger = log.extend("settings");
 import { closeDatabase } from "@/database";
 import { ARRIVAL_RADIUS_OPTIONS, describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits, type ArrivalRadius } from "@/hooks/usePreferredUnits";
 import SheetView from "@/ui/SheetView";
@@ -49,7 +52,7 @@ function resetAppData() {
             // Reload the app
             await reloadAppAsync();
           } catch (error) {
-            console.error("Failed to reset app data:", error);
+            logger.error("Failed to reset app data:", error);
             Alert.alert("Error", "Failed to reset app data. Please try again.");
           }
         },

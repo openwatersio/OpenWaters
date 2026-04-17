@@ -1,4 +1,7 @@
+import log from "@/logger";
 import type { CatalogSource } from "@/charts/catalog/types";
+
+const logger = log.extend("charts");
 import { generateStyle } from "@/charts/install";
 import {
   readCatalog,
@@ -124,7 +127,7 @@ export function useMapStyle(): StyleSpecification | string {
         const next = await generateStyle(sources, filters);
         if (!cancelled) setStyle(next);
       } catch (err) {
-        console.warn(`Failed to generate style for ${chart.id}:`, err);
+        logger.warn(`Failed to generate style for ${chart.id}:`, err);
       }
     })();
 

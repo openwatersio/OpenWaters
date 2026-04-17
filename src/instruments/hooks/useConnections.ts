@@ -1,4 +1,7 @@
+import log from "@/logger";
 import { persistProxy } from "@/persistProxy";
+
+const logger = log.extend("connections");
 import { proxy, useSnapshot } from "valtio";
 
 import { pruneStaleVessels } from "@/ais/hooks/useAIS";
@@ -76,11 +79,11 @@ export async function addSignalKConnection(
 ): Promise<Connection> {
   let endpoints: SignalKEndpoints;
   try {
-    console.log("[connections] discovering Signal K at:", url);
+    logger.info("discovering Signal K at:", url);
     endpoints = await discoverEndpoints(url);
-    console.log("[connections] discovered:", endpoints.wsUrl);
+    logger.info("discovered:", endpoints.wsUrl);
   } catch (e) {
-    console.warn("[connections] discovery failed:", e);
+    logger.warn("discovery failed:", e);
     throw new Error(
       `Could not discover Signal K server at ${url}: ${e instanceof Error ? e.message : String(e)}`,
     );

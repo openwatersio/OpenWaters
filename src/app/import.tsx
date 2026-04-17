@@ -1,4 +1,7 @@
+import log from "@/logger";
 import type { ImportFile, ImportRecord, ImportRecordStatus } from "@/import";
+
+const logger = log.extend("import");
 import {
   clearImportStatus,
   isImportRunning,
@@ -185,7 +188,7 @@ async function onPickFile() {
   try {
     startFileImport(await File.pickFileAsync());
   } catch (e) {
-    console.warn("[import] pick file failed", e);
+    logger.warn("pick file failed", e);
   }
 }
 
@@ -195,7 +198,7 @@ async function onPickDirectory() {
     if (!dir) return;
     startDirectoryImport(dir);
   } catch (e) {
-    console.warn("[import] pick directory failed", e);
+    logger.warn("pick directory failed", e);
   }
 }
 
@@ -268,16 +271,6 @@ export default function Import() {
                   </Text>
                 )}
               </Section>
-
-              {status.terminalReason === "interrupted" && (
-                <Section>
-                  <Text modifiers={[foregroundStyle("red")]}>
-                    Import was interrupted. Items shown above reflect what
-                    landed; review your tracks, routes, and markers for
-                    anything partial.
-                  </Text>
-                </Section>
-              )}
 
               {status.terminalReason === "error" && status.errorMessage && (
                 <Section header={<Text>Error</Text>}>
