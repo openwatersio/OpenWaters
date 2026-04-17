@@ -55,7 +55,7 @@
     "expo-system-ui": "~55.0.15",
     "expo-task-manager": "~55.0.14",
     "expo-web-browser": "~55.0.14",
-    "fast-xml-parser": "^5.5.10",
+    "fast-xml-parser": "^5.7.0",
     "fflate": "^0.8.2",
     "geolib": "^3.3.14",
     "react": "19.2.0",
