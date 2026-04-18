@@ -1,13 +1,14 @@
+import { toDepth, toSpeed, toTemperature } from "@/hooks/usePreferredUnits";
+import useTheme from "@/hooks/useTheme";
 import { type DataPoint, useHasInstrumentData, useInstrumentPath } from "@/instruments/hooks/useInstruments";
 import { NavigationState, useNavigation } from "@/navigation/hooks/useNavigation";
-import { toDepth, toSpeed, toTemperature } from "@/hooks/usePreferredUnits";
 import { useTrackRecording } from "@/tracks/hooks/useTrackRecording";
-import useTheme from "@/hooks/useTheme";
+import OverlayView from "@/ui/OverlayView";
 import * as Haptics from "expo-haptics";
 import { SymbolView } from "expo-symbols";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import OverlayView from "@/ui/OverlayView";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const STALE_THRESHOLD = 10_000; // 10 seconds
 
@@ -34,12 +35,14 @@ function Cell({ label, value, unit, stale = false }: CellProps) {
       <Text style={[styles.cellLabel, { color: theme.textPrimary, opacity: stale ? 0.3 : 0.6 }]}>
         {label}
       </Text>
-      <Text style={[styles.cellValue, { color: theme.textPrimary, opacity: stale ? 0.3 : 1 }]}>
-        {value}
-      </Text>
-      <Text style={[styles.cellUnit, { color: theme.textPrimary, opacity: stale ? 0.3 : 0.6 }]}>
-        {unit}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
+        <Text style={[styles.cellValue, { color: theme.textPrimary, opacity: stale ? 0.3 : 1 }]}>
+          {value}
+        </Text>
+        <Text style={[styles.cellUnit, { color: theme.textPrimary, opacity: stale ? 0.3 : 0.6 }]}>
+          {unit}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -82,91 +85,93 @@ export default function NavigationHUD() {
   const tempFormatted = waterTemp ? toTemperature(waterTemp.value as number) : null;
 
   return (
-    <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setExpanded((e) => !e); }}>
-      <OverlayView style={styles.container}>
-        {/* Source indicator */}
-        {navSource === "signalk" && (
-          <View style={styles.sourceRow}>
-            <SymbolView name="antenna.radiowaves.left.and.right" size={10} tintColor={theme.textSecondary} />
-          </View>
-        )}
-
-        {/* Always visible: SOG + depth (if available) */}
-        <View style={styles.row}>
-          <Cell
-            label="SOG"
-            value={sogFormatted.value}
-            unit={sogFormatted.abbr}
-          />
-          {depthFormatted && (
-            <Cell
-              label="Depth"
-              value={depthFormatted.value}
-              unit={depthFormatted.abbr}
-              stale={isDataStale(depth)}
-            />
-          )}
-        </View>
-
-        {expanded && (
-          <>
-            <View style={styles.row}>
-              <Cell
-                label="COG"
-                value={formatDegrees(course)}
-                unit={"\u00B0"}
-              />
-              <Cell
-                label="HDG"
-                value={heading !== null ? `${Math.round(heading)}` : "--"}
-                unit={"\u00B0"}
-              />
+    <OverlayView style={styles.container}>
+      <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setExpanded((e) => !e); }}>
+        <SafeAreaView edges={["top", "left", "right"]}>
+          {/* Source indicator */}
+          {navSource === "signalk" && (
+            <View style={styles.sourceRow}>
+              <SymbolView name="antenna.radiowaves.left.and.right" size={10} tintColor={theme.textSecondary} />
             </View>
-            {(aws || awa) && (
+          )}
+
+          {/* Always visible: SOG + depth (if available) */}
+          <View style={styles.row}>
+            <Cell
+              label="SOG"
+              value={sogFormatted.value}
+              unit={sogFormatted.abbr}
+            />
+            <Cell
+              label="COG"
+              value={formatDegrees(course)}
+              unit={"\u00B0"}
+            />
+            <Cell
+              label="HDG"
+              value={heading !== null ? `${Math.round(heading)}` : "--"}
+              unit={"\u00B0"}
+            />
+            {depthFormatted && (
+              <Cell
+                label="Depth"
+                value={depthFormatted.value}
+                unit={depthFormatted.abbr}
+                stale={isDataStale(depth)}
+              />
+            )}
+          </View>
+
+          {expanded && (
+            <>
               <View style={styles.row}>
-                {awsFormatted && (
+
+                {(aws || awa) && (
+                  <>
+                    {awsFormatted && (
+                      <Cell
+                        label="AWS"
+                        value={awsFormatted.value}
+                        unit={awsFormatted.abbr}
+                        stale={isDataStale(aws)}
+                      />
+                    )}
+                    <Cell
+                      label="AWA"
+                      value={formatWindAngle(awa)}
+                      unit={"\u00B0"}
+                      stale={isDataStale(awa)}
+                    />
+                  </>
+                )}
+                {tempFormatted && (
                   <Cell
-                    label="AWS"
-                    value={awsFormatted.value}
-                    unit={awsFormatted.abbr}
-                    stale={isDataStale(aws)}
+                    label="WATER"
+                    value={tempFormatted.value}
+                    unit={tempFormatted.abbr}
+                    stale={isDataStale(waterTemp)}
                   />
                 )}
-                <Cell
-                  label="AWA"
-                  value={formatWindAngle(awa)}
-                  unit={"\u00B0"}
-                  stale={isDataStale(awa)}
-                />
               </View>
-            )}
-            {tempFormatted && (
-              <View style={styles.row}>
-                <Cell
-                  label="WATER"
-                  value={tempFormatted.value}
-                  unit={tempFormatted.abbr}
-                  stale={isDataStale(waterTemp)}
-                />
-              </View>
-            )}
-          </>
-        )}
-      </OverlayView>
-    </Pressable>
+            </>
+          )}
+        </SafeAreaView>
+      </Pressable>
+    </OverlayView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    minWidth: 160,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    paddingBottom: 16,
   },
   sourceRow: {
     alignItems: "center",
-    marginBottom: 2,
   },
   row: {
     flexDirection: "row",
@@ -179,8 +184,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   cellLabel: {
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: 14,
     textTransform: "uppercase",
   },
   cellValue: {
