@@ -182,6 +182,7 @@ const unsub = subscribeKey(cameraState, "trackingMode", (next) => { ... });
 **Watch-outs:**
 
 - Snapshots are deeply readonly. Calling `.sort()` or passing to APIs typed as mutable arrays needs a copy or `Readonly<T>` widening at the consumer.
+- `Object.keys/values/entries` on a `useSnapshot` result can throw on Hermes with Valtio 2.x. We carry [patches/valtio+2.3.1.patch](patches/valtio+2.3.1.patch) via `patch-package` to remove Valtio's `Object.preventExtensions(snap)` call until the upstream fix lands.
 - Don't pass the live proxy to native components — MapLibre's `initialViewState` (and similar) freeze the input, which freezes the proxy itself. Spread to a plain object: `{ ...proxyState }`.
 - Mutating after `await` is a race if the same code path can run concurrently. Capture state locally before the await, or serialize the work.
 - The proxy itself can't be reassigned. Mutate in place; expose a clear/reset action for tests.
