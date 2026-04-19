@@ -2,6 +2,7 @@ import {
   deleteMarker as dbDeleteMarker,
   updateMarker as dbUpdateMarker,
   getAllMarkers,
+  getDatabase,
   getMarker,
   insertMarker,
   type Marker,
@@ -59,4 +60,17 @@ export async function updateMarker(
 
 export async function deleteMarker(id: number) {
   await dbDeleteMarker(id);
+}
+
+const fetchMarkerCount = async () => {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM markers",
+  );
+  return row?.count ?? 0;
+};
+
+/** Reactive count of all markers. */
+export function useMarkerCount(): number {
+  return useDbQuery(["markers"], fetchMarkerCount) ?? 0;
 }

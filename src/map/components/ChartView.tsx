@@ -17,6 +17,7 @@ import AtoNLayer from "@/aton/components/AtoNLayer";
 import { DownloadRegionOverlay } from "@/charts/components/DownloadRegionOverlay";
 import { handleRegionDidChange, handleRegionIsChanging, NavigationCamera } from "@/navigation/components/NavigationCamera";
 import { NavigationPuck } from "@/navigation/components/NavigationPuck";
+import { MARKER_IMAGES } from "./AnnotationIcon";
 import SelectedLocationAnnotation from "./SelectedLocationAnnotation";
 import MapOverlay from "./MapOverlay";
 import MarkerOverlay from "@/markers/components/MarkerOverlay";
@@ -80,22 +81,23 @@ export default function ChartView() {
     >
       <NavigationCamera />
       <Images images={{
-        "vessel-default": { source: require("@/assets/vessels/png/default.png"), sdf: true },
-        "vessel-unknown": { source: require("@/assets/vessels/png/unknown.png"), sdf: true },
-        "vessel-cargo": { source: require("@/assets/vessels/png/cargo.png"), sdf: true },
-        "vessel-tanker": { source: require("@/assets/vessels/png/tanker.png"), sdf: true },
-        "vessel-passenger": { source: require("@/assets/vessels/png/passenger.png"), sdf: true },
-        "vessel-sailing": { source: require("@/assets/vessels/png/sailing.png"), sdf: true },
-        "vessel-pleasure": { source: require("@/assets/vessels/png/pleasure.png"), sdf: true },
-        "vessel-highspeed": { source: require("@/assets/vessels/png/highspeed.png"), sdf: true },
-        "vessel-fishing": { source: require("@/assets/vessels/png/fishing.png"), sdf: true },
-        "vessel-tug": { source: require("@/assets/vessels/png/tug.png"), sdf: true },
-        "nav-puck": { source: require("@/assets/vessels/png/puck.png"), sdf: true },
-        "aton-default": { source: require("@/assets/atons/png/default.png"), sdf: true },
-        "aton-buoy": { source: require("@/assets/atons/png/buoy.png"), sdf: true },
-        "aton-beacon": { source: require("@/assets/atons/png/beacon.png"), sdf: true },
-        "aton-lighthouse": { source: require("@/assets/atons/png/lighthouse.png"), sdf: true },
-        "aton-virtual": { source: require("@/assets/atons/png/virtual.png"), sdf: true },
+        "vessel-default": { source: require("@/assets/map/png/vessel-default.png"), sdf: true },
+        "vessel-unknown": { source: require("@/assets/map/png/vessel-unknown.png"), sdf: true },
+        "vessel-cargo": { source: require("@/assets/map/png/vessel-cargo.png"), sdf: true },
+        "vessel-tanker": { source: require("@/assets/map/png/vessel-tanker.png"), sdf: true },
+        "vessel-passenger": { source: require("@/assets/map/png/vessel-passenger.png"), sdf: true },
+        "vessel-sailing": { source: require("@/assets/map/png/vessel-sailing.png"), sdf: true },
+        "vessel-pleasure": { source: require("@/assets/map/png/vessel-pleasure.png"), sdf: true },
+        "vessel-highspeed": { source: require("@/assets/map/png/vessel-highspeed.png"), sdf: true },
+        "vessel-fishing": { source: require("@/assets/map/png/vessel-fishing.png"), sdf: true },
+        "vessel-tug": { source: require("@/assets/map/png/vessel-tug.png"), sdf: true },
+        "nav-puck": { source: require("@/assets/map/png/vessel-puck.png"), sdf: true },
+        "aton-default": { source: require("@/assets/map/png/aton-default.png"), sdf: true },
+        "aton-buoy": { source: require("@/assets/map/png/aton-buoy.png"), sdf: true },
+        "aton-beacon": { source: require("@/assets/map/png/aton-beacon.png"), sdf: true },
+        "aton-lighthouse": { source: require("@/assets/map/png/aton-lighthouse.png"), sdf: true },
+        "aton-virtual": { source: require("@/assets/map/png/aton-virtual.png"), sdf: true },
+        ...MARKER_IMAGES,
       }} />
       <TrackOverlay />
       <MarkerOverlay />

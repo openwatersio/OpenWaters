@@ -1,6 +1,7 @@
 import {
   deleteTrack,
   getAllTracksWithStats,
+  getDatabase,
   getTrack,
   getTrackPoints,
   renameTrack,
@@ -64,4 +65,17 @@ export async function handleRename(trackId: number, name: string) {
 
 export function handleExport(trackId: number) {
   exportTrackAsGPX(trackId);
+}
+
+const fetchTrackCount = async () => {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM tracks",
+  );
+  return row?.count ?? 0;
+};
+
+/** Reactive count of all tracks. */
+export function useTrackCount(): number {
+  return useDbQuery(["tracks"], fetchTrackCount) ?? 0;
 }

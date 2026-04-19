@@ -1,6 +1,7 @@
 import {
   deleteRoute as dbDeleteRoute,
   getAllRoutes,
+  getDatabase,
   getRoute,
   getRoutePoints,
   insertRoute,
@@ -434,4 +435,17 @@ export async function handleRenameRoute(routeId: number, name: string) {
   if (activeRouteState.id === routeId) {
     activeRouteState.name = trimmed;
   }
+}
+
+const fetchRouteCount = async () => {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM routes",
+  );
+  return row?.count ?? 0;
+};
+
+/** Reactive count of all routes. */
+export function useRouteCount(): number {
+  return useDbQuery(["routes"], fetchRouteCount) ?? 0;
 }

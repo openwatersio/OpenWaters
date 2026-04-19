@@ -1,7 +1,68 @@
-import useTheme from '@/hooks/useTheme';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { SFSymbol, SymbolView } from 'expo-symbols';
+import AnchorIcon from "@/assets/map/svg/marker-anchor.svg";
+import BridgeIcon from "@/assets/map/svg/marker-bridge.svg";
+import FerryIcon from "@/assets/map/svg/marker-ferry.svg";
+import FireIcon from "@/assets/map/svg/marker-fire.svg";
+import FishIcon from "@/assets/map/svg/marker-fish.svg";
+import FuelIcon from "@/assets/map/svg/marker-fuel.svg";
+import GroceryIcon from "@/assets/map/svg/marker-grocery.svg";
+import HomeIcon from "@/assets/map/svg/marker-home.svg";
+import LifepreserverIcon from "@/assets/map/svg/marker-lifepreserver.svg";
+import ObstructionIcon from "@/assets/map/svg/marker-obstruction.svg";
+import PinIcon from "@/assets/map/svg/marker-pin.svg";
+import PointIcon from "@/assets/map/svg/marker-point.svg";
+import RestaurantIcon from "@/assets/map/svg/marker-restaurant.svg";
+import SailboatIcon from "@/assets/map/svg/marker-sailboat.svg";
+import TrashIcon from "@/assets/map/svg/marker-trash.svg";
+import useTheme from "@/hooks/useTheme";
+import type { ImageSourcePropType } from "react-native";
+import type { SvgProps } from "react-native-svg";
+
+type SvgComponent = React.FC<SvgProps>;
+
+/**
+ * Single registry for marker icons. Each entry pairs the SVG component
+ * (for React rendering in Annotation) with the SDF PNG (for MapLibre's
+ * SymbolLayer). Adding a new icon = one entry here + the SVG/PNG files.
+ */
+const ICON_REGISTRY: Record<
+  string,
+  { svg: SvgComponent; png: ImageSourcePropType }
+> = {
+  anchor: { svg: AnchorIcon, png: require("@/assets/map/png/marker-anchor.png") },
+  bridge: { svg: BridgeIcon, png: require("@/assets/map/png/marker-bridge.png") },
+  ferry: { svg: FerryIcon, png: require("@/assets/map/png/marker-ferry.png") },
+  fire: { svg: FireIcon, png: require("@/assets/map/png/marker-fire.png") },
+  fish: { svg: FishIcon, png: require("@/assets/map/png/marker-fish.png") },
+  fuel: { svg: FuelIcon, png: require("@/assets/map/png/marker-fuel.png") },
+  grocery: { svg: GroceryIcon, png: require("@/assets/map/png/marker-grocery.png") },
+  home: { svg: HomeIcon, png: require("@/assets/map/png/marker-home.png") },
+  lifepreserver: { svg: LifepreserverIcon, png: require("@/assets/map/png/marker-lifepreserver.png") },
+  obstruction: { svg: ObstructionIcon, png: require("@/assets/map/png/marker-obstruction.png") },
+  pin: { svg: PinIcon, png: require("@/assets/map/png/marker-pin.png") },
+  point: { svg: PointIcon, png: require("@/assets/map/png/marker-point.png") },
+  restaurant: { svg: RestaurantIcon, png: require("@/assets/map/png/marker-restaurant.png") },
+  sailboat: { svg: SailboatIcon, png: require("@/assets/map/png/marker-sailboat.png") },
+  trash: { svg: TrashIcon, png: require("@/assets/map/png/marker-trash.png") },
+};
+
+/** SVG components keyed by icon name (for React rendering). */
+export const ICONS: Record<string, SvgComponent> = Object.fromEntries(
+  Object.entries(ICON_REGISTRY).map(([k, v]) => [k, v.svg]),
+);
+
+/** All icon names. */
+export const ICON_NAMES = Object.keys(ICON_REGISTRY);
+
+/** MapLibre image entries keyed by sprite ID (for <Images> registration). */
+export const MARKER_IMAGES: Record<string, { source: ImageSourcePropType; sdf: true }> =
+  Object.fromEntries(
+    Object.entries(ICON_REGISTRY).map(([k, v]) => [
+      `marker-${k}`,
+      { source: v.png, sdf: true as const },
+    ]),
+  );
+
+export type AnnotationIconName = keyof typeof ICON_REGISTRY;
 
 export interface AnnotationIconProps {
   name: string;
@@ -9,54 +70,9 @@ export interface AnnotationIconProps {
   size?: number;
 }
 
-type IconProps = Omit<AnnotationIconProps, 'name'>;
-type IconFn = (props: IconProps) => any;
-
-export const ICONS = {
-  anchor: (props: IconProps) => <MaterialIcons name="anchor" {...props} />,
-  bridge: (props: IconProps) => <MaterialCommunityIcons name="bridge" {...props} />,
-  ferry: (props: IconProps) => <MaterialIcons name="directions-ferry" {...props} />,
-  fish: (props: IconProps) => <SymbolIcon name="fish.fill" {...props} />,
-  fuel: (props: IconProps) => <SymbolIcon name="fuelpump.fill" {...props} />,
-  grocery: (props: IconProps) => <SymbolIcon name="cart.fill" {...props} />,
-  obstruction: (props: IconProps) => <SymbolIcon name="circle.dotted" {...props} />,
-  pin: (props: IconProps) => <SymbolIcon name="mappin" {...props} />,
-  point: ({ size, ...props }: IconProps) => <SymbolIcon name="circle.fill" size={size ? size * 0.6 : undefined} {...props} />,
-  restaurant: (props: IconProps) => <SymbolIcon name="fork.knife" {...props} />,
-  sailboat: (props: IconProps) => <MaterialIcons name="sailing" {...props} />,
-  fire: (props: IconProps) => <SymbolIcon name="flame.fill" {...props} />,
-  trash: (props: IconProps) => <SymbolIcon name="trash.fill" {...props} />,
-  // TODO:
-  // - marina
-  // - port
-  // - ship
-  // - kayak
-  // - canoe
-  // - motorboat
-  // - megayacht
-  // - fishingboat
-  // - tugboat
-  // - windmill
-  // - harbor
-  // - dock
-  // - pier
-  // - boatyard
-} satisfies Record<string, IconFn>;
-
-export type AnnotationIconName = keyof typeof ICONS;
-
-export function AnnotationIcon({ name, color, size }: AnnotationIconProps) {
+export function AnnotationIcon({ name, color, size = 24 }: AnnotationIconProps) {
   const theme = useTheme();
-  const Icon = ICONS[name as AnnotationIconName] ?? DefaultIcon;
+  const Icon = ICONS[name] ?? ICONS.pin;
 
-  return <Icon color={color || theme.textPrimary} size={size || 24} />;
-}
-
-// Adapt SymbolView to the interface expected by Annotation's icon prop
-function SymbolIcon({ name, color, size }: { name: SFSymbol; color?: string, size?: number }) {
-  return <SymbolView name={name} tintColor={color} size={size} />;
-}
-
-export function DefaultIcon(props: IconProps) {
-  return <SymbolIcon name="mappin" {...props} />;
+  return <Icon width={size} height={size} color={color ?? theme.textPrimary} />;
 }
