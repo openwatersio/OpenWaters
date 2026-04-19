@@ -93,10 +93,6 @@ export default function ChartView() {
         "vessel-tug": { source: require("@/assets/map/png/vessel-tug.png"), sdf: true },
         "nav-puck": { source: require("@/assets/map/png/vessel-puck.png"), sdf: true },
         "aton-default": { source: require("@/assets/map/png/aton-default.png"), sdf: true },
-        "aton-buoy": { source: require("@/assets/map/png/aton-buoy.png"), sdf: true },
-        "aton-beacon": { source: require("@/assets/map/png/aton-beacon.png"), sdf: true },
-        "aton-lighthouse": { source: require("@/assets/map/png/aton-lighthouse.png"), sdf: true },
-        "aton-virtual": { source: require("@/assets/map/png/aton-virtual.png"), sdf: true },
         ...MARKER_IMAGES,
       }} />
       <TrackOverlay />
