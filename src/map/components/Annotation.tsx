@@ -47,11 +47,13 @@ export function Annotation({
 
   // --- Animations ---
 
-  // Entrance
-  const entranceY = useSharedValue(-50);
-  const entranceScale = useSharedValue(0);
+  // Entrance: drop-in only when the marker is selected on mount (e.g. newly
+  // placed). Unselected markers appear instantly at their resting position.
+  const entranceY = useSharedValue(selected ? -50 : 0);
+  const entranceScale = useSharedValue(selected ? 0 : 1);
 
   useEffect(() => {
+    if (!selected) return;
     entranceScale.value = withSpring(1, { damping: 50, stiffness: 1000 });
     entranceY.value = withSpring(0, { damping: 70, stiffness: 1000 });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

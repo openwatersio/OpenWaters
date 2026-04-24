@@ -1,11 +1,17 @@
 import { useImport } from "@/import/state";
+import { useMarkerCount } from "@/markers/hooks/useMarkers";
+import { useRouteCount } from "@/routes/hooks/useRoutes";
+import { useTrackCount } from "@/tracks/hooks/useTracks";
 import SheetView from "@/ui/SheetView";
 import { Button, Host, List, Section } from "@expo/ui/swift-ui";
-import { tint } from "@expo/ui/swift-ui/modifiers";
+import { badge, tint } from "@expo/ui/swift-ui/modifiers";
 import { router } from "expo-router";
 
 export default function Menu() {
   const { errorCount } = useImport();
+  const trackCount = useTrackCount();
+  const markerCount = useMarkerCount();
+  const routeCount = useRouteCount();
   const hasErrors = errorCount > 0;
   const importLabel = hasErrors
     ? `Import (${errorCount} ${errorCount === 1 ? "error" : "errors"})`
@@ -17,19 +23,19 @@ export default function Menu() {
         <List>
           <Section>
             <Button
-              modifiers={[tint('primary')]}
+              modifiers={[tint('primary'), badge(trackCount > 0 ? String(trackCount) : undefined)]}
               systemImage="point.bottomleft.forward.to.arrow.triangle.scurvepath"
               label="Tracks"
               onPress={() => router.dismissTo("/tracks")}
             />
             <Button
-              modifiers={[tint('primary')]}
+              modifiers={[tint('primary'), badge(markerCount > 0 ? String(markerCount) : undefined)]}
               systemImage="mappin.and.ellipse"
               label="Markers"
               onPress={() => router.dismissTo("/markers")}
             />
             <Button
-              modifiers={[tint('primary')]}
+              modifiers={[tint('primary'), badge(routeCount > 0 ? String(routeCount) : undefined)]}
               systemImage="point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath.fill"
               label="Routes"
               onPress={() => router.dismissTo("/routes")}

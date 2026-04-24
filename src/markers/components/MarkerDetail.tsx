@@ -6,7 +6,6 @@ import RouteButton from "@/routes/components/RouteButton";
 import { exportMarkerAsGPX } from "@/tracks/export";
 import SheetHeader from "@/ui/SheetHeader";
 import {
-  Button,
   Form,
   Host,
   Section,
@@ -95,6 +94,18 @@ export default function MarkerDetail({ id }: { id: string }) {
       </Stack.Toolbar>
       {marker && (
         <SheetBottomToolbar>
+          <Stack.Toolbar.Button
+            accessibilityLabel="Delete"
+            icon="trash"
+            onPress={confirmDelete}
+          />
+          <Stack.Toolbar.Button
+            icon="square.and.pencil"
+            accessibilityLabel="Edit"
+            onPress={() => router.push({ pathname: "/marker/edit", params: { id: markerId } })}
+          />
+          <Stack.Toolbar.Spacer />
+
           <RouteButton latitude={marker.latitude} longitude={marker.longitude} />
         </SheetBottomToolbar>
       )}
@@ -113,17 +124,6 @@ export default function MarkerDetail({ id }: { id: string }) {
                 {marker.notes}
               </Text>
             )}
-          </Section>
-          <Section>
-            <Button
-              label="Edit"
-              onPress={() => router.push({ pathname: "/marker/edit", params: { id: markerId } })}
-            />
-            <Button
-              label="Delete"
-              role="destructive"
-              onPress={confirmDelete}
-            />
           </Section>
         </Form>
       </Host>

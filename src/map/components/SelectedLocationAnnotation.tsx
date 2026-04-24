@@ -1,5 +1,5 @@
-import { useSelection } from "@/map/hooks/useSelection";
 import useTheme from "@/hooks/useTheme";
+import { useSelection } from "@/map/hooks/useSelection";
 import type { ViewAnnotationProps } from "@maplibre/maplibre-react-native";
 import { router } from "expo-router";
 import { useCallback } from "react";
@@ -25,7 +25,7 @@ export default function SelectedLocationAnnotation() {
     <Annotation
       id="selected-location"
       lngLat={selectedCoords}
-      icon="mappin"
+      icon="pin"
       color={theme.danger}
       selected
       draggable

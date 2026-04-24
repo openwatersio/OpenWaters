@@ -1,9 +1,9 @@
+import useTheme from "@/hooks/useTheme";
 import { AnnotationIcon, AnnotationIconName, ICONS } from "@/map/components/AnnotationIcon";
+import { updateMarker, useMarker } from "@/markers/hooks/useMarkers";
 import { flyTo } from "@/navigation/components/NavigationCamera";
 import SheetHeader from "@/ui/SheetHeader";
 import SheetView from "@/ui/SheetView";
-import { updateMarker, useMarker } from "@/markers/hooks/useMarkers";
-import useTheme from "@/hooks/useTheme";
 import {
   ColorPicker,
   Form,
@@ -28,7 +28,7 @@ export default function EditMarkerScreen() {
   const marker = useMarker(markerId);
   const theme = useTheme();
 
-  const [color, setColor] = useState<string | null>(marker?.color ?? null);
+  const [color, setColor] = useState<string>(marker?.color ?? theme.primary);
   const [icon, setIcon] = useState<AnnotationIconName>((marker?.icon as AnnotationIconName) ?? "pin");
 
   const subtitle = marker
@@ -92,13 +92,20 @@ export default function EditMarkerScreen() {
               supportsOpacity={false}
             />
             <RNHostView matchContents>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, paddingHorizontal: 30 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, paddingHorizontal: 30, justifyContent: "flex-start" }}>
                 {Object.keys(ICONS).map((name) => (
                   <Pressable
                     key={name}
                     onPress={() => { setIcon(name as AnnotationIconName); updateMarker(markerId, { icon: name }); }}
                   >
-                    <AnnotationIcon name={name} size={24} color={icon === name ? color ?? undefined : theme.textPrimary} />
+                    <View style={{
+                      padding: 6,
+                      borderRadius: 9999,
+                      backgroundColor: name === icon ? color : "transparent",
+                    }}
+                    >
+                      <AnnotationIcon name={name} size={24} color={name === icon ? theme.surface : theme.textPrimary} />
+                    </View>
                   </Pressable>
                 ))}
               </View>
