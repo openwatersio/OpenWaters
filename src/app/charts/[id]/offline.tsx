@@ -108,7 +108,7 @@ export default function OfflineSummary() {
               <HStack>
                 <Text>Total offline data</Text>
                 <Spacer />
-                <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
+                <Text modifiers={[foregroundStyle(theme.labelSecondary)]}>
                   {hasAnyData ? formatBytes(totalBytes) : "None"}
                 </Text>
               </HStack>
@@ -156,7 +156,7 @@ export default function OfflineSummary() {
                       <Text modifiers={[font({ size: 15 })]}>
                         {source.title}
                       </Text>
-                      <Text modifiers={[font({ size: 12 }), foregroundStyle(theme.textSecondary)]}>
+                      <Text modifiers={[font({ size: 12 }), foregroundStyle(theme.labelSecondary)]}>
                         {source.sizeBytes ? formatBytes(source.sizeBytes) : "MBTiles"}
                       </Text>
                     </VStack>
@@ -199,7 +199,7 @@ export default function OfflineSummary() {
                       <HStack alignment="center">
                         <VStack alignment="leading" spacing={2}>
                           <Text modifiers={[font({ size: 15 })]}>Tile cache</Text>
-                          <Text modifiers={[font({ size: 12 }), foregroundStyle(theme.textSecondary)]}>
+                          <Text modifiers={[font({ size: 12 }), foregroundStyle(theme.labelSecondary)]}>
                             {state === "complete"
                               ? `${tileCount} tiles · ${formatBytes(size)}`
                               : state === "active"

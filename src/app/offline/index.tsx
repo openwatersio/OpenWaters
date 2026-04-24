@@ -109,7 +109,7 @@ export default function OfflineManagement() {
               <HStack>
                 <Text>Offline data</Text>
                 <Spacer />
-                <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
+                <Text modifiers={[foregroundStyle(theme.labelSecondary)]}>
                   {formatBytes(totalStorageUsed)}
                 </Text>
               </HStack>
@@ -117,13 +117,13 @@ export default function OfflineManagement() {
                 <HStack>
                   <Text>Free space</Text>
                   <Spacer />
-                  <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
+                  <Text modifiers={[foregroundStyle(theme.labelSecondary)]}>
                     {formatBytes(freeSpace)}
                   </Text>
                 </HStack>
               ) : null}
               {activeDownloadCount > 0 ? (
-                <Text modifiers={[foregroundStyle(theme.primary)]}>
+                <Text modifiers={[foregroundStyle(theme.accent)]}>
                   {activeDownloadCount} download{activeDownloadCount > 1 ? "s" : ""} in progress
                 </Text>
               ) : null}
@@ -146,7 +146,7 @@ export default function OfflineManagement() {
                         <Text
                           modifiers={[
                             font({ size: 12 }),
-                            foregroundStyle(theme.textSecondary),
+                            foregroundStyle(theme.labelSecondary),
                           ]}
                         >
                           {source.sizeBytes
@@ -191,7 +191,7 @@ export default function OfflineManagement() {
 
             {chartOfflineData.length === 0 ? (
               <Section>
-                <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
+                <Text modifiers={[foregroundStyle(theme.labelSecondary)]}>
                   No offline data downloaded yet. Open a chart and download
                   regions or cache tiles for offline use.
                 </Text>
@@ -259,7 +259,7 @@ function TilePackRow({
       <VStack alignment="leading" spacing={2}>
         <Text modifiers={[font({ size: 15 })]}>Tile cache</Text>
         <Text
-          modifiers={[font({ size: 12 }), foregroundStyle(theme.textSecondary)]}
+          modifiers={[font({ size: 12 }), foregroundStyle(theme.labelSecondary)]}
         >
           {label}
         </Text>

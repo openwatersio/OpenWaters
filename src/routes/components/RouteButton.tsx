@@ -14,7 +14,7 @@ export default function RouteButton({ latitude, longitude }: Props) {
   return (
     <Stack.Toolbar.Button
       icon="point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath.fill"
-      tintColor={isActive ? theme.primary : undefined}
+      tintColor={isActive ? theme.accent : undefined}
       onPress={() => {
         if (isActive) {
           addRouteWaypoint({ latitude, longitude });

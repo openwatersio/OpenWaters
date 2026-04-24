@@ -248,7 +248,7 @@ export default function AddChart() {
 
           {status.state === "detecting" && !hasSources ? (
             <Section>
-              <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
+              <Text modifiers={[foregroundStyle(theme.labelSecondary)]}>
                 Detecting source type...
               </Text>
             </Section>
@@ -360,13 +360,13 @@ function SourceCard({
       />
 
       {"url" in source && source.url ? (
-        <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
+        <Text modifiers={[foregroundStyle(theme.labelSecondary)]}>
           {source.url}
         </Text>
       ) : null}
 
       {"tiles" in source && source.tiles?.[0] ? (
-        <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
+        <Text modifiers={[foregroundStyle(theme.labelSecondary)]}>
           {source.tiles[0]}
         </Text>
       ) : null}

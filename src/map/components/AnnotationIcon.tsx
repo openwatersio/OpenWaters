@@ -74,5 +74,5 @@ export function AnnotationIcon({ name, color, size = 24 }: AnnotationIconProps) 
   const theme = useTheme();
   const Icon = ICONS[name] ?? ICONS.pin;
 
-  return <Icon width={size} height={size} color={color ?? theme.textPrimary} />;
+  return <Icon width={size} height={size} color={color ?? theme.label} />;
 }

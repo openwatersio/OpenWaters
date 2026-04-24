@@ -20,12 +20,12 @@ export default function SheetHeader({ title, subtitle, onPressTitle }: Props) {
             <Text
               numberOfLines={1}
               onPress={onPressTitle}
-              style={{ color: theme.textPrimary, fontSize: 20, fontWeight: "700" }}
+              style={{ color: theme.label, fontSize: 20, fontWeight: "700" }}
             >
               {title}
             </Text>
             {subtitle != null && (
-              <Text numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 15 }}>
+              <Text numberOfLines={1} style={{ color: theme.labelSecondary, fontSize: 15 }}>
                 {subtitle}
               </Text>
             )}

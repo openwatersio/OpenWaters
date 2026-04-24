@@ -30,7 +30,7 @@ export default function MarkerOverlay() {
       properties: {
         id: marker.id,
         icon: markerIconImage(marker.icon),
-        color: marker.color ?? theme.primary,
+        color: marker.color ? theme.adapt(marker.color) : theme.markers,
       },
       geometry: {
         type: "Point" as const,
@@ -38,7 +38,7 @@ export default function MarkerOverlay() {
       },
     }));
     return { type: "FeatureCollection", features };
-  }, [markers, theme.primary]);
+  }, [markers, theme.markers, theme.adapt]);
 
   const handlePress = useCallback(
     (e: NativeSyntheticEvent<{ features: GeoJSON.Feature[] }>) => {
@@ -72,7 +72,7 @@ export default function MarkerOverlay() {
             "circle-radius": [
               "interpolate", ["linear"], ["zoom"],
               4, 4,
-              18, 18,
+              18, 12,
             ],
             "circle-color": ["get", "color"],
             "circle-stroke-width": [
@@ -80,10 +80,10 @@ export default function MarkerOverlay() {
               4, 0.2,
               18, 2,
             ],
-            "circle-stroke-color": "white",
+            "circle-stroke-color": theme.contrast,
           }}
         />
-        {/* Unselected: white icon on top of circle */}
+        {/* Unselected: contrast-colored icon on top of circle */}
         <Layer
           id="markers-symbol"
           type="symbol"
@@ -97,13 +97,13 @@ export default function MarkerOverlay() {
             "icon-size": [
               "interpolate", ["linear"], ["zoom"],
               4, 0.1,
-              18, 0.6,
+              18, 0.4,
             ],
             "icon-allow-overlap": true,
             "icon-ignore-placement": true,
           }}
           paint={{
-            "icon-color": "white",
+            "icon-color": theme.contrast,
           }}
         />
       </GeoJSONSource>
@@ -116,7 +116,7 @@ export default function MarkerOverlay() {
           id="selected-marker"
           lngLat={[selectedMarker.longitude, selectedMarker.latitude]}
           icon={selectedMarker.icon ?? "pin"}
-          color={selectedMarker.color ?? theme.primary}
+          color={selectedMarker.color ? theme.adapt(selectedMarker.color) : theme.markers}
           selected
           draggable
           onPress={() => navigate("marker", String(selectedMarker.id))}

@@ -26,7 +26,7 @@ export default function SelectedLocationAnnotation() {
       id="selected-location"
       lngLat={selectedCoords}
       icon="pin"
-      color={theme.danger}
+      color={theme.userLocation}
       selected
       draggable
       onDragEnd={handleDragEnd}

@@ -1,3 +1,10 @@
+// expo-platform-colors is a local native module; return fixed hex values for tests
+jest.mock("expo-platform-colors", () => ({
+  resolveSemanticColor: (_name: string, scheme: "light" | "dark") =>
+    scheme === "dark" ? "#000000" : "#FFFFFF",
+  setOverrideUserInterfaceStyle: jest.fn(),
+}));
+
 // react-native-reanimated uses native worklets; mock for tests
 jest.mock("react-native-reanimated", () => {
   const React = require("react");

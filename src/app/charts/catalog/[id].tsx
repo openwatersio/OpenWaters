@@ -82,11 +82,11 @@ export default function CatalogEntryDetail() {
               </VStack>
             ) : null}
             <Section>
-              <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
+              <Text modifiers={[foregroundStyle(theme.labelSecondary)]}>
                 {entry.summary}
               </Text>
               {entry.description ? (
-                <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
+                <Text modifiers={[foregroundStyle(theme.labelSecondary)]}>
                   {entry.description}
                 </Text>
               ) : null}

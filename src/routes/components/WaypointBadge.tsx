@@ -17,9 +17,9 @@ export default function WaypointBadge({
   const theme = useTheme();
   const modifiers = [
     font({ size: 12, weight: "black" as const }),
-    foregroundStyle("white"),
+    foregroundStyle(theme.contrast),
     frame({ width: 24, height: 24 }),
-    background(theme.primary, shapes.circle()),  // inner fill
+    background(theme.accent, shapes.circle()),  // inner fill
   ];
 
   if (index === 0 || last) {
@@ -27,7 +27,7 @@ export default function WaypointBadge({
       <Image
         systemName={last ? "flag.pattern.checkered" : "flag.fill"}
         size={12}
-        color={"white"}
+        color={theme.contrast}
         modifiers={modifiers}
       />
     );

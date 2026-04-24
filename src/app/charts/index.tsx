@@ -139,7 +139,7 @@ function ChartRow({
             {chart.name}
           </Text>
           {selected ? (
-            <Image systemName="checkmark" size={14} color={theme.primary} />
+            <Image systemName="checkmark" size={14} color={theme.accent} />
           ) : null}
         </HStack>
       </ContextMenu.Trigger>

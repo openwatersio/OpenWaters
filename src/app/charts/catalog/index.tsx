@@ -91,7 +91,7 @@ export default function ChartCatalog() {
                               style={{
                                 width: 56,
                                 height: 56,
-                                backgroundColor: theme.surfaceSecondary,
+                                backgroundColor: theme.surface,
                                 alignItems: "center",
                                 justifyContent: "center",
                               }}
@@ -111,7 +111,7 @@ export default function ChartCatalog() {
                         <Text
                           modifiers={[
                             font({ size: 13 }),
-                            foregroundStyle(theme.textSecondary),
+                            foregroundStyle(theme.labelSecondary),
                             lineLimit(2),
                           ]}
                         >
@@ -148,14 +148,14 @@ export default function ChartCatalog() {
               <HStack
                 modifiers={[onTapGesture(() => router.push("/charts/add"))]}
               >
-                <Text modifiers={[foregroundStyle(theme.primary)]}>
+                <Text modifiers={[foregroundStyle(theme.accent)]}>
                   Manually Add Chart…
                 </Text>
                 <Spacer />
                 <Image
                   systemName="chevron.right"
                   size={13}
-                  color={theme.textSecondary}
+                  color={theme.labelSecondary}
                 />
               </HStack>
             </Section>

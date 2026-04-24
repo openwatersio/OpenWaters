@@ -45,6 +45,7 @@
     "expo-image": "~55.0.8",
     "expo-linking": "~55.0.13",
     "expo-location": "~55.1.8",
+    "expo-platform-colors": "file:./modules/expo-platform-colors",
     "expo-modules-core": "^55.0.22",
     "expo-router": "~55.0.12",
     "expo-sharing": "~55.0.18",

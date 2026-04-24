@@ -116,12 +116,12 @@ export default function TrackDetail({ id }: { id: string }) {
                 data={chartData}
                 type="area"
                 showGrid={false}
-                areaStyle={{ color: theme.primary + "50" }}
-                lineStyle={{ color: theme.primary, width: 1.5 }}
+                areaStyle={{ color: theme.accent + "50" }}
+                lineStyle={{ color: theme.accent, width: 1.5 }}
                 modifiers={[
                   padding({ top: 10 }),
                   frame({ height: 70 }),
-                  background(theme.surfaceElevated),
+                  background(theme.surfaceFloating),
                   cornerRadius(12),
                 ]}
               />
