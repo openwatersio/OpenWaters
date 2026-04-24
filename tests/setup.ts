@@ -116,17 +116,18 @@ jest.mock("@expo/ui/swift-ui", () => {
   };
 });
 
-jest.mock("@expo/ui/swift-ui/modifiers", () => ({
-  environment: () => ({}),
-  frame: () => ({}),
-  glassEffect: () => ({}),
-  glassEffectId: () => ({}),
-  labelStyle: () => ({}),
-  contentTransition: () => ({}),
-  animation: () => ({}),
-  Animation: { default: "default" },
-  tint: () => ({}),
-}));
+// @expo/ui modifiers: every modifier is a function that returns an empty
+// descriptor. Proxy so adding a new modifier in app code doesn't require
+// updating this mock.
+jest.mock("@expo/ui/swift-ui/modifiers", () =>
+  new Proxy(
+    { Animation: { default: "default" } },
+    {
+      get: (target, prop) =>
+        prop in target ? (target as any)[prop] : () => ({}),
+    },
+  ),
+);
 
 // react-native-safe-area-context uses native modules; mock insets
 jest.mock("react-native-safe-area-context", () => ({

@@ -1,5 +1,4 @@
 import { resolveSemanticColor } from "expo-platform-colors";
-import { useCallback } from "react";
 import { useColorScheme } from "react-native";
 
 /**
@@ -167,9 +166,15 @@ function build(scheme: Scheme): Palette {
 }
 
 /** Materialized once at module load; static for the lifetime of the JS runtime. */
-const palettes = Object.freeze({
-  light: build("light"),
-  dark: build("dark"),
+const themes = Object.freeze({
+  light: Object.freeze({
+    ...build("light"),
+    adapt: (hex: string) => adaptColor(hex, "light"),
+  }),
+  dark: Object.freeze({
+    ...build("dark"),
+    adapt: (hex: string) => adaptColor(hex, "dark"),
+  }),
 });
 
 /**
@@ -177,9 +182,10 @@ const palettes = Object.freeze({
  * driven app-wide by `setOverrideUserInterfaceStyle` (wired to the chart
  * theme), so `useColorScheme()` reflects the app theme rather than the OS
  * setting.
+ *
+ * Returns the same object identity for a given scheme so memoized consumers
+ * (like `createStyles`) don't re-evaluate on every render.
  */
 export default function useTheme(): Theme {
-  const scheme: Scheme = useColorScheme() === "dark" ? "dark" : "light";
-  const adapt = useCallback((hex: string) => adaptColor(hex, scheme), [scheme]);
-  return { ...palettes[scheme], adapt };
+  return useColorScheme() === "dark" ? themes.dark : themes.light;
 }
