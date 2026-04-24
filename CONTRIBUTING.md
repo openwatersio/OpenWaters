@@ -2,12 +2,26 @@
 
 Open Waters is a modern, open source, mobile-first marine navigation app built with React Native and Expo. See [docs/](docs/README.md) for feature documentation, specs, and the project vision.
 
+## Project Status
+
+Open Waters is in **early alpha** with limited users. There are no external consumers of internal APIs, no install base to migrate, and no release compatibility commitments.
+
+**Prefer breaking changes over backward compatibility.** When refactoring or redesigning:
+
+- Rename, move, or delete APIs freely — don't preserve old names as aliases
+- Don't add deprecation shims, compatibility layers, or migration paths for internal code
+- Don't keep feature flags, fallbacks, or "legacy" branches around after a change lands
+- Change database schemas with a straightforward migration — don't preserve old columns or dual-write
+- Update all call sites in the same change; don't leave TODOs to clean up later
+
+A clean codebase beats a compatible one. Revisit this guidance when we have real users.
+
+## Getting Started
+
 This project is built with [Expo](https://expo.dev/), a framework and platform for universal React applications. To learn more, look at the following resources:
 
 - [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
 - [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Getting Started
 
 ### Prerequisites
 
@@ -35,15 +49,15 @@ npm run lint               # run eslint
 
 ### Tech Stack
 
-| Layer      | Technology                            |
-| ---------- | ------------------------------------- |
-| Framework  | React Native + Expo                   |
-| Language   | TypeScript (strict mode)              |
-| Navigation | expo-router (file-based routing)      |
-| State      | Valtio with AsyncStorage persistence  |
-| Map Engine | MapLibre React Native v11             |
-| Testing    | Jest                                  |
-| Linting    | ESLint (expo config)                  |
+| Layer      | Technology                           |
+| ---------- | ------------------------------------ |
+| Framework  | React Native + Expo                  |
+| Language   | TypeScript (strict mode)             |
+| Navigation | expo-router (file-based routing)     |
+| State      | Valtio with AsyncStorage persistence |
+| Map Engine | MapLibre React Native v11            |
+| Testing    | Jest                                 |
+| Linting    | ESLint (expo config)                 |
 
 ### Directory Structure
 
@@ -157,7 +171,7 @@ For partial persistence (only some fields) or hydration side effects, pass `part
 ```typescript
 persistProxy(activeRouteState, {
   name: "active-route",
-  partialize: (s) => s.route?.id != null ? { id: s.route.id } : null,
+  partialize: (s) => (s.route?.id != null ? { id: s.route.id } : null),
   hydrate: (state, persisted) => {
     if (persisted?.id != null) loadRoute(persisted.id);
   },
@@ -257,16 +271,16 @@ Use `toSpeed()` and `toDistance()` from `@/hooks/usePreferredUnits` for all unit
 
 ### Naming Conventions
 
-| What           | Convention            | Example                       |
-| -------------- | --------------------- | ----------------------------- |
-| Components     | PascalCase            | `ChartView.tsx`               |
-| Hooks          | camelCase, use-prefix | `useCameraState.tsx`          |
+| What           | Convention            | Example                         |
+| -------------- | --------------------- | ------------------------------- |
+| Components     | PascalCase            | `ChartView.tsx`                 |
+| Hooks          | camelCase, use-prefix | `useCameraState.tsx`            |
 | Valtio proxies | `xyzState` + `useXyz` | `cameraState`, `useCameraState` |
-| Store actions  | plain named exports   | `export function loadItems()` |
-| State types    | `State`               | `type State = { ... }`        |
-| Storage keys   | kebab-case string     | `"preferred-units"`           |
-| Constants      | SCREAMING_SNAKE_CASE  | `SPEED_THRESHOLD`             |
-| Enums          | PascalCase            | `NavigationState.Underway`    |
+| Store actions  | plain named exports   | `export function loadItems()`   |
+| State types    | `State`               | `type State = { ... }`          |
+| Storage keys   | kebab-case string     | `"preferred-units"`             |
+| Constants      | SCREAMING_SNAKE_CASE  | `SPEED_THRESHOLD`               |
+| Enums          | PascalCase            | `NavigationState.Underway`      |
 
 ### TypeScript
 
