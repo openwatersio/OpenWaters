@@ -15,12 +15,12 @@ export default function Stat({ label, value, unit }: Props) {
     <VStack spacing={2} modifiers={[
       frame({ maxWidth: Infinity }),
       padding({ all: 12 }),
-      background(theme.surfaceElevated),
+      background(theme.surfaceFloating),
       cornerRadius(12),
     ]}>
       <Text modifiers={[
         font({ size: 12, weight: "semibold" }),
-        foregroundStyle(theme.textSecondary),
+        foregroundStyle(theme.labelSecondary),
       ]}>
         {label}
       </Text>
@@ -29,13 +29,13 @@ export default function Stat({ label, value, unit }: Props) {
           <Text modifiers={[
             font({ size: 24, weight: "bold" }),
             monospacedDigit(),
-            foregroundStyle(theme.textPrimary),
+            foregroundStyle(theme.label),
           ]}>
             {value}
           </Text>
           <Text modifiers={[
             font({ size: 16, weight: "medium" }),
-            foregroundStyle(theme.textSecondary),
+            foregroundStyle(theme.labelSecondary),
           ]}>
             {unit}
           </Text>
@@ -44,7 +44,7 @@ export default function Stat({ label, value, unit }: Props) {
         <Text modifiers={[
           font({ size: 24, weight: "bold" }),
           monospacedDigit(),
-          foregroundStyle(theme.textPrimary),
+          foregroundStyle(theme.label),
         ]}>
           {value}
         </Text>

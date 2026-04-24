@@ -65,7 +65,7 @@ export function OfflineStatusButton() {
       ? theme.success
       : status === "partial"
         ? theme.warning
-        : undefined;
+        : "primary";
 
   return (
     <Button

@@ -1,3 +1,10 @@
+// expo-platform-colors is a local native module; return fixed hex values for tests
+jest.mock("expo-platform-colors", () => ({
+  resolveSemanticColor: (_name: string, scheme: "light" | "dark") =>
+    scheme === "dark" ? "#000000" : "#FFFFFF",
+  setOverrideUserInterfaceStyle: jest.fn(),
+}));
+
 // react-native-reanimated uses native worklets; mock for tests
 jest.mock("react-native-reanimated", () => {
   const React = require("react");
@@ -109,17 +116,18 @@ jest.mock("@expo/ui/swift-ui", () => {
   };
 });
 
-jest.mock("@expo/ui/swift-ui/modifiers", () => ({
-  environment: () => ({}),
-  frame: () => ({}),
-  glassEffect: () => ({}),
-  glassEffectId: () => ({}),
-  labelStyle: () => ({}),
-  contentTransition: () => ({}),
-  animation: () => ({}),
-  Animation: { default: "default" },
-  tint: () => ({}),
-}));
+// @expo/ui modifiers: every modifier is a function that returns an empty
+// descriptor. Proxy so adding a new modifier in app code doesn't require
+// updating this mock.
+jest.mock("@expo/ui/swift-ui/modifiers", () =>
+  new Proxy(
+    { Animation: { default: "default" } },
+    {
+      get: (target, prop) =>
+        prop in target ? (target as any)[prop] : () => ({}),
+    },
+  ),
+);
 
 // react-native-safe-area-context uses native modules; mock insets
 jest.mock("react-native-safe-area-context", () => ({

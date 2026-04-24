@@ -2,6 +2,7 @@ import type { Marker } from "@/database";
 import { formatBearing } from "@/geo";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
+import { createStyles } from "@/hooks/useStyles";
 import { AnnotationIcon } from "@/map/components/AnnotationIcon";
 import { deleteMarker, updateMarker } from "@/markers/hooks/useMarkers";
 import { getPosition } from "@/navigation/hooks/useNavigation";
@@ -13,7 +14,6 @@ import {
   Alert,
   PlatformColor,
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -82,6 +82,7 @@ type Props = {
 const MarkerListItem = memo(
   function MarkerListItem({ marker }: Props) {
     const theme = useTheme();
+    const styles = useStyles();
     const distLabel = getDistanceLabel(marker);
     const coordsLabel = formatCoords(marker.latitude, marker.longitude);
 
@@ -102,35 +103,20 @@ const MarkerListItem = memo(
         <View
           style={[
             styles.icon,
-            { backgroundColor: marker.color ?? theme.primary },
+            { backgroundColor: marker.color ? theme.adapt(marker.color) : theme.markers },
           ]}
         >
-          <AnnotationIcon
-            name={marker.icon ?? "pin"}
-            color="white"
-            size={18}
-          />
+          <AnnotationIcon name={marker.icon ?? "pin"} color={theme.contrast} size={18} />
         </View>
 
         <View style={styles.content}>
           <View style={styles.topRow}>
-            <Text
-              style={[styles.title, { color: theme.textPrimary }]}
-              numberOfLines={1}
-            >
+            <Text style={styles.title} numberOfLines={1}>
               {markerDisplayName(marker)}
             </Text>
-            {distLabel && (
-              <Text
-                style={[styles.distance, { color: theme.textSecondary }]}
-              >
-                {distLabel}
-              </Text>
-            )}
+            {distLabel && <Text style={styles.distance}>{distLabel}</Text>}
           </View>
-          <Text style={[styles.coords, { color: theme.textSecondary }]}>
-            {coordsLabel}
-          </Text>
+          <Text style={styles.coords}>{coordsLabel}</Text>
         </View>
       </Pressable>
     );
@@ -146,7 +132,7 @@ const MarkerListItem = memo(
 
 export default MarkerListItem;
 
-const styles = StyleSheet.create({
+const useStyles = createStyles((theme) => ({
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -161,23 +147,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  content: {
-    flex: 1,
-    gap: 2,
-  },
+  content: { flex: 1, gap: 2 },
   topRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
   },
-  title: { fontSize: 16, fontWeight: "600", flexShrink: 1 },
+  title: { fontSize: 16, fontWeight: "600", flexShrink: 1, color: theme.label },
   distance: {
     fontSize: 13,
     fontVariant: ["tabular-nums"],
+    color: theme.labelSecondary,
   },
   coords: {
     fontSize: 12,
     fontVariant: ["tabular-nums"],
+    color: theme.labelSecondary,
   },
-});
+}));

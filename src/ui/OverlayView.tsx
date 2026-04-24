@@ -1,8 +1,6 @@
-import {
-  GlassView,
-  isLiquidGlassAvailable,
-} from "expo-glass-effect";
-import { StyleSheet, useColorScheme, View, type StyleProp, type ViewStyle } from "react-native";
+import useTheme from "@/hooks/useTheme";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { useColorScheme, View, type StyleProp, type ViewStyle } from "react-native";
 
 const liquidGlass = isLiquidGlassAvailable();
 
@@ -11,36 +9,26 @@ type OverlayViewProps = {
   children?: React.ReactNode;
 };
 
-export default function OverlayView({
-  style,
-  children,
-}: OverlayViewProps) {
-  const isDark = useColorScheme() === "dark";
+export default function OverlayView({ style, children }: OverlayViewProps) {
+  const theme = useTheme();
+  // useColorScheme() reflects the app-wide theme because _layout.tsx drives
+  // UIWindow.overrideUserInterfaceStyle from the chart theme.
+  const colorScheme = useColorScheme() === "dark" ? "dark" : "light";
 
   if (liquidGlass) {
     return (
-      <GlassView glassEffectStyle="regular" colorScheme={isDark ? "dark" : "light"} style={style} isInteractive>
+      <GlassView
+        glassEffectStyle="regular"
+        colorScheme={colorScheme}
+        style={style}
+        isInteractive
+      >
         {children}
       </GlassView>
     );
   }
 
   return (
-    <View style={[style, styles.fallback, isDark && styles.fallbackDark]}>
-      {children}
-    </View>
+    <View style={[{ backgroundColor: theme.surface }, style]}>{children}</View>
   );
 }
-
-const styles = StyleSheet.create({
-  fallback: {
-    backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  fallbackDark: {
-    backgroundColor: "#1c1c1e",
-  },
-});

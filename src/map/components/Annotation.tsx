@@ -1,8 +1,9 @@
 import useTheme from "@/hooks/useTheme";
+import { createStyles } from "@/hooks/useStyles";
 import { ViewAnnotation, type ViewAnnotationProps } from "@maplibre/maplibre-react-native";
 import * as Haptics from "expo-haptics";
 import { ReactNode, useCallback, useEffect, useRef } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -43,6 +44,7 @@ export function Annotation({
   ...props
 }: AnnotationProps) {
   const theme = useTheme();
+  const styles = useStyles();
   const prevSelected = useRef(selected);
 
   // --- Animations ---
@@ -162,16 +164,16 @@ export function Annotation({
     >
       <>
         <Animated.View style={containerStyle}>
-          <Animated.View style={[styles.circle, { backgroundColor: color, borderColor: theme.surface }, circleSize]}>
+          <Animated.View style={[styles.circle, { backgroundColor: color }, circleSize]}>
             <Animated.View style={iconStyle}>
               {label != null ? (
                 <Animated.Text style={styles.label}>{label}</Animated.Text>
               ) : icon ? (
-                <AnnotationIcon name={icon} color="white" size={26} />
+                <AnnotationIcon name={icon} color={theme.contrast} size={26} />
               ) : null}
             </Animated.View>
           </Animated.View>
-          <Animated.View style={[styles.tail, { borderTopColor: theme.surface }, tailStyle]} />
+          <Animated.View style={[styles.tail, tailStyle]} />
         </Animated.View>
         {selected && accessory && (
           <View style={styles.accessory} pointerEvents="box-none">
@@ -184,10 +186,11 @@ export function Annotation({
 }
 
 
-const styles = StyleSheet.create({
+const useStyles = createStyles((theme) => ({
   circle: {
     alignItems: "center",
     justifyContent: "center",
+    borderColor: theme.contrast,
   },
   // With anchor="center", the container's vertical center is the coordinate,
   // so top:"50%" anchors the accessory's top at the coord point. Absolute
@@ -207,12 +210,13 @@ const styles = StyleSheet.create({
     borderLeftColor: "transparent",
     borderRightWidth: 9,
     borderRightColor: "transparent",
+    borderTopColor: theme.contrast,
   },
   label: {
-    color: "white",
+    color: theme.contrast,
     fontSize: 22,
     fontWeight: "900",
     textAlign: "center",
     letterSpacing: -0.5,
   },
-});
+}));

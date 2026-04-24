@@ -1,4 +1,5 @@
 import { cancelAllDownloads } from "@/charts/download";
+import { useActiveTheme } from "@/charts/hooks/useCharts";
 import "@/import/background"; // Register import background task at module scope
 import { handleIncomingFileUrl, resumeImportIfNeeded } from "@/import/state";
 import { connectAll, disconnectAll } from "@/instruments/hooks/useConnections";
@@ -7,12 +8,21 @@ import "@/tracks/hooks/useTrackRecording"; // Register background task at module
 import { LocationManager } from "@maplibre/maplibre-react-native";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import * as Linking from "expo-linking";
+import { setOverrideUserInterfaceStyle } from "expo-platform-colors";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { useColorScheme } from 'react-native';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const activeTheme = useActiveTheme();
+
+  // Drive the app-wide user interface style from the chart theme. This one
+  // call flips every window's trait collection, so @expo/ui Host subtrees,
+  // GlassView, useColorScheme(), and presented sheets all follow.
+  useEffect(() => {
+    setOverrideUserInterfaceStyle(activeTheme === "day" ? "light" : "dark");
+  }, [activeTheme]);
 
   // Stop native location updates and cancel active downloads before JS
   // runtime tears down on reload, preventing crashes and orphaned native tasks.
@@ -114,7 +124,7 @@ export default function RootLayout() {
         <Stack.Screen name="settings" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [0.5, 1],
+          sheetAllowedDetents: [1],
           sheetGrabberVisible: true,
           title: "Settings",
         }} />

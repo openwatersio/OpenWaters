@@ -1,6 +1,6 @@
-import { useNavigation } from "@/navigation/hooks/useNavigation";
-import useTheme from "@/hooks/useTheme";
 import { projectPosition } from "@/geo";
+import useTheme from "@/hooks/useTheme";
+import { useNavigation } from "@/navigation/hooks/useNavigation";
 import { Layer, Animated as MLAnimated } from "@maplibre/maplibre-react-native";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { Easing, Animated as RNAnimated } from "react-native";
@@ -214,7 +214,7 @@ export const NavigationPuck = memo(function NavigationPuck() {
           }}
           paint={{
             "icon-color": theme.userLocation,
-            "icon-halo-color": theme.surface,
+            "icon-halo-color": theme.contrast,
             "icon-halo-width": 1.5,
           }}
         />

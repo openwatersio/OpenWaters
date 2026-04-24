@@ -14,7 +14,7 @@ export type ButtonProps = {
 
 export default function Button({ label, onPress, systemImage, role, variant = "default", color, style: containerStyle }: ButtonProps) {
   const theme = useTheme();
-  const tint = color ?? (role === "destructive" ? theme.danger : theme.primary);
+  const tint = color ?? (role === "destructive" ? theme.danger : theme.accent);
   const foreground = variant === "bordered" ? theme.surface : tint;
 
   return (
@@ -29,9 +29,7 @@ export default function Button({ label, onPress, systemImage, role, variant = "d
       ]}
     >
       {systemImage && <SymbolView name={systemImage} size={18} tintColor={foreground} />}
-      {label && <Text style={[styles.label, { color: foreground }]}>
-        {label}
-      </Text>}
+      {label && <Text style={[styles.label, { color: foreground }]}>{label}</Text>}
     </Pressable>
   );
 }

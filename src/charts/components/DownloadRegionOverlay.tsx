@@ -1,6 +1,6 @@
 import { useDownloadOverlay } from "@/charts/hooks/useDownloadOverlay";
 import { useTopSheetHeight } from "@/map/hooks/useSheetPosition";
-import useTheme from "@/hooks/useTheme";
+import { createStyles } from "@/hooks/useStyles";
 import { Dimensions, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
@@ -10,7 +10,7 @@ const BORDER_RADIUS = 16;
 
 export function DownloadRegionOverlay() {
   const { visible } = useDownloadOverlay();
-  const theme = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
   const sheetHeight = useTopSheetHeight();
 
@@ -55,12 +55,11 @@ export function DownloadRegionOverlay() {
             left: rectX,
             width: rectW,
             height: rectH,
-            borderColor: theme.primary,
             borderRadius: r,
           },
         ]}
       >
-        <View style={[styles.label, { backgroundColor: theme.primary }]}>
+        <View style={styles.label}>
           <Text style={styles.labelText}>Select Download Area</Text>
         </View>
       </View>
@@ -68,10 +67,11 @@ export function DownloadRegionOverlay() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createStyles((theme) => ({
   border: {
     position: "absolute",
     borderWidth: 3,
+    borderColor: theme.accent,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -79,10 +79,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
+    backgroundColor: theme.accent,
   },
-  labelText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-});
+  labelText: { color: theme.contrast, fontSize: 14, fontWeight: "600" },
+}));

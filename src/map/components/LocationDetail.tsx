@@ -97,7 +97,7 @@ export default function LocationDetail({ id }: { id: string }) {
                 <Image
                   systemName="location.fill"
                   size={14}
-                  color={theme.textSecondary}
+                  color={theme.labelSecondary}
                 />
                 <Text modifiers={[
                   font({ size: 15, weight: "medium" }),
@@ -115,14 +115,14 @@ export default function LocationDetail({ id }: { id: string }) {
               <VStack alignment="leading" spacing={8}>
                 <Text modifiers={[
                   font({ size: 12, weight: "semibold" }),
-                  foregroundStyle(theme.textSecondary),
+                  foregroundStyle(theme.labelSecondary),
                 ]}>
                   CHART FEATURES
                 </Text>
                 {features.map((feature, i) => (
                   <VStack key={i} alignment="leading" spacing={4} modifiers={[
                     padding({ all: 12 }),
-                    background(theme.surfaceElevated),
+                    background(theme.surfaceFloating),
                     cornerRadius(10),
                   ]}>
                     {Object.entries(feature.properties ?? {})
@@ -132,13 +132,13 @@ export default function LocationDetail({ id }: { id: string }) {
                         <HStack key={key} spacing={4}>
                           <Text modifiers={[
                             font({ size: 14 }),
-                            foregroundStyle(theme.textSecondary),
+                            foregroundStyle(theme.labelSecondary),
                           ]}>
                             {`${key}: `}
                           </Text>
                           <Text modifiers={[
                             font({ size: 14 }),
-                            foregroundStyle(theme.textPrimary),
+                            foregroundStyle(theme.label),
                           ]}>
                             {String(value)}
                           </Text>

@@ -1,6 +1,6 @@
 import { type TrackWithStats } from "@/database";
 import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
-import useTheme from "@/hooks/useTheme";
+import { createStyles } from "@/hooks/useStyles";
 import {
   formatDate,
   formatDuration,
@@ -16,7 +16,6 @@ import {
   Alert,
   PlatformColor,
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -66,13 +65,9 @@ type Props = {
   track: TrackWithStats;
 };
 
-// Memoized: `useTracks` returns a fresh array of fresh objects on every
-// fetch, so default shallow compare would never bail out — compare by id
-// plus the fields the row actually displays. All of those are cached on
-// the tracks row, so props only change on rename / end-of-track.
 const TrackListItem = memo(
   function TrackListItem({ track }: Props) {
-    const theme = useTheme();
+    const styles = useStyles();
     const dist = toDistance(track.distance);
     const avgSpd = track.avg_speed != null ? toSpeed(track.avg_speed) : null;
     const maxSpd = track.max_speed != null ? toSpeed(track.max_speed) : null;
@@ -83,44 +78,29 @@ const TrackListItem = memo(
         onLongPress={() => showTrackActions(track)}
         style={({ pressed }) => [
           styles.row,
-          // iOS adaptive press highlight. `systemFill` matches the default
-          // UITableView / SwiftUI List selection color and adjusts for
-          // light/dark automatically.
           pressed && { backgroundColor: PlatformColor("systemFill") },
         ]}
       >
         <View style={styles.topRow}>
-          <Text
-            style={[styles.title, { color: theme.textPrimary }]}
-            numberOfLines={1}
-          >
+          <Text style={styles.title} numberOfLines={1}>
             {trackDisplayName(track)}
           </Text>
-          <Text style={[styles.date, { color: theme.textSecondary }]}>
-            {formatDate(track.started_at)}
-          </Text>
+          <Text style={styles.date}>{formatDate(track.started_at)}</Text>
         </View>
 
         <View style={styles.statsRow}>
-          <StatItem
-            label="Distance"
-            value={`${dist.value} ${dist.abbr}`}
-            theme={theme}
-          />
+          <StatItem label="Distance" value={`${dist.value} ${dist.abbr}`} />
           <StatItem
             label="Duration"
             value={formatDuration(track.started_at, track.ended_at)}
-            theme={theme}
           />
           <StatItem
             label="Average"
             value={avgSpd ? `${avgSpd.value} ${avgSpd.abbr}` : "—"}
-            theme={theme}
           />
           <StatItem
             label="Max"
             value={maxSpd ? `${maxSpd.value} ${maxSpd.abbr}` : "—"}
-            theme={theme}
           />
         </View>
       </Pressable>
@@ -138,28 +118,17 @@ const TrackListItem = memo(
 
 export default TrackListItem;
 
-function StatItem({
-  label,
-  value,
-  theme,
-}: {
-  label: string;
-  value: string;
-  theme: ReturnType<typeof useTheme>;
-}) {
+function StatItem({ label, value }: { label: string; value: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.stat}>
-      <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-        {label}
-      </Text>
-      <Text style={[styles.statValue, { color: theme.textPrimary }]}>
-        {value}
-      </Text>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createStyles((theme) => ({
   row: {
     height: ROW_HEIGHT,
     paddingHorizontal: 16,
@@ -173,17 +142,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
   },
-  title: { fontSize: 16, fontWeight: "600", flexShrink: 1 },
-  date: { fontSize: 14 },
+  title: {
+    fontSize: 16,
+    fontWeight: "600",
+    flexShrink: 1,
+    color: theme.label,
+  },
+  date: { fontSize: 14, color: theme.labelSecondary },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   stat: { flexDirection: "column" },
-  statLabel: { fontSize: 11, fontWeight: "600" },
+  statLabel: { fontSize: 11, fontWeight: "600", color: theme.labelSecondary },
   statValue: {
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
+    color: theme.label,
   },
-});
+}));

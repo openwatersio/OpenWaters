@@ -29,7 +29,7 @@ export default function TrackOverlay() {
 function ActiveTrackOverlay() {
   const theme = useTheme();
   const coordinates = useTrackRecordingPoints();
-  return <TrackLine id="active-track" coordinates={coordinates} color={theme.danger} />;
+  return <TrackLine id="active-track" coordinates={coordinates} color={theme.tracks} />;
 }
 
 function computeBounds(coords: Coordinate[]): LngLatBounds | null {
@@ -70,5 +70,5 @@ function SelectedTrackOverlay() {
 
   if (!selectedId) return null;
 
-  return <TrackLine id="selected-track" coordinates={coords} color={theme.primary} />;
+  return <TrackLine id="selected-track" coordinates={coords} color={theme.tracks} />;
 }

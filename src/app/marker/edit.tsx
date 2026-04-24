@@ -28,7 +28,7 @@ export default function EditMarkerScreen() {
   const marker = useMarker(markerId);
   const theme = useTheme();
 
-  const [color, setColor] = useState<string>(marker?.color ?? theme.primary);
+  const [color, setColor] = useState<string>(marker?.color ?? theme.accent);
   const [icon, setIcon] = useState<AnnotationIconName>((marker?.icon as AnnotationIconName) ?? "pin");
 
   const subtitle = marker
@@ -104,7 +104,7 @@ export default function EditMarkerScreen() {
                       backgroundColor: name === icon ? color : "transparent",
                     }}
                     >
-                      <AnnotationIcon name={name} size={24} color={name === icon ? theme.surface : theme.textPrimary} />
+                      <AnnotationIcon name={name} size={24} color={name === icon ? theme.surface : theme.label} />
                     </View>
                   </Pressable>
                 ))}

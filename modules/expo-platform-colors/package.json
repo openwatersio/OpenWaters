@@ -1,0 +1,8 @@
+{
+  "name": "expo-platform-colors",
+  "version": "0.1.0",
+  "description": "Resolve UIKit semantic colors to hex and force app-wide user interface style.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "private": true
+}

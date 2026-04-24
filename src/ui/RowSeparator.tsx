@@ -1,4 +1,4 @@
-import useTheme from "@/hooks/useTheme";
+import { createStyles } from "@/hooks/useStyles";
 import { StyleSheet, View } from "react-native";
 
 type Props = {
@@ -7,24 +7,14 @@ type Props = {
   inset?: number;
 };
 
-/**
- * Hairline divider between rows in a `FlatList` via `ItemSeparatorComponent`,
- * or between any stacked elements. Uses `theme.border` for the color and
- * `StyleSheet.hairlineWidth` for the height so it renders as a single
- * device pixel regardless of scale.
- */
 export default function RowSeparator({ inset = 16 }: Props) {
-  const theme = useTheme();
-  return (
-    <View
-      style={[
-        styles.separator,
-        { backgroundColor: theme.border, marginLeft: inset },
-      ]}
-    />
-  );
+  const styles = useStyles();
+  return <View style={[styles.separator, { marginLeft: inset }]} />;
 }
 
-const styles = StyleSheet.create({
-  separator: { height: StyleSheet.hairlineWidth },
-});
+const useStyles = createStyles((theme) => ({
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: theme.separator,
+  },
+}));

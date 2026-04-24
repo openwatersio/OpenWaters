@@ -104,7 +104,7 @@ function EditingOverlay() {
           <Layer
             id="route-edit-line-dash"
             type="line"
-            paint={{ "line-width": 3, "line-opacity": 1, "line-color": theme.primary, "line-dasharray": [2, 2] }}
+            paint={{ "line-width": 3, "line-opacity": 1, "line-color": theme.routes, "line-dasharray": [2, 2] }}
             layout={{ "line-cap": "round", "line-join": "round" }}
           />
         </GeoJSONSource>
@@ -116,7 +116,7 @@ function EditingOverlay() {
           id={`route-wp-${point.key}`}
           point={point}
           index={i}
-          color={theme.primary}
+          color={theme.routes}
           selected={i === activeIndex}
           draggable
           onPress={() => setActiveIndex(i === activeIndex ? null : i)}
@@ -191,7 +191,7 @@ function NavigatingOverlay() {
           <Layer
             id="route-completed-line"
             type="line"
-            paint={{ "line-width": 3, "line-opacity": 0.3, "line-color": theme.primary }}
+            paint={{ "line-width": 3, "line-opacity": 0.3, "line-color": theme.routes }}
             layout={{ "line-cap": "round", "line-join": "round" }}
           />
         </GeoJSONSource>
@@ -208,7 +208,7 @@ function NavigatingOverlay() {
           <Layer
             id="route-active-line"
             type="line"
-            paint={{ "line-width": 4, "line-opacity": 1, "line-color": theme.primary }}
+            paint={{ "line-width": 4, "line-opacity": 1, "line-color": theme.routes }}
             layout={{ "line-cap": "round", "line-join": "round" }}
           />
         </GeoJSONSource>
@@ -219,7 +219,7 @@ function NavigatingOverlay() {
           <Layer
             id="route-remaining-line"
             type="line"
-            paint={{ "line-width": 3, "line-opacity": 0.7, "line-color": theme.primary, "line-dasharray": [2, 2] }}
+            paint={{ "line-width": 3, "line-opacity": 0.7, "line-color": theme.routes, "line-dasharray": [2, 2] }}
             layout={{ "line-cap": "round", "line-join": "round" }}
           />
         </GeoJSONSource>
@@ -234,7 +234,7 @@ function NavigatingOverlay() {
             id={`route-wp-${point.key}`}
             point={point}
             index={i}
-            color={isCompleted ? theme.textTertiary : theme.primary}
+            color={isCompleted ? theme.labelTertiary : theme.routes}
             selected={isActive}
           />
         );

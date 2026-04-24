@@ -1,6 +1,7 @@
 import { type Route } from "@/database";
 import { toDistance } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
+import { createStyles } from "@/hooks/useStyles";
 import {
   getActiveRoute,
   handleDeleteRoute,
@@ -15,7 +16,6 @@ import {
   Alert,
   PlatformColor,
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -128,6 +128,7 @@ type Props = {
 const RouteListItem = memo(
   function RouteListItem({ route, isNavigating }: Props) {
     const theme = useTheme();
+    const styles = useStyles();
     const dist = route.distance > 0 ? toDistance(route.distance) : null;
 
     return (
@@ -140,23 +141,15 @@ const RouteListItem = memo(
         ]}
       >
         <View style={styles.titleRow}>
-          <Text
-            style={[styles.title, { color: theme.textPrimary }]}
-            numberOfLines={1}
-          >
+          <Text style={styles.title} numberOfLines={1}>
             {routeDisplayName(route)}
           </Text>
           {isNavigating && (
-            <Text style={{ color: theme.primary, fontSize: 12 }}>▶</Text>
+            <Text style={{ color: theme.routes, fontSize: 12 }}>▶</Text>
           )}
         </View>
         {dist && (
-          <Text
-            style={[
-              styles.distance,
-              { color: theme.textSecondary },
-            ]}
-          >
+          <Text style={styles.distance}>
             {dist.value} {dist.abbr}
           </Text>
         )}
@@ -172,21 +165,18 @@ const RouteListItem = memo(
 
 export default RouteListItem;
 
-const styles = StyleSheet.create({
+const useStyles = createStyles((theme) => ({
   row: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     justifyContent: "center",
     gap: 2,
   },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  title: { fontSize: 16, fontWeight: "600", flexShrink: 1 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  title: { fontSize: 16, fontWeight: "600", flexShrink: 1, color: theme.label },
   distance: {
     fontSize: 13,
     fontVariant: ["tabular-nums"],
+    color: theme.labelSecondary,
   },
-});
+}));

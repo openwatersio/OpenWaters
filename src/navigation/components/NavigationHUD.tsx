@@ -1,5 +1,6 @@
 import { toDepth, toSpeed, toTemperature } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
+import { createStyles } from "@/hooks/useStyles";
 import { type DataPoint, useHasInstrumentData, useInstrumentPath } from "@/instruments/hooks/useInstruments";
 import { NavigationState, useNavigation } from "@/navigation/hooks/useNavigation";
 import { useTrackRecording } from "@/tracks/hooks/useTrackRecording";
@@ -7,7 +8,7 @@ import OverlayView from "@/ui/OverlayView";
 import * as Haptics from "expo-haptics";
 import { SymbolView } from "expo-symbols";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const STALE_THRESHOLD = 10_000; // 10 seconds
@@ -29,17 +30,17 @@ type CellProps = {
 };
 
 function Cell({ label, value, unit, stale = false }: CellProps) {
-  const theme = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.cell}>
-      <Text style={[styles.cellLabel, { color: theme.textPrimary, opacity: stale ? 0.3 : 0.6 }]}>
+      <Text style={[styles.cellLabel, { opacity: stale ? 0.3 : 0.6 }]}>
         {label}
       </Text>
       <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
-        <Text style={[styles.cellValue, { color: theme.textPrimary, opacity: stale ? 0.3 : 1 }]}>
+        <Text style={[styles.cellValue, { opacity: stale ? 0.3 : 1 }]}>
           {value}
         </Text>
-        <Text style={[styles.cellUnit, { color: theme.textPrimary, opacity: stale ? 0.3 : 0.6 }]}>
+        <Text style={[styles.cellUnit, { opacity: stale ? 0.3 : 0.6 }]}>
           {unit}
         </Text>
       </View>
@@ -74,6 +75,7 @@ export default function NavigationHUD() {
 
   const hasInstruments = useHasInstrumentData();
   const theme = useTheme();
+  const styles = useStyles();
 
   // Visible when underway, recording, or instrument data exists
   const visible = navState === NavigationState.Underway || isRecording || hasInstruments;
@@ -91,7 +93,7 @@ export default function NavigationHUD() {
           {/* Source indicator */}
           {navSource === "signalk" && (
             <View style={styles.sourceRow}>
-              <SymbolView name="antenna.radiowaves.left.and.right" size={10} tintColor={theme.textSecondary} />
+              <SymbolView name="antenna.radiowaves.left.and.right" size={10} tintColor={theme.labelSecondary} />
             </View>
           )}
 
@@ -161,7 +163,7 @@ export default function NavigationHUD() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createStyles((theme) => ({
   container: {
     position: "absolute",
     top: 0,
@@ -170,32 +172,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 16,
   },
-  sourceRow: {
-    alignItems: "center",
-  },
+  sourceRow: { alignItems: "center" },
   row: {
     flexDirection: "row",
     justifyContent: "space-around",
     gap: 16,
   },
-  cell: {
-    alignItems: "center",
-    minWidth: 56,
-    paddingVertical: 2,
-  },
-  cellLabel: {
-    fontSize: 14,
-    textTransform: "uppercase",
-  },
+  cell: { alignItems: "center", minWidth: 56, paddingVertical: 2 },
+  cellLabel: { fontSize: 14, textTransform: "uppercase", color: theme.label },
   cellValue: {
     fontSize: 22,
     fontWeight: "700",
     textAlign: "center",
     letterSpacing: -0.8,
     fontVariant: ["tabular-nums"],
+    color: theme.label,
   },
-  cellUnit: {
-    fontSize: 9,
-    textTransform: "uppercase",
-  },
-});
+  cellUnit: { fontSize: 9, textTransform: "uppercase", color: theme.label },
+}));

@@ -84,7 +84,7 @@ export default function ChartDetail() {
             </VStack>
             <Section>
               {chart.catalogEntry ? (
-                <Text modifiers={[foregroundStyle(theme.textSecondary)]}>
+                <Text modifiers={[foregroundStyle(theme.labelSecondary)]}>
                   From catalog: {chart.catalogEntry.title}
                 </Text>
               ) : null}
