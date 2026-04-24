@@ -39,10 +39,16 @@ export function useMarkers({
   return useDbQuery(["markers"], fetch) ?? [];
 }
 
-/** Reactive single-marker query. Returns null until loaded or if missing. */
-export function useMarker(id: number): Marker | null {
-  const fetch = useCallback(() => getMarker(id), [id]);
-  return useDbQuery(["markers"], fetch) ?? null;
+/** Reactive single-marker query. Returns null until loaded, if missing, or
+ *  when `id` is null. When null, skips the DB subscription entirely — useful
+ *  for "selected marker" patterns where no selection is the common case. */
+export function useMarker(id: number | null): Marker | null {
+  const fetch = useCallback(
+    () => (id == null ? Promise.resolve(null) : getMarker(id)),
+    [id],
+  );
+  const tables = id == null ? [] : ["markers"];
+  return useDbQuery(tables, fetch) ?? null;
 }
 
 export async function addMarker(fields: MarkerFields) {

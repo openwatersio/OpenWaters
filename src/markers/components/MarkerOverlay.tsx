@@ -1,16 +1,20 @@
 import useTheme from "@/hooks/useTheme";
 import { Annotation } from "@/map/components/Annotation";
+import { ICON_NAMES } from "@/map/components/AnnotationIcon";
 import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
 import { updateMarker, useMarker, useMarkers } from "@/markers/hooks/useMarkers";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { useCallback, useMemo } from "react";
 import type { NativeSyntheticEvent } from "react-native";
 
-/** Map AnnotationIcon names to MapLibre sprite image IDs. Icons without a
- *  sprite fall back to marker-pin (the default). */
+const ICON_SET = new Set(ICON_NAMES);
+
+/** Map AnnotationIcon names to MapLibre sprite image IDs. Unknown/legacy
+ *  icon values fall back to `marker-pin` so the SymbolLayer never points at
+ *  a missing sprite. */
 function markerIconImage(icon: string | null): string {
-  if (!icon) return "marker-pin";
-  return `marker-${icon}`;
+  if (icon && ICON_SET.has(icon)) return `marker-${icon}`;
+  return "marker-pin";
 }
 
 export default function MarkerOverlay() {
@@ -20,8 +24,8 @@ export default function MarkerOverlay() {
   const navigate = useSelectionHandler();
 
   const selectedId = selection?.type === "marker" ? Number(selection.id) : null;
-  const selectedMarker = useMarker(selectedId ?? 0);
-  const showSelectedAnnotation = selectedId != null && selectedMarker != null;
+  const selectedMarker = useMarker(selectedId);
+  const showSelectedAnnotation = selectedMarker != null;
 
   // Build GeoJSON FeatureCollection from all markers.
   const geojson = useMemo((): GeoJSON.FeatureCollection => {
