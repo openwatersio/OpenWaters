@@ -1,35 +1,33 @@
 import { type AISVessel, useAIS } from "@/ais/hooks/useAIS";
-import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
 import { projectPosition } from "@/geo";
+import useTheme from "@/hooks/useTheme";
+import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
+import { iconSize, iconSizeWithHalo } from "@/map/iconSize";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { NativeSyntheticEvent } from "react-native";
 
 type Position = { latitude: number; longitude: number };
 
-type ShipTypeStyle = { color: string; icon: string };
-
-const UNKNOWN_STYLE: ShipTypeStyle = { color: "#64748b", icon: "vessel-unknown" };  // slate-500
-
 const STALE_AGE = 6 * 60 * 1000;   // 6 minutes
 const EXPIRED_AGE = 9 * 60 * 1000;  // 9 minutes
 const SOG_THRESHOLD = 0.25;         // m/s (~0.5 knots)
 const COG_PROJECTION_SECONDS = 15 * 60; // 15 minutes
 
-/** AIS ship type code → color and icon for map rendering */
-function shipTypeStyle(code: number | undefined): ShipTypeStyle {
-  if (code === undefined) return UNKNOWN_STYLE;
-  if (code >= 80 && code <= 89) return { color: "#ef4444", icon: "vessel-tanker" };    // tanker = red-500
-  if (code >= 70 && code <= 79) return { color: "#10b981", icon: "vessel-cargo" };     // cargo = emerald-500
-  if (code >= 60 && code <= 69) return { color: "#6366f1", icon: "vessel-passenger" }; // passenger = indigo-500
-  if (code === 52) return { color: "#8b5cf6", icon: "vessel-tug" };                    // tug = violet-500
-  if (code >= 50 && code <= 59) return { color: "#06b6d4", icon: "vessel-default" };   // special = cyan-500
-  if (code >= 40 && code <= 49) return { color: "#f59e0b", icon: "vessel-highspeed" }; // high speed = amber-500
-  if (code === 37) return { color: "#d946ef", icon: "vessel-pleasure" };               // pleasure = fuchsia-500
-  if (code === 36) return { color: "#0ea5e9", icon: "vessel-sailing" };                // sailing = sky-500
-  if (code === 31 || code === 32) return { color: "#8b5cf6", icon: "vessel-tug" };     // towing = violet-500
-  if (code === 30) return { color: "#f43f5e", icon: "vessel-fishing" };                // fishing = rose-500
-  return UNKNOWN_STYLE;
+/** AIS ship type code → sprite icon ID */
+function shipTypeIcon(code: number | undefined): string {
+  if (code === undefined) return "vessel-unknown";
+  if (code >= 80 && code <= 89) return "vessel-tanker";
+  if (code >= 70 && code <= 79) return "vessel-cargo";
+  if (code >= 60 && code <= 69) return "vessel-passenger";
+  if (code === 52) return "vessel-tug";
+  if (code >= 50 && code <= 59) return "vessel-default";
+  if (code >= 40 && code <= 49) return "vessel-highspeed";
+  if (code === 37) return "vessel-pleasure";
+  if (code === 36) return "vessel-sailing";
+  if (code === 31 || code === 32) return "vessel-tug";
+  if (code === 30) return "vessel-fishing";
+  return "vessel-unknown";
 }
 
 /** Combined navigation + freshness state */
@@ -84,6 +82,7 @@ function vesselShipType(vessel: AISVessel): number | undefined {
 
 export default function AISLayer() {
   const vessels = useAIS();
+  const theme = useTheme();
 
   // Tick every 30s to re-evaluate staleness even when vessel data hasn't changed
   const [tick, setTick] = useState(0);
@@ -105,9 +104,7 @@ export default function AISLayer() {
         const end = projectPosition(pos.latitude, pos.longitude, cog, dist);
         return {
           type: "Feature",
-          properties: {
-            color: shipTypeStyle(vesselShipType(vessel)).color,
-          },
+          properties: {},
           geometry: {
             type: "LineString",
             coordinates: [[pos.longitude, pos.latitude], end],
@@ -126,7 +123,6 @@ export default function AISLayer() {
         if (state === "expired") return null;
         const pos = vesselPosition(vessel);
         if (!pos) return null;
-        const style = shipTypeStyle(vesselShipType(vessel));
         return {
           type: "Feature",
           properties: {
@@ -135,8 +131,7 @@ export default function AISLayer() {
             rotation: vesselRotation(vessel),
             sog: vesselSOG(vessel),
             state,
-            icon: style.icon,
-            color: style.color,
+            icon: shipTypeIcon(vesselShipType(vessel)),
           },
           geometry: {
             type: "Point",
@@ -169,7 +164,7 @@ export default function AISLayer() {
           id="ais-cog-lines-layer"
           type="line"
           paint={{
-            "line-color": ["get", "color"],
+            "line-color": theme.ais,
             "line-width": 1.5,
             "line-opacity": 0.5,
           }}
@@ -184,45 +179,48 @@ export default function AISLayer() {
         hitbox={{ top: 22, right: 22, bottom: 22, left: 22 }}
         onPress={handlePress}
       >
-        {/* Unselected vessels */}
+        {/* Halo (drawn first, underneath the fill) */}
+        <Layer
+          id="ais-vessels-halo"
+          type="symbol"
+          layout={{
+            "icon-image": ["get", "icon"],
+            "icon-size": ["interpolate", ["linear"], ["zoom"],
+              6, ["case", ["==", ["get", "mmsi"], selectedMmsi], iconSizeWithHalo(22, 2), iconSizeWithHalo(10, 0.25)],
+              18, ["case", ["==", ["get", "mmsi"], selectedMmsi], iconSizeWithHalo(64, 4), iconSizeWithHalo(44, 4)],
+            ],
+            "icon-rotate": ["get", "rotation"],
+            "icon-rotation-alignment": "map",
+            "icon-allow-overlap": true,
+            "icon-ignore-placement": true,
+          }}
+          paint={{
+            "icon-color": theme.contrast,
+            "icon-opacity": ["match", ["get", "state"], "stale", 0.3, "moored", 0.6, 1.0],
+          }}
+        />
+        {/* Vessel fill */}
         <Layer
           id="ais-vessels-symbol"
           type="symbol"
-          filter={["!=", ["get", "mmsi"], selectedMmsi]}
           layout={{
             "icon-image": ["get", "icon"],
-            "icon-size": ["interpolate", ["linear"], ["zoom"], 6, 0.2, 10, 0.35, 14, 0.5, 18, 0.7],
+            "icon-size": ["interpolate", ["linear"], ["zoom"],
+              6, ["case", ["==", ["get", "mmsi"], selectedMmsi], iconSize(22), iconSize(10)],
+              18, ["case", ["==", ["get", "mmsi"], selectedMmsi], iconSize(64), iconSize(44)],
+            ],
             "icon-rotate": ["get", "rotation"],
             "icon-rotation-alignment": "map",
             "icon-allow-overlap": true,
             "icon-ignore-placement": true,
           }}
           paint={{
-            "icon-color": ["get", "color"],
-            "icon-opacity": ["match", ["get", "state"], "stale", 0.2, "moored", 0.5, 1.0],
-            "icon-halo-color": "rgba(0, 0, 0, 0.5)",
-            "icon-halo-width": 1,
-          }}
-        />
-
-        {/* Selected vessel (larger icon) */}
-        <Layer
-          id="ais-vessels-selected"
-          type="symbol"
-          filter={["==", ["get", "mmsi"], selectedMmsi]}
-          layout={{
-            "icon-image": ["get", "icon"],
-            "icon-size": ["interpolate", ["linear"], ["zoom"], 6, 0.3, 10, 0.5, 14, 0.7, 18, 1.0],
-            "icon-rotate": ["get", "rotation"],
-            "icon-rotation-alignment": "map",
-            "icon-allow-overlap": true,
-            "icon-ignore-placement": true,
-          }}
-          paint={{
-            "icon-color": ["get", "color"],
-            "icon-opacity": ["match", ["get", "state"], "stale", 0.3, "moored", 0.6, 1.0],
-            "icon-halo-color": "rgba(255, 255, 255, 0.8)",
-            "icon-halo-width": 2,
+            "icon-color": theme.ais,
+            "icon-opacity": ["case",
+              ["==", ["get", "mmsi"], selectedMmsi],
+              ["match", ["get", "state"], "stale", 0.3, "moored", 0.6, 1.0],
+              ["match", ["get", "state"], "stale", 0.2, "moored", 0.5, 1.0],
+            ],
           }}
         />
       </GeoJSONSource>

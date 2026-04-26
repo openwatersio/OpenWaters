@@ -1,5 +1,6 @@
 import { projectPosition } from "@/geo";
 import useTheme from "@/hooks/useTheme";
+import { iconSize } from "@/map/iconSize";
 import { useNavigation } from "@/navigation/hooks/useNavigation";
 import { Layer, Animated as MLAnimated } from "@maplibre/maplibre-react-native";
 import { memo, useEffect, useMemo, useRef } from "react";
@@ -205,7 +206,7 @@ export const NavigationPuck = memo(function NavigationPuck() {
           type="symbol"
           layout={{
             "icon-image": "nav-puck",
-            "icon-size": 0.5,
+            "icon-size": iconSize(44),
             "icon-rotate": ["get", "heading"],
             "icon-rotation-alignment": "map",
             "icon-pitch-alignment": "map",
@@ -215,7 +216,7 @@ export const NavigationPuck = memo(function NavigationPuck() {
           paint={{
             "icon-color": theme.userLocation,
             "icon-halo-color": theme.contrast,
-            "icon-halo-width": 1.5,
+            "icon-halo-width": 2,
           }}
         />
       </MLAnimated.GeoJSONSource>

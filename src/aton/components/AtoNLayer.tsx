@@ -1,5 +1,6 @@
 import { type AtoN, useAtoN } from "@/aton/hooks/useAtoN";
 import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
+import { iconSize } from "@/map/iconSize";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { useCallback, useMemo } from "react";
 import type { NativeSyntheticEvent } from "react-native";
@@ -81,8 +82,8 @@ export default function AtoNLayer() {
             "interpolate",
             ["linear"],
             ["zoom"],
-            6, ["case", ["==", ["get", "id"], selectedId], 0.25, 0.15],
-            18, ["case", ["==", ["get", "id"], selectedId], 1, 0.6],
+            6, ["case", ["==", ["get", "id"], selectedId], iconSize(14), iconSize(8)],
+            18, ["case", ["==", ["get", "id"], selectedId], iconSize(54), iconSize(32)],
           ],
           "icon-allow-overlap": true,
           "icon-ignore-placement": true,

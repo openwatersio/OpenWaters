@@ -47,7 +47,7 @@ const tokens = {
   tracks: { custom: "#FF3B30" },
   routes: { custom: "#EE22EE" },
   markers: { custom: "#007AFF" },
-  ais: { custom: "#22C55E" },
+  ais: { custom: "#25AC00" },
   aton: { custom: "#F59E0B" },
 
   // ── Chrome ────────────────────────────────────────────────

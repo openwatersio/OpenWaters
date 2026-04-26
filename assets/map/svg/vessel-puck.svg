@@ -1,14 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <path
-    d="
-    M 32 6
-    L 53 48
-    Q 54 51 51 50
-    L 34 41
-    Q 32 40 30 41
-    L 13 50
-    Q 10 51 11 48
-    Z
-  "
-    fill="white" stroke="white" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" />
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="48px" height="48px" viewBox="0 0 48 48" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>vessel-puck</title>
+    <g id="vessel-puck" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="location.north.fill" transform="translate(12, 8)" fill-rule="nonzero">
+            <rect id="Rectangle" fill="#000000" opacity="0" x="0" y="0" width="23.5547" height="31.3916"></rect>
+            <path d="M1.59668,30.4688 C2.31445,30.4688 2.79785,30.2051 3.51562,29.502 L11.3965,21.6943 C11.4697,21.6211 11.5283,21.5625 11.6016,21.5625 C11.6602,21.5625 11.7334,21.6211 11.8066,21.6943 L19.6729,29.502 C20.4053,30.2051 20.874,30.4688 21.5918,30.4688 C22.5879,30.4688 23.1885,29.707 23.1885,28.7109 C23.1885,28.1543 22.9688,27.4951 22.749,26.8945 L13.5938,1.875 C13.125,0.585938 12.4365,0 11.6016,0 C10.752,0 10.0781,0.585938 9.60938,1.875 L0.439453,26.8945 C0.234375,27.4951 0,28.1543 0,28.7109 C0,29.707 0.600586,30.4688 1.59668,30.4688 Z" id="Path" fill="#FFFFFF"></path>
+        </g>
+    </g>
 </svg>

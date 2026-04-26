@@ -2,6 +2,7 @@ import useTheme from "@/hooks/useTheme";
 import { Annotation } from "@/map/components/Annotation";
 import { ICON_NAMES } from "@/map/components/AnnotationIcon";
 import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
+import { iconSize } from "@/map/iconSize";
 import { updateMarker, useMarker, useMarkers } from "@/markers/hooks/useMarkers";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { useCallback, useMemo } from "react";
@@ -100,8 +101,8 @@ export default function MarkerOverlay() {
             "icon-image": ["get", "icon"],
             "icon-size": [
               "interpolate", ["linear"], ["zoom"],
-              4, 0.1,
-              18, 0.4,
+              4, iconSize(4),
+              18, iconSize(22),
             ],
             "icon-allow-overlap": true,
             "icon-ignore-placement": true,
