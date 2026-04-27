@@ -14,4 +14,7 @@ config.resolver.assetExts = config.resolver.assetExts.filter(
 );
 config.resolver.sourceExts.push("svg");
 
+// Bundle .md files as assets so they can be loaded at runtime via expo-asset.
+config.resolver.assetExts.push("md");
+
 module.exports = config;

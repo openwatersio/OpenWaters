@@ -1,11 +1,12 @@
 import ChartPreview from "@/charts/components/ChartPreview";
-import SheetHeader from "@/ui/SheetHeader";
-import SheetView from "@/ui/SheetView";
 import { useChartCatalog } from "@/charts/hooks/useChartCatalog";
 import { useSourceFilters } from "@/charts/hooks/useCharts";
-import useTheme from "@/hooks/useTheme";
 import { installCatalogEntry } from "@/charts/install";
 import { buildPreviewStyle, computeBounds } from "@/charts/sources";
+import useTheme from "@/hooks/useTheme";
+import { NavigationLink } from "@/ui/NavigationLink";
+import SheetHeader from "@/ui/SheetHeader";
+import SheetView from "@/ui/SheetView";
 import {
   Button,
   Host,
@@ -145,19 +146,7 @@ export default function ChartCatalog() {
               </Section>
             )}
             <Section>
-              <HStack
-                modifiers={[onTapGesture(() => router.push("/charts/add"))]}
-              >
-                <Text modifiers={[foregroundStyle(theme.accent)]}>
-                  Manually Add Chart…
-                </Text>
-                <Spacer />
-                <Image
-                  systemName="chevron.right"
-                  size={13}
-                  color={theme.labelSecondary}
-                />
-              </HStack>
+              <NavigationLink label="Manually Add Chart…" destination="/charts/add" />
             </Section>
           </List>
         </VStack>

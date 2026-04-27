@@ -5,6 +5,23 @@ jest.mock("expo-platform-colors", () => ({
   setOverrideUserInterfaceStyle: jest.fn(),
 }));
 
+// expo-asset uses native code; stub for screens that load bundled markdown
+jest.mock("expo-asset", () => ({
+  Asset: {
+    loadAsync: jest.fn(async () => [{ localUri: "mock://asset", uri: "mock://asset" }]),
+  },
+  useAssets: jest.fn(() => [
+    [{ localUri: "mock://asset", uri: "mock://asset" }],
+    undefined,
+  ]),
+}));
+
+// Default fetch stub so asset URIs don't throw. Individual tests override
+// `global.fetch` per-call when they need real assertions.
+if (typeof (global as any).fetch !== "function") {
+  (global as any).fetch = jest.fn(async () => ({ text: async () => "" }));
+}
+
 // react-native-reanimated uses native worklets; mock for tests
 jest.mock("react-native-reanimated", () => {
   const React = require("react");

@@ -94,11 +94,19 @@ export default function Menu() {
               label={importLabel}
               onPress={() => router.navigate("/import")}
             />
+          </Section>
+          <Section>
             <Button
               modifiers={[tint('primary')]}
               systemImage="gearshape"
               label="Settings"
               onPress={() => router.navigate("/settings")}
+            />
+            <Button
+              modifiers={[tint('primary')]}
+              systemImage="info.circle"
+              label="About"
+              onPress={() => router.push("/about")}
             />
           </Section>
         </List>

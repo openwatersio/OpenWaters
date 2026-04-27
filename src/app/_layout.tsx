@@ -1,5 +1,11 @@
 import { cancelAllDownloads } from "@/charts/download";
 import { useActiveTheme } from "@/charts/hooks/useCharts";
+import DisclaimerScreen from "@/disclaimer/components/DisclaimerScreen";
+import {
+  getCurrentAppVersion,
+  needsAcknowledgment,
+  useDisclaimer,
+} from "@/disclaimer/hooks/useDisclaimer";
 import "@/import/background"; // Register import background task at module scope
 import { handleIncomingFileUrl, resumeImportIfNeeded } from "@/import/state";
 import { connectAll, disconnectAll } from "@/instruments/hooks/useConnections";
@@ -11,11 +17,14 @@ import * as Linking from "expo-linking";
 import { setOverrideUserInterfaceStyle } from "expo-platform-colors";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
-import { useColorScheme } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const activeTheme = useActiveTheme();
+  const { hydrated, acknowledgedVersion } = useDisclaimer();
+  const showDisclaimer =
+    hydrated && needsAcknowledgment(getCurrentAppVersion(), acknowledgedVersion);
 
   // Drive the app-wide user interface style from the chart theme. This one
   // call flips every window's trait collection, so @expo/ui Host subtrees,
@@ -54,6 +63,22 @@ export default function RootLayout() {
   useEffect(() => {
     setTimeout(resumeImportIfNeeded, 0);
   }, []);
+
+  if (!hydrated) {
+    return (
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <View style={{ flex: 1 }} />
+      </ThemeProvider>
+    );
+  }
+
+  if (showDisclaimer) {
+    return (
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <DisclaimerScreen />
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
@@ -127,6 +152,21 @@ export default function RootLayout() {
           sheetAllowedDetents: [1],
           sheetGrabberVisible: true,
           title: "Settings",
+        }} />
+        <Stack.Screen name="(menu)/about" options={{
+          presentation: "formSheet",
+          sheetAllowedDetents: [1],
+          title: "About",
+        }} />
+        <Stack.Screen name="(menu)/notice" options={{
+          presentation: "formSheet",
+          sheetAllowedDetents: [1],
+          title: "Notice",
+        }} />
+        <Stack.Screen name="(menu)/license" options={{
+          presentation: "formSheet",
+          sheetAllowedDetents: [1],
+          title: "License",
         }} />
         <Stack.Screen name="feature/[type]/[id]" options={{
           presentation: "formSheet",

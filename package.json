@@ -15,6 +15,7 @@
       "<rootDir>/tests/setup.ts"
     ],
     "moduleNameMapper": {
+      "\\.md$": "<rootDir>/tests/__mocks__/mdAsset.js",
       "^@/(.*)$": "<rootDir>/src/$1",
       "^@react-native-async-storage/async-storage$": "@react-native-async-storage/async-storage/jest/async-storage-mock"
     },
@@ -45,8 +46,8 @@
     "expo-image": "~55.0.8",
     "expo-linking": "~55.0.13",
     "expo-location": "~55.1.8",
-    "expo-platform-colors": "file:./modules/expo-platform-colors",
     "expo-modules-core": "^55.0.22",
+    "expo-platform-colors": "file:./modules/expo-platform-colors",
     "expo-router": "~55.0.12",
     "expo-sharing": "~55.0.18",
     "expo-splash-screen": "~55.0.18",
@@ -65,6 +66,7 @@
     "react-native-gesture-handler": "~2.30.0",
     "react-native-logs": "^5.6.0",
     "react-native-map-link": "^3.11.0",
+    "react-native-markdown-display": "^7.0.2",
     "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "~5.6.2",
     "react-native-screens": "~4.23.0",
