@@ -15,6 +15,7 @@ export type DataPoint = {
 // --- Mutable store: zero-cost writes, throttled notifications ---
 
 const NOTIFY_INTERVAL = 200; // ms — max 5 notifications/sec
+const STALE_MS = 10_000; // instruments are considered stale this long after the last write
 
 /** The mutable data store — writes go here immediately */
 let data: Record<string, DataPoint> = {};
@@ -27,6 +28,9 @@ let lastNotifyMs = 0;
 
 /** Pending notification timer */
 let notifyTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Pending staleness-transition timer (fires when data ages past STALE_MS) */
+let staleTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** Subscribed listeners (from useSyncExternalStore) */
 const listeners = new Set<() => void>();
@@ -46,6 +50,14 @@ function scheduleNotify() {
   notifyTimer = setTimeout(notifyListeners, NOTIFY_INTERVAL);
 }
 
+function scheduleStaleNotify() {
+  if (staleTimer) clearTimeout(staleTimer);
+  staleTimer = setTimeout(() => {
+    staleTimer = null;
+    for (const listener of listeners) listener();
+  }, STALE_MS);
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -58,6 +70,7 @@ export function updatePath(path: string, dataPoint: DataPoint) {
   data[path] = dataPoint;
   lastWriteMs = dataPoint.timestamp;
   scheduleNotify();
+  scheduleStaleNotify();
 }
 
 /** Batch update multiple instrument paths */
@@ -71,6 +84,7 @@ export function updatePaths(updates: Record<string, DataPoint>) {
   }
   lastWriteMs = latestTimestamp;
   scheduleNotify();
+  scheduleStaleNotify();
 }
 
 /** Check if a data point is stale (older than maxAgeMs) */
@@ -99,9 +113,12 @@ export function useInstrumentData(): Record<string, DataPoint> {
   return useSyncExternalStore(subscribe, () => data);
 }
 
-/** Subscribe to whether any instrument data exists. */
+/** Subscribe to whether any instrument data has been received recently (within STALE_MS). */
 export function useHasInstrumentData(): boolean {
-  return useSyncExternalStore(subscribe, () => Object.keys(data).length > 0);
+  return useSyncExternalStore(
+    subscribe,
+    () => lastWriteMs > 0 && Date.now() - lastWriteMs < STALE_MS,
+  );
 }
 
 /** Imperative read of the current data (always fresh, no React subscription) */
@@ -115,6 +132,10 @@ export function resetInstrumentStore() {
   if (notifyTimer) {
     clearTimeout(notifyTimer);
     notifyTimer = null;
+  }
+  if (staleTimer) {
+    clearTimeout(staleTimer);
+    staleTimer = null;
   }
   lastWriteMs = 0;
   lastNotifyMs = 0;

@@ -142,13 +142,18 @@ function scheduleMoored(currentState: NavigationState) {
 export function updateFromDevice(location: LocationObject) {
   if (!location) return;
   const { coords } = location;
+  // iOS CoreLocation returns -1 for speed/heading when invalid (e.g. when the
+  // device is stationary and direction can't be determined). Treat as unknown.
+  const speed = coords.speed !== null && coords.speed >= 0 ? coords.speed : null;
+  const heading =
+    coords.heading !== null && coords.heading >= 0 ? coords.heading : null;
   _device = {
     latitude: coords.latitude,
     longitude: coords.longitude,
-    speed: coords.speed,
+    speed,
     // FIXME: why switch course to radians and not heading? Both should be store in the same unit
-    course: coords.heading !== null ? (coords.heading * Math.PI) / 180 : null, // degrees → radians
-    heading: coords.heading,
+    course: heading !== null ? (heading * Math.PI) / 180 : null, // degrees → radians
+    heading,
     accuracy: coords.accuracy,
     timestamp: location.timestamp,
   };
