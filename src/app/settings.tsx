@@ -1,6 +1,7 @@
 import { setThemePreference, useThemePreference, type ThemePreference } from "@/charts/theme";
 import { closeDatabase } from "@/database";
 import { ARRIVAL_RADIUS_OPTIONS, describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits, type ArrivalRadius } from "@/hooks/usePreferredUnits";
+import { setTelemetryEnabled, useTelemetry } from "@/hooks/useTelemetry";
 import log from "@/logger";
 import SheetView from "@/ui/SheetView";
 import { Button, Host, List, Picker, Section, Text, Toggle, VStack } from "@expo/ui/swift-ui";
@@ -71,6 +72,7 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 export default function Settings() {
   const { speed, distance, depth, temperature, arrivalRadius, arriveOnCircleOnly } = usePreferredUnits();
   const { preference: themePreference } = useThemePreference();
+  const { enabled: telemetryEnabled } = useTelemetry();
 
   return (
     <SheetView id="settings">
@@ -170,6 +172,20 @@ export default function Settings() {
                 systemImage="arrow.down.to.line"
                 label="Offline Data"
                 onPress={() => router.push("/offline")}
+              />
+            </Section>
+            <Section
+              title="Privacy"
+              footer={
+                <Text>
+                  Sends anonymous crash and error data to help us fix bugs. No location, navigation data, or personal information is included.
+                </Text>
+              }
+            >
+              <Toggle
+                label="Send crash reports"
+                isOn={telemetryEnabled}
+                onIsOnChange={setTelemetryEnabled}
               />
             </Section>
             <Section>

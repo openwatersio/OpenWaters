@@ -5,6 +5,7 @@
     "types": ["jest", "react-native", "node"],
     "paths": {
       "@/assets/*": ["./assets/*"],
+      "@/docs/*": ["./docs/*"],
       "@/*": ["./src/*"]
     }
   },

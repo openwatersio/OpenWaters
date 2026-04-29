@@ -1,8 +1,9 @@
-// Learn more: https://docs.expo.dev/guides/customizing-metro/
-const { getDefaultConfig } = require("expo/metro-config");
+const {
+  getSentryExpoConfig
+} = require("@sentry/react-native/metro");
 
 /** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 
 // Use react-native-svg-transformer for .svg files so they can be imported
 // as React components: `import FuelIcon from "@/assets/map/svg/marker-fuel.svg"`

@@ -38,5 +38,6 @@ yarn-error.*
 
 app-example
 .vscode
-ios
-android
+/ios
+/android
+.env.local

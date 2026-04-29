@@ -6,6 +6,7 @@ import {
   needsAcknowledgment,
   useDisclaimer,
 } from "@/disclaimer/hooks/useDisclaimer";
+import "@/errors"; // Initialize error tracking
 import "@/import/background"; // Register import background task at module scope
 import { handleIncomingFileUrl, resumeImportIfNeeded } from "@/import/state";
 import { connectAll, disconnectAll } from "@/instruments/hooks/useConnections";
@@ -13,13 +14,14 @@ import "@/navigation/hooks/useNavigation"; // Register LocationManager listener 
 import "@/tracks/hooks/useTrackRecording"; // Register background task at module scope
 import { LocationManager } from "@maplibre/maplibre-react-native";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import * as Sentry from '@sentry/react-native';
 import * as Linking from "expo-linking";
 import { setOverrideUserInterfaceStyle } from "expo-platform-colors";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { useColorScheme, View } from 'react-native';
 
-export default function RootLayout() {
+function RootLayout() {
   const colorScheme = useColorScheme();
   const activeTheme = useActiveTheme();
   const { hydrated, acknowledgedVersion } = useDisclaimer();
@@ -252,3 +254,5 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);
