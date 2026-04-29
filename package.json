@@ -34,6 +34,7 @@
     "@sentry/react-native": "~7.11.0",
     "coordinate-format": "^1.0.0",
     "expo": "^55.0.18",
+    "expo-application": "~55.0.14",
     "expo-background-task": "~55.0.17",
     "expo-blur": "~55.0.14",
     "expo-build-properties": "~55.0.13",

@@ -2,12 +2,12 @@ import { NavigationLink } from "@/ui/NavigationLink";
 import SheetView from "@/ui/SheetView";
 import { Host, LabeledContent, List, Section, Text, VStack } from "@expo/ui/swift-ui";
 import { font, foregroundStyle, frame, listRowBackground, listRowSeparator, multilineTextAlignment, textSelection } from "@expo/ui/swift-ui/modifiers";
-import Constants from "expo-constants";
+import * as Application from "expo-application";
 import { router, Stack } from "expo-router";
 
 export default function About() {
-  const version = Constants.expoConfig?.version ?? "—";
-  const build = Constants.nativeBuildVersion ?? null;
+  const version = Application.nativeApplicationVersion ?? "—";
+  const build = Application.nativeBuildVersion ?? null;
 
   return (
     <SheetView id="about">
