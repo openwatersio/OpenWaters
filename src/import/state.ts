@@ -14,16 +14,39 @@ import {
   stageDirectoryFiles,
   stageFile,
 } from "@/import/staging";
-import {
-  registerImportBackgroundTask,
-  unregisterImportBackgroundTask,
-} from "@/import/background";
 import log from "@/logger";
+import * as BackgroundTask from "expo-background-task";
 import { File, type Directory } from "expo-file-system";
 import { router } from "expo-router";
 import { proxy, useSnapshot } from "valtio";
 
 const logger = log.extend("import");
+
+/** Shared task name — `defineTask` lives in `@/import/background`. */
+export const IMPORT_TASK_NAME = "import-processing";
+
+/** Register the background processing task with iOS. Safe to call multiple
+ *  times — skips if already registered. */
+async function registerImportBackgroundTask(): Promise<void> {
+  try {
+    await BackgroundTask.registerTaskAsync(IMPORT_TASK_NAME, {
+      minimumInterval: 15, // minutes — iOS minimum
+    });
+    logger.debug("background task registered");
+  } catch (e) {
+    // Expected on simulator or Expo Go
+    logger.warn("failed to register background task", e);
+  }
+}
+
+/** Unregister the background task once there's nothing left to process. */
+async function unregisterImportBackgroundTask(): Promise<void> {
+  try {
+    await BackgroundTask.unregisterTaskAsync(IMPORT_TASK_NAME);
+  } catch {
+    // Task may not be registered
+  }
+}
 
 /** Per-import state. `files`, `records`, and `errors` are mutated in place
  *  by the importer. `terminalReason` is set only when the job ended
