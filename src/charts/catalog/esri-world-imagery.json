@@ -1,0 +1,26 @@
+{
+  "id": "esri-world-imagery",
+  "title": "Esri World Imagery",
+  "summary": "Global satellite and aerial imagery from Esri.",
+  "description": "Esri World Imagery is a global high-resolution satellite and aerial imagery basemap, useful for visual identification of anchorages, inlets, reef structures, and shoreline features.\n\nImagery is contributed by multiple sources including Maxar, Earthstar Geographics, USDA, USGS, and the GIS User Community, served through Esri's ArcGIS Online basemap services.",
+  "homepage": "https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9",
+  "license": "Esri Standard Terms of Use",
+  "keywords": [
+    "satellite",
+    "imagery",
+    "aerial"
+  ],
+  "sources": [
+    {
+      "id": "esri-world-imagery",
+      "title": "Esri World Imagery",
+      "type": "raster",
+      "tiles": [
+        "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+      ],
+      "tileSize": 256,
+      "maxzoom": 19,
+      "attribution": "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+    }
+  ]
+}

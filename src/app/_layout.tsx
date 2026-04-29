@@ -165,6 +165,11 @@ function RootLayout() {
           sheetAllowedDetents: [1],
           title: "Notice",
         }} />
+        <Stack.Screen name="(menu)/attributions" options={{
+          presentation: "formSheet",
+          sheetAllowedDetents: [1],
+          title: "Attributions",
+        }} />
         <Stack.Screen name="(menu)/license" options={{
           presentation: "formSheet",
           sheetAllowedDetents: [1],

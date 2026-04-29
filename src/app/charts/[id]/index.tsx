@@ -5,9 +5,11 @@ import { useChart } from "@/charts/hooks/useCharts";
 import useTheme from "@/hooks/useTheme";
 import { uninstallChart } from "@/charts/install";
 import { selectChart } from "@/charts/store";
+import { NavigationLink } from "@/ui/NavigationLink";
 import {
   Button,
   Host,
+  LabeledContent,
   List,
   RNHostView,
   Section,
@@ -15,8 +17,8 @@ import {
   VStack,
 } from "@expo/ui/swift-ui";
 import { foregroundStyle, listRowInsets } from "@expo/ui/swift-ui/modifiers";
-import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useCallback } from "react";
+import { type ExternalPathString, router, Stack, useLocalSearchParams } from "expo-router";
+import { useCallback, useMemo } from "react";
 import { Alert, View } from "react-native";
 
 export default function ChartDetail() {
@@ -44,6 +46,17 @@ export default function ChartDetail() {
     if (!chart) return;
     selectChart(chart.id);
     router.back();
+  }, [chart]);
+
+  const attributions = useMemo(() => {
+    if (!chart?.catalogEntry) return [];
+    return Array.from(
+      new Set(
+        chart.catalogEntry.sources
+          .map((s) => s.attribution)
+          .filter((a): a is string => Boolean(a)),
+      ),
+    );
   }, [chart]);
 
   if (!chart) return null;
@@ -89,6 +102,25 @@ export default function ChartDetail() {
                 </Text>
               ) : null}
             </Section>
+
+            {chart.catalogEntry && (
+              <Section title="Attribution">
+                <LabeledContent label="License">
+                  <Text>{chart.catalogEntry.license}</Text>
+                </LabeledContent>
+                {chart.catalogEntry.homepage && (
+                  <NavigationLink
+                    label="Homepage"
+                    destination={
+                      chart.catalogEntry.homepage as ExternalPathString
+                    }
+                  />
+                )}
+                {attributions.map((attr) => (
+                  <Text key={attr}>{attr}</Text>
+                ))}
+              </Section>
+            )}
 
             <Section>
               <Button

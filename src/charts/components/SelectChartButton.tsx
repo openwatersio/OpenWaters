@@ -1,5 +1,5 @@
 import { useCharts } from "@/charts/hooks/useCharts";
-import { selectChart } from "@/charts/store";
+import { selectChart, useChartStore } from "@/charts/store";
 import { Button, Divider, Menu } from "@expo/ui/swift-ui";
 import {
   foregroundStyle,
@@ -14,6 +14,7 @@ const NS_ID = "map-controls";
 
 export function SelectChartButton() {
   const charts = useCharts();
+  const { selectedChartId } = useChartStore();
 
   return (
     <Menu
@@ -42,7 +43,18 @@ export function SelectChartButton() {
         systemImage="slider.horizontal.3"
         onPress={() => router.navigate("/charts")}
       />
-
+      {selectedChartId && (
+        <Button
+          label="About This Chart"
+          systemImage="info.circle"
+          onPress={() =>
+            router.push({
+              pathname: "/charts/[id]",
+              params: { id: selectedChartId },
+            })
+          }
+        />
+      )}
     </Menu>
   );
 }

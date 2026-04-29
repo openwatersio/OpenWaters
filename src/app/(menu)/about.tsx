@@ -29,6 +29,7 @@ export default function About() {
             <NavigationLink label="Safety Notice" destination="/notice" />
             <NavigationLink label="Privacy Policy" destination="/privacy" />
             <NavigationLink label="License" destination="/license" />
+            <NavigationLink label="Attributions" destination="/attributions" />
             <NavigationLink label="Source Code" destination="https://github.com/openwatersio/OpenWaters" />
           </Section>
           <Section>
