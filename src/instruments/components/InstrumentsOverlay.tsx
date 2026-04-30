@@ -1,7 +1,11 @@
 import { toDepth, toSpeed, toTemperature } from "@/hooks/usePreferredUnits";
-import useTheme from "@/hooks/useTheme";
 import { createStyles } from "@/hooks/useStyles";
-import { type DataPoint, useHasInstrumentData, useInstrumentPath } from "@/instruments/hooks/useInstruments";
+import useTheme from "@/hooks/useTheme";
+import {
+  type DataPoint,
+  useHasInstrumentData,
+  useInstrumentPath,
+} from "@/instruments/hooks/useInstruments";
 import { NavigationState, useNavigation } from "@/navigation/hooks/useNavigation";
 import { useTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import OverlayView from "@/ui/OverlayView";
@@ -12,10 +16,6 @@ import { Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const STALE_THRESHOLD = 10_000; // 10 seconds
-
-function useInstrumentValue(path: string): DataPoint | undefined {
-  return useInstrumentPath(path);
-}
 
 function isDataStale(point: DataPoint | undefined): boolean {
   if (!point) return true;
@@ -50,7 +50,7 @@ function Cell({ label, value, unit, stale = false }: CellProps) {
 
 function formatDegrees(radians: number | null): string {
   if (radians === null) return "--";
-  return `${Math.round(((radians * 180 / Math.PI) + 360) % 360)}`;
+  return `${Math.round((((radians * 180) / Math.PI) + 360) % 360)}`;
 }
 
 function formatWindAngle(point: DataPoint | undefined): string {
@@ -58,26 +58,23 @@ function formatWindAngle(point: DataPoint | undefined): string {
   return `${Math.round(((point.value as number) * 180) / Math.PI)}`;
 }
 
-export default function NavigationHUD() {
+export default function InstrumentsOverlay() {
   const [expanded, setExpanded] = useState(false);
 
-  // Unified navigation data (works with device GPS or Signal K)
   const { speed, course, heading, state: navState, source: navSource } = useNavigation();
   const { isRecording } = useTrackRecording();
 
-  // Instrument-only data (Signal K only, no device equivalent)
-  const depthTransducer = useInstrumentValue("environment.depth.belowTransducer");
-  const depthSurface = useInstrumentValue("environment.depth.belowSurface");
+  const depthTransducer = useInstrumentPath("environment.depth.belowTransducer");
+  const depthSurface = useInstrumentPath("environment.depth.belowSurface");
   const depth = depthSurface ?? depthTransducer;
-  const aws = useInstrumentValue("environment.wind.speedApparent");
-  const awa = useInstrumentValue("environment.wind.angleApparent");
-  const waterTemp = useInstrumentValue("environment.water.temperature");
+  const aws = useInstrumentPath("environment.wind.speedApparent");
+  const awa = useInstrumentPath("environment.wind.angleApparent");
+  const waterTemp = useInstrumentPath("environment.water.temperature");
 
   const hasInstruments = useHasInstrumentData();
   const theme = useTheme();
   const styles = useStyles();
 
-  // Visible when underway, recording, or instrument data exists
   const visible = navState === NavigationState.Underway || isRecording || hasInstruments;
   if (!visible) return null;
 
@@ -88,31 +85,30 @@ export default function NavigationHUD() {
 
   return (
     <OverlayView style={styles.container}>
-      <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setExpanded((e) => !e); }}>
+      <Pressable
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setExpanded((e) => !e);
+        }}
+      >
         <SafeAreaView edges={["top", "left", "right"]}>
-          {/* Source indicator */}
           {navSource === "signalk" && (
             <View style={styles.sourceRow}>
-              <SymbolView name="antenna.radiowaves.left.and.right" size={10} tintColor={theme.labelSecondary} />
+              <SymbolView
+                name="antenna.radiowaves.left.and.right"
+                size={10}
+                tintColor={theme.labelSecondary}
+              />
             </View>
           )}
 
-          {/* Always visible: SOG + depth (if available) */}
           <View style={styles.row}>
-            <Cell
-              label="SOG"
-              value={sogFormatted.value}
-              unit={sogFormatted.abbr}
-            />
-            <Cell
-              label="COG"
-              value={formatDegrees(course)}
-              unit={"\u00B0"}
-            />
+            <Cell label="SOG" value={sogFormatted.value} unit={sogFormatted.abbr} />
+            <Cell label="COG" value={formatDegrees(course)} unit="°" />
             <Cell
               label="HDG"
               value={heading !== null ? `${Math.round(heading)}` : "--"}
-              unit={"\u00B0"}
+              unit="°"
             />
             {depthFormatted && (
               <Cell
@@ -125,37 +121,34 @@ export default function NavigationHUD() {
           </View>
 
           {expanded && (
-            <>
-              <View style={styles.row}>
-
-                {(aws || awa) && (
-                  <>
-                    {awsFormatted && (
-                      <Cell
-                        label="AWS"
-                        value={awsFormatted.value}
-                        unit={awsFormatted.abbr}
-                        stale={isDataStale(aws)}
-                      />
-                    )}
+            <View style={styles.row}>
+              {(aws || awa) && (
+                <>
+                  {awsFormatted && (
                     <Cell
-                      label="AWA"
-                      value={formatWindAngle(awa)}
-                      unit={"\u00B0"}
-                      stale={isDataStale(awa)}
+                      label="AWS"
+                      value={awsFormatted.value}
+                      unit={awsFormatted.abbr}
+                      stale={isDataStale(aws)}
                     />
-                  </>
-                )}
-                {tempFormatted && (
+                  )}
                   <Cell
-                    label="WATER"
-                    value={tempFormatted.value}
-                    unit={tempFormatted.abbr}
-                    stale={isDataStale(waterTemp)}
+                    label="AWA"
+                    value={formatWindAngle(awa)}
+                    unit="°"
+                    stale={isDataStale(awa)}
                   />
-                )}
-              </View>
-            </>
+                </>
+              )}
+              {tempFormatted && (
+                <Cell
+                  label="WATER"
+                  value={tempFormatted.value}
+                  unit={tempFormatted.abbr}
+                  stale={isDataStale(waterTemp)}
+                />
+              )}
+            </View>
           )}
         </SafeAreaView>
       </Pressable>

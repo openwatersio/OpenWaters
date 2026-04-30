@@ -14,6 +14,7 @@ export function ZoomButtons() {
     <VStack
       spacing={0}
       modifiers={[
+        frame({ width: 44 }),
         glassEffect({ glass: { variant: 'regular', interactive: true }, shape: 'capsule' }),
         glassEffectId('zoom', NS_ID),
       ]}

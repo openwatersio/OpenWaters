@@ -2,7 +2,7 @@ import { resetInstrumentStore, updatePaths } from '@/instruments/hooks/useInstru
 import { NavigationState, navigationState, resetNavigation } from '@/navigation/hooks/useNavigation';
 import { resetPreferredUnits } from '@/hooks/usePreferredUnits';
 import { resetTrackRecording, trackRecordingState } from '@/tracks/hooks/useTrackRecording';
-import NavigationHUD from '@/navigation/components/NavigationHUD';
+import InstrumentsOverlay from '@/instruments/components/InstrumentsOverlay';
 import { render, screen } from '@testing-library/react-native';
 
 beforeEach(() => {
@@ -12,22 +12,22 @@ beforeEach(() => {
   resetTrackRecording();
 });
 
-describe('NavigationHUD', () => {
+describe('InstrumentsOverlay', () => {
   it('is hidden when moored, not recording, and no instrument data', () => {
     Object.assign(navigationState, { state: NavigationState.Moored });
-    const { toJSON } = render(<NavigationHUD />);
+    const { toJSON } = render(<InstrumentsOverlay />);
     expect(toJSON()).toBeNull();
   });
 
   it('renders SOG when underway', () => {
     Object.assign(navigationState, { state: NavigationState.Underway });
-    render(<NavigationHUD />);
+    render(<InstrumentsOverlay />);
     expect(screen.getByText('SOG')).toBeTruthy();
   });
 
   it('converts speed to the preferred unit', () => {
     Object.assign(navigationState, { state: NavigationState.Underway, speed: 1 });
-    render(<NavigationHUD />);
+    render(<InstrumentsOverlay />);
     // 1 m/s ≈ 1.9 knots (default unit)
     expect(screen.getByText('1.9')).toBeTruthy();
   });
@@ -37,7 +37,7 @@ describe('NavigationHUD', () => {
     Object.assign(trackRecordingState, {
       track: { id: 1, name: null, started_at: new Date().toISOString(), ended_at: null, distance: 0, color: null },
     });
-    render(<NavigationHUD />);
+    render(<InstrumentsOverlay />);
     expect(screen.getByText('SOG')).toBeTruthy();
   });
 
@@ -50,7 +50,7 @@ describe('NavigationHUD', () => {
         source: "signalk.test",
       },
     });
-    render(<NavigationHUD />);
+    render(<InstrumentsOverlay />);
     expect(screen.getByText('Depth')).toBeTruthy();
   });
 
@@ -63,7 +63,7 @@ describe('NavigationHUD', () => {
         source: "signalk.test",
       },
     });
-    render(<NavigationHUD />);
+    render(<InstrumentsOverlay />);
     expect(screen.getByText('8.5')).toBeTruthy();
   });
 });
