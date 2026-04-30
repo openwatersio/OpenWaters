@@ -24,6 +24,7 @@ export type Connection = {
   name: string; // User-friendly name
   status: ConnectionStatus;
   error?: string;
+  disabled?: boolean; // Persisted: if true, don't auto-connect
 };
 
 interface State {
@@ -167,6 +168,7 @@ export function removeConnection(id: string) {
 export async function connectConnection(id: string) {
   const connection = connectionsState.connections.find((c) => c.id === id);
   if (!connection) return;
+  if (connection.disabled) return;
 
   if (connection.type === "nmea-tcp") {
     if (connection.host && connection.port) {
@@ -195,9 +197,26 @@ export function disconnectConnection(id: string) {
   updateConnectionStatus(id, "disconnected");
 }
 
+/** Disable a connection: persist disabled flag and disconnect */
+export function disableConnection(id: string) {
+  const conn = connectionsState.connections.find((c) => c.id === id);
+  if (!conn) return;
+  conn.disabled = true;
+  disconnectConnection(id);
+}
+
+/** Enable a connection: clear disabled flag and attempt to connect */
+export function enableConnection(id: string) {
+  const conn = connectionsState.connections.find((c) => c.id === id);
+  if (!conn) return;
+  conn.disabled = false;
+  connectConnection(id);
+}
+
 /** Connect all saved connections (call on app launch) */
 export async function connectAll() {
   for (const connection of connectionsState.connections) {
+    if (connection.disabled) continue;
     connectConnection(connection.id);
   }
   startPruneTimer();

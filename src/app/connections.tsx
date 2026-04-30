@@ -1,21 +1,37 @@
-import SheetView from "@/ui/SheetView";
-import {
-  addNMEAConnection,
-  addSignalKConnection,
-  useConnections,
-} from "@/instruments/hooks/useConnections";
+import useTheme from "@/hooks/useTheme";
 import {
   type DiscoveredService,
   startDiscovery,
   stopDiscovery,
 } from "@/instruments/discovery";
-import { Button, Host, LabeledContent, List, Picker, Section, Text, TextField } from "@expo/ui/swift-ui";
-import { autocorrectionDisabled, foregroundStyle, keyboardType, pickerStyle, tag, textInputAutocapitalization, tint } from "@expo/ui/swift-ui/modifiers";
+import {
+  type ConnectionStatus,
+  addNMEAConnection,
+  addSignalKConnection,
+  useConnections,
+} from "@/instruments/hooks/useConnections";
+import SheetView from "@/ui/SheetView";
+import { Button, Host, HStack, Image, List, Picker, ProgressView, Section, Spacer, Text, TextField, VStack } from "@expo/ui/swift-ui";
+import { autocorrectionDisabled, buttonStyle, clipShape, font, foregroundStyle, frame, keyboardType, labelStyle, onTapGesture, pickerStyle, progressViewStyle, tag, textInputAutocapitalization, tint } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 
 function typeLabel(type: string): string {
   return type === "signalk" ? "Signal K" : "NMEA";
+}
+
+function StatusIcon({ status, hasError }: { status: ConnectionStatus; hasError: boolean }) {
+  const theme = useTheme();
+  if (status === "connected") {
+    return <Image systemName="antenna.radiowaves.left.and.right" color={theme.success} />;
+  }
+  if (status === "connecting") {
+    return <ProgressView modifiers={[progressViewStyle("circular")]} />;
+  }
+  if (hasError) {
+    return <Image systemName="exclamationmark.triangle.fill" color={theme.danger} />;
+  }
+  return <Image systemName="antenna.radiowaves.left.and.right.slash" color={theme.labelSecondary} />;
 }
 
 export default function Connections() {
@@ -105,24 +121,6 @@ export default function Connections() {
 
       <Host style={{ flex: 1 }}>
         <List>
-          {availableServices.length > 0 ? (
-            <Section title="Discovered">
-              {availableServices.map((service) => (
-                <Button
-                  key={service.id}
-                  onPress={() => handleAddDiscovered(service)}
-                >
-                  <LabeledContent
-                    modifiers={[foregroundStyle("primary")]}
-                    label={typeLabel(service.type)}
-                  >
-                    <Text>{service.host}:{service.port}</Text>
-                  </LabeledContent>
-                </Button>
-              ))}
-            </Section>
-          ) : null}
-
           {connections.length > 0 ? (
             <Section title="Connections">
               {connections.map((conn) => (
@@ -130,14 +128,52 @@ export default function Connections() {
                   key={conn.id}
                   onPress={() => router.push({ pathname: "/connection/[id]", params: { id: conn.id } })}
                 >
-                  <LabeledContent
-                    modifiers={[foregroundStyle("primary")]}
-                    label={typeLabel(conn.type)}
-                  >
-                    <Text>{conn.host}:{conn.port}</Text>
-                  </LabeledContent>
-
+                  <HStack spacing={12}>
+                    <VStack alignment="leading" spacing={2}>
+                      <Text modifiers={[foregroundStyle("primary"), font({ weight: "semibold" })]}>
+                        {typeLabel(conn.type)}
+                      </Text>
+                      <Text modifiers={[foregroundStyle("secondary"), font({ size: 12 })]}>
+                        {conn.host}:{conn.port}
+                      </Text>
+                    </VStack>
+                    <Spacer />
+                    <StatusIcon status={conn.status} hasError={!!conn.error} />
+                  </HStack>
                 </Button>
+              ))}
+            </Section>
+          ) : null}
+
+          {availableServices.length > 0 ? (
+            <Section title="Discovered">
+              {availableServices.map((service) => (
+                <HStack
+                  key={service.id}
+                  spacing={12}
+                  modifiers={[onTapGesture(() => handleAddDiscovered(service))]}
+                >
+                  <VStack alignment="leading" spacing={2}>
+                    <Text modifiers={[foregroundStyle("primary"), font({ weight: "semibold" })]}>
+                      {typeLabel(service.type)}
+                    </Text>
+                    <Text modifiers={[foregroundStyle("secondary"), font({ size: 12 })]}>
+                      {service.host}:{service.port}
+                    </Text>
+                  </VStack>
+                  <Spacer />
+                  <Button
+                    systemImage="plus"
+                    label="Add"
+                    modifiers={[
+                      labelStyle("iconOnly"),
+                      buttonStyle("borderedProminent"),
+                      clipShape("circle"),
+                      frame({ width: 32, height: 32 }),
+                    ]}
+                    onPress={() => handleAddDiscovered(service)}
+                  />
+                </HStack>
               ))}
             </Section>
           ) : null}

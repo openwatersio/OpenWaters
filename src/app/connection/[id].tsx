@@ -1,13 +1,13 @@
-import SheetHeader from "@/ui/SheetHeader";
-import SheetView from "@/ui/SheetView";
 import { useAIS } from "@/ais/hooks/useAIS";
 import {
-  connectConnection,
-  disconnectConnection,
+  disableConnection,
+  enableConnection,
   removeConnection,
   useConnection,
 } from "@/instruments/hooks/useConnections";
 import { useInstrumentData } from "@/instruments/hooks/useInstruments";
+import SheetHeader from "@/ui/SheetHeader";
+import SheetView from "@/ui/SheetView";
 import {
   Button,
   Form,
@@ -145,17 +145,16 @@ export default function ConnectionDetail() {
           )}
 
           <Section>
-            {connection.status === "connected" ? (
+            {connection.disabled ? (
               <Button
-                modifiers={[tint("orange")]}
-                label="Disconnect"
-                onPress={() => disconnectConnection(id)}
+                label="Enable"
+                onPress={() => enableConnection(id)}
               />
             ) : (
               <Button
-                modifiers={[tint("primary")]}
-                label="Connect"
-                onPress={() => connectConnection(id)}
+                modifiers={[tint("orange")]}
+                label="Disable"
+                onPress={() => disableConnection(id)}
               />
             )}
             <Button
