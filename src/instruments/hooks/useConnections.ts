@@ -237,6 +237,7 @@ function connectSignalKClient(id: string, wsUrl: string) {
     onStateChange: (state) => {
       updateConnectionStatus(id, state);
       if (state === "connected") {
+        client.subscribeSelf();
         client.subscribeAIS();
         client.subscribeAtoN();
       }

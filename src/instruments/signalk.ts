@@ -294,6 +294,66 @@ export class SignalKClient {
     this.ws.send(JSON.stringify(message));
   }
 
+  /** Subscribe to self-vessel paths (navigation + environment) */
+  subscribeSelf() {
+    if (!this.ws || this.state !== "connected") return;
+    this.ws.send(
+      JSON.stringify({
+        context: "vessels.self",
+        subscribe: [
+          // Navigation
+          { path: "navigation.position", period: 1000, policy: "fixed" },
+          {
+            path: "navigation.courseOverGroundTrue",
+            period: 1000,
+            policy: "fixed",
+          },
+          { path: "navigation.speedOverGround", period: 1000, policy: "fixed" },
+          {
+            path: "navigation.speedThroughWater",
+            period: 1000,
+            policy: "fixed",
+          },
+          { path: "navigation.headingTrue", period: 1000, policy: "fixed" },
+          { path: "navigation.rateOfTurn", period: 1000, policy: "fixed" },
+          // Environment — wind
+          {
+            path: "environment.wind.speedApparent",
+            period: 1000,
+            policy: "fixed",
+          },
+          {
+            path: "environment.wind.angleApparent",
+            period: 1000,
+            policy: "fixed",
+          },
+          // Environment — depth
+          {
+            path: "environment.depth.belowSurface",
+            period: 1000,
+            policy: "fixed",
+          },
+          {
+            path: "environment.depth.belowTransducer",
+            period: 1000,
+            policy: "fixed",
+          },
+          {
+            path: "environment.depth.belowKeel",
+            period: 1000,
+            policy: "fixed",
+          },
+          // Environment — water
+          {
+            path: "environment.water.temperature",
+            period: 5000,
+            policy: "fixed",
+          },
+        ],
+      }),
+    );
+  }
+
   /** Subscribe to AIS vessel data (position, identity, navigation) */
   subscribeAIS() {
     if (!this.ws || this.state !== "connected") return;
