@@ -25,18 +25,40 @@ if (typeof (global as any).fetch !== "function") {
 // react-native-reanimated uses native worklets; mock for tests
 jest.mock("react-native-reanimated", () => {
   const React = require("react");
-  const View = require("react-native").View;
+  const RN = require("react-native");
+  const passthrough = (Component: any) =>
+    React.forwardRef((props: any, ref: any) =>
+      React.createElement(Component, { ...props, ref }),
+    );
+  const AnimatedView = passthrough(RN.View);
+  const AnimatedScrollView = passthrough(RN.ScrollView);
   return {
     __esModule: true,
     default: {
-      View: React.forwardRef((props: any, ref: any) =>
-        React.createElement(View, { ...props, ref }),
-      ),
+      View: AnimatedView,
+      ScrollView: AnimatedScrollView,
+      createAnimatedComponent: passthrough,
     },
+    LinearTransition: {},
+    FadeIn: { duration: () => ({}) },
+    FadeOut: { duration: () => ({}) },
     SlideInUp: { duration: () => ({ duration: () => ({}) }) },
     SlideOutUp: { duration: () => ({ duration: () => ({}) }) },
+    Extrapolation: { CLAMP: "clamp", EXTEND: "extend", IDENTITY: "identity" },
+    useSharedValue: (v: any) => ({ value: v }),
+    useAnimatedStyle: (fn: any) => fn(),
+    useAnimatedScrollHandler: (handlers: any) => handlers,
+    interpolate: (_value: any, _input: any, output: any) =>
+      output[Math.floor(output.length / 2)],
+    withRepeat: (v: any) => v,
+    withTiming: (v: any) => v,
+    cancelAnimation: () => {},
   };
 });
+
+jest.mock("react-native-worklets", () => ({
+  scheduleOnRN: (fn: any, ...args: any[]) => fn(...args),
+}));
 
 // expo-symbols ships a native iOS-only component; mock it for tests
 jest.mock("expo-symbols", () => {

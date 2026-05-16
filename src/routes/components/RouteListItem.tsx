@@ -37,7 +37,7 @@ function openRoute(route: Route) {
   }
 
   if (active.id === route.id) {
-    router.dismissTo("/activity");
+    router.dismissAll();
     return;
   }
 

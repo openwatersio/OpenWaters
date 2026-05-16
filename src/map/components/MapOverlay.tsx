@@ -1,10 +1,10 @@
+import ActivitiesOverlay from "@/activities/components/ActivitiesOverlay";
 import { OfflineStatusButton } from "@/charts/components/OfflineStatusButton";
 import { SelectChartButton } from "@/charts/components/SelectChartButton";
 import { Compass } from "@/map/components/Compass";
 import { FollowLocationButton } from "@/map/components/FollowLocationButton";
 import { MenuButton } from "@/map/components/MenuButton";
 import { ZoomButtons } from "@/map/components/ZoomButtons";
-import InstrumentsOverlay from "@/instruments/components/InstrumentsOverlay";
 import { useSheetOffset } from "@/map/hooks/useSheetPosition";
 import TrackRecordButton from "@/tracks/components/TrackRecordButton";
 import {
@@ -24,7 +24,24 @@ export default function MapOverlay() {
 
   return (
     <>
-      <InstrumentsOverlay />
+      <Animated.View
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          paddingBottom: 0,
+        }}
+        pointerEvents="box-none"
+      >
+        <SafeAreaView
+          edges={["top", "left", "right"]}
+          pointerEvents="box-none"
+        >
+          <ActivitiesOverlay />
+          <TrackRecordButton />
+        </SafeAreaView>
+      </Animated.View>
       <Animated.View
         style={[
           { position: "absolute", bottom: 0, left: 0, right: 0 },
@@ -39,8 +56,7 @@ export default function MapOverlay() {
           <Host matchContents>
             <Namespace id={NS_ID}>
               <GlassEffectContainer>
-                <VStack spacing={16}>
-                  <TrackRecordButton />
+                <VStack spacing={16} modifiers={[tint("primary")]}>
                   <OfflineStatusButton />
                   <SelectChartButton />
                 </VStack>

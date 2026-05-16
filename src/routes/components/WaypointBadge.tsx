@@ -1,5 +1,5 @@
-import { ActiveWaypoint } from "@/routes/hooks/useRoutes";
 import useTheme from "@/hooks/useTheme";
+import { ActiveWaypoint } from "@/routes/hooks/useRoutes";
 import { Image, Text } from "@expo/ui/swift-ui";
 import { background, font, foregroundStyle, frame, shapes } from "@expo/ui/swift-ui/modifiers";
 
@@ -19,7 +19,7 @@ export default function WaypointBadge({
     font({ size: 12, weight: "black" as const }),
     foregroundStyle(theme.contrast),
     frame({ width: 24, height: 24 }),
-    background(theme.accent, shapes.circle()),  // inner fill
+    background(theme.routes, shapes.circle()),  // inner fill
   ];
 
   if (index === 0 || last) {

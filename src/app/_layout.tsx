@@ -86,14 +86,6 @@ function RootLayout() {
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="activity" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          // Updated dynamically by DetentProvider
-          sheetAllowedDetents: [0],
-          sheetGrabberVisible: true,
-          headerShown: false,
-        }} />
         <Stack.Screen name="charts/index" options={{
           presentation: "formSheet",
           sheetLargestUndimmedDetentIndex: "last",

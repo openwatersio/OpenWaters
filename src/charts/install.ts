@@ -34,6 +34,13 @@ export async function generateStyle(
   filters: SourceFilters = {},
 ): Promise<StyleSpecification> {
   const filtered = filterSources(sources, filters);
+  // User asked for a dark theme but the chart has no source tagged with it,
+  // so filterSources fell back to day. Add a dim background-on-top layer so
+  // the chart is readable at night and floating glass overlays sample dark
+  // content underneath them.
+  const wantsDark = filters.theme === "night" || filters.theme === "dusk";
+  const hasRequestedVariant = sources.some((s) => s.theme === filters.theme);
+  const needsDim = wantsDark && !hasRequestedVariant;
 
   // Single style source — fetch the remote style and return its contents
   if (filtered.length === 1 && filtered[0].type === "style") {
@@ -41,7 +48,9 @@ export async function generateStyle(
     if (!response.ok) {
       throw new Error(`Failed to fetch style: ${response.status}`);
     }
-    return (await response.json()) as StyleSpecification;
+    const spec = (await response.json()) as StyleSpecification;
+    if (needsDim) appendDimLayer(spec);
+    return spec;
   }
 
   const spec: StyleSpecification = {
@@ -120,7 +129,21 @@ export async function generateStyle(
     }
   }
 
+  if (needsDim) appendDimLayer(spec);
   return spec;
+}
+
+/**
+ * Append a semi-opaque black background layer at the end of the layer list.
+ * MapLibre renders layers in array order, so the last entry draws on top of
+ * everything else — yielding a dim overlay on the chart content.
+ */
+function appendDimLayer(spec: StyleSpecification): void {
+  (spec.layers as unknown[]).push({
+    id: "openwaters-night-dim",
+    type: "background",
+    paint: { "background-color": "rgba(0, 0, 0, 0.5)" },
+  });
 }
 
 // ---------------------------------------------------------------------------

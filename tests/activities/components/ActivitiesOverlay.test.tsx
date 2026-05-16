@@ -1,8 +1,8 @@
+import ActivitiesOverlay from '@/activities/components/ActivitiesOverlay';
 import { resetInstrumentStore, updatePaths } from '@/instruments/hooks/useInstruments';
-import { NavigationState, navigationState, resetNavigation } from '@/navigation/hooks/useNavigation';
 import { resetPreferredUnits } from '@/hooks/usePreferredUnits';
+import { NavigationState, navigationState, resetNavigation } from '@/navigation/hooks/useNavigation';
 import { resetTrackRecording, trackRecordingState } from '@/tracks/hooks/useTrackRecording';
-import InstrumentsOverlay from '@/instruments/components/InstrumentsOverlay';
 import { render, screen } from '@testing-library/react-native';
 
 beforeEach(() => {
@@ -12,36 +12,43 @@ beforeEach(() => {
   resetTrackRecording();
 });
 
-describe('InstrumentsOverlay', () => {
-  it('is hidden when moored, not recording, and no instrument data', () => {
+describe('ActivitiesOverlay', () => {
+  it('renders nothing when moored, not recording, and no instrument data', () => {
     Object.assign(navigationState, { state: NavigationState.Moored });
-    const { toJSON } = render(<InstrumentsOverlay />);
+    const { toJSON } = render(<ActivitiesOverlay />);
     expect(toJSON()).toBeNull();
   });
 
-  it('renders SOG when underway', () => {
+  it('shows the navigation card when underway', () => {
     Object.assign(navigationState, { state: NavigationState.Underway });
-    render(<InstrumentsOverlay />);
+    render(<ActivitiesOverlay />);
     expect(screen.getByText('SOG')).toBeTruthy();
   });
 
-  it('converts speed to the preferred unit', () => {
+  it('converts speed to the preferred unit on the navigation card', () => {
     Object.assign(navigationState, { state: NavigationState.Underway, speed: 1 });
-    render(<InstrumentsOverlay />);
+    render(<ActivitiesOverlay />);
     // 1 m/s ≈ 1.9 knots (default unit)
     expect(screen.getByText('1.9')).toBeTruthy();
   });
 
-  it('is visible when recording even if moored', () => {
+  it('shows the navigation card when recording even if moored', () => {
     Object.assign(navigationState, { state: NavigationState.Moored });
     Object.assign(trackRecordingState, {
-      track: { id: 1, name: null, started_at: new Date().toISOString(), ended_at: null, distance: 0, color: null },
+      track: {
+        id: 1,
+        name: null,
+        started_at: new Date().toISOString(),
+        ended_at: null,
+        distance: 0,
+        color: null,
+      },
     });
-    render(<InstrumentsOverlay />);
+    render(<ActivitiesOverlay />);
     expect(screen.getByText('SOG')).toBeTruthy();
   });
 
-  it('is visible when instrument data exists even if moored', () => {
+  it('shows the instruments card only when external instrument data is present', () => {
     Object.assign(navigationState, { state: NavigationState.Moored });
     updatePaths({
       "environment.depth.belowTransducer": {
@@ -50,8 +57,10 @@ describe('InstrumentsOverlay', () => {
         source: "signalk.test",
       },
     });
-    render(<InstrumentsOverlay />);
+    render(<ActivitiesOverlay />);
     expect(screen.getByText('Depth')).toBeTruthy();
+    // Navigation card should not appear when only external instrument data exists
+    expect(screen.queryByText('SOG')).toBeNull();
   });
 
   it('shows depth from instruments when available', () => {
@@ -63,7 +72,7 @@ describe('InstrumentsOverlay', () => {
         source: "signalk.test",
       },
     });
-    render(<InstrumentsOverlay />);
+    render(<ActivitiesOverlay />);
     expect(screen.getByText('8.5')).toBeTruthy();
   });
 });

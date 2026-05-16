@@ -1,6 +1,6 @@
-import { toDistance } from "@/hooks/usePreferredUnits";
 import { formatETA } from "@/format";
 import { formatBearing } from "@/geo";
+import { toDistance } from "@/hooks/usePreferredUnits";
 import { HStack, Text, VStack } from "@expo/ui/swift-ui";
 import {
   font,
@@ -13,7 +13,7 @@ import {
 export function StatItem({ label, value, suffix }: { label: string; value: string; suffix?: string }) {
   return (
     <VStack alignment="center" spacing={0} modifiers={[frame({ maxWidth: Infinity })]}>
-      <HStack alignment="firstTextBaseline" spacing={2}>
+      <HStack alignment="firstTextBaseline" spacing={1}>
         <Text
           modifiers={[
             font({ size: 24, weight: "bold" }),

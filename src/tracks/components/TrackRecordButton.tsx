@@ -1,30 +1,72 @@
 import useTheme from "@/hooks/useTheme";
 import { startTrackRecording, useTrackRecording } from "@/tracks/hooks/useTrackRecording";
-import { Button, Image } from "@expo/ui/swift-ui";
-import { frame, glassEffect, glassEffectId } from "@expo/ui/swift-ui/modifiers";
-import * as Haptics from "expo-haptics";
-
-const NS_ID = "map-controls";
+import OverlayView from "@/ui/OverlayView";
+import { SymbolView } from "expo-symbols";
+import { useEffect } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import {
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 export default function TrackRecordButton() {
   const { isRecording } = useTrackRecording();
   const theme = useTheme();
+  const opacity = useSharedValue(1);
 
-  if (isRecording) return null;
+  useEffect(() => {
+    opacity.value = withTiming(isRecording ? 0 : 1, { duration: 250 });
+  }, [isRecording, opacity]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
   return (
-    <Button
-      onPress={() => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        startTrackRecording();
-      }}
-      modifiers={[
-        frame({ width: 44, height: 44 }),
-        glassEffect({ glass: { variant: "regular", interactive: true }, shape: "circle" }),
-        glassEffectId("record", NS_ID),
-      ]}
+    <OverlayView
+      style={[styles.container, animatedStyle]}
+      layout={LinearTransition}
     >
-      <Image systemName="circle.fill" size={12} color={theme.danger} />
-    </Button>
+      <View style={styles.row}>
+        <Pressable
+          onPress={startTrackRecording}
+          disabled={isRecording}
+          style={styles.button}
+        >
+          <View style={styles.dotWrap}>
+            <SymbolView
+              name="circle.fill"
+              size={12}
+              tintColor={theme.tracks}
+            />
+          </View>
+        </Pressable>
+      </View>
+    </OverlayView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    alignSelf: "flex-start",
+    borderRadius: 22,
+    justifyContent: "center",
+    marginLeft: 16,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  button: {
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dotWrap: {
+    padding: 4,
+    borderRadius: 44,
+  },
+});

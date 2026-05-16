@@ -3,7 +3,7 @@ import { useElapsedMs } from "@/hooks/useElapsedMs";
 import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
 import { useTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import { StatItem } from "@/ui/StatItem";
-import { HStack } from "@expo/ui/swift-ui";
+import { HStack, Image } from "@expo/ui/swift-ui";
 
 export default function TrackRecordingStats() {
   const { track, distance, averageSpeed } = useTrackRecording();
@@ -13,6 +13,7 @@ export default function TrackRecordingStats() {
 
   return (
     <HStack spacing={16}>
+      <Image systemName="point.bottomleft.forward.to.arrow.triangle.scurvepath" color="red" />
       <StatItem label="Average" value={avgSpd.value} suffix={avgSpd.abbr} />
       <StatItem label="Elapsed" value={formatElapsedMs(elapsedMs)} />
       <StatItem label="Distance" value={dist.value} suffix={dist.abbr} />

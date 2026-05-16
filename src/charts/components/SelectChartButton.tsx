@@ -2,7 +2,6 @@ import { useCharts } from "@/charts/hooks/useCharts";
 import { selectChart, useChartStore } from "@/charts/store";
 import { Button, Divider, Menu } from "@expo/ui/swift-ui";
 import {
-  foregroundStyle,
   frame,
   glassEffect,
   glassEffectId,
@@ -22,7 +21,6 @@ export function SelectChartButton() {
       systemImage={"square.3.layers.3d"}
       modifiers={[
         labelStyle("iconOnly"),
-        foregroundStyle("primary"),
         frame({ width: 44, height: 44 }),
         glassEffect({ glass: { variant: "regular", interactive: true }, shape: "circle" }),
         glassEffectId("chart-type", NS_ID),

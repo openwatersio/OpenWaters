@@ -10,6 +10,7 @@ import {
 import log from "@/logger";
 import { persistProxy } from "@/persistProxy";
 import { computeDistance, segmentDistance } from "@/tracks/distance";
+import * as Haptics from "expo-haptics";
 import {
   Accuracy,
   hasStartedLocationUpdatesAsync,
@@ -126,6 +127,7 @@ export async function startTrackRecording() {
   const granted = await requestPermissions();
   if (!granted) return;
 
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   resetTrackRecording(await startTrack());
   await startBackgroundTracking();
 }

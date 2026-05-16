@@ -1,34 +1,42 @@
 import useTheme from "@/hooks/useTheme";
-import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import { useColorScheme, View, type StyleProp, type ViewStyle } from "react-native";
+import { GlassView, GlassViewProps, isLiquidGlassAvailable } from "expo-glass-effect";
+import type { ComponentPropsWithoutRef } from "react";
+import type { StyleProp, ViewStyle } from "react-native";
+import Animated from "react-native-reanimated";
 
 const liquidGlass = isLiquidGlassAvailable();
+
+const AnimatedGlassView = Animated.createAnimatedComponent(GlassView);
+
+type AnimatedViewProps = ComponentPropsWithoutRef<typeof AnimatedGlassView>;
 
 type OverlayViewProps = {
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
-};
+} & GlassViewProps & Pick<AnimatedViewProps, "layout" | "entering" | "exiting">;
 
-export default function OverlayView({ style, children }: OverlayViewProps) {
+export default function OverlayView({ style, children, ...animationProps }: OverlayViewProps) {
   const theme = useTheme();
-  // useColorScheme() reflects the app-wide theme because _layout.tsx drives
-  // UIWindow.overrideUserInterfaceStyle from the chart theme.
-  const colorScheme = useColorScheme() === "dark" ? "dark" : "light";
 
   if (liquidGlass) {
     return (
-      <GlassView
+      <AnimatedGlassView
         glassEffectStyle="regular"
-        colorScheme={colorScheme}
         style={style}
         isInteractive
+        {...animationProps}
       >
         {children}
-      </GlassView>
+      </AnimatedGlassView>
     );
   }
 
   return (
-    <View style={[{ backgroundColor: theme.surface }, style]}>{children}</View>
+    <Animated.View
+      style={[{ backgroundColor: theme.surface }, style]}
+      {...animationProps}
+    >
+      {children}
+    </Animated.View>
   );
 }

@@ -19,8 +19,7 @@ export default function TrackList({ order }: Props) {
   const allTracks = useTracks({ order });
   const activeTrackId = activeTrack?.id ?? null;
 
-  // Hide the live recording — it has its own screen at `/activity`. Stats on
-  // the tracks row aren't meaningful until the track ends anyway.
+  // Hide the live recording — its stats only become meaningful once the track ends.
   const tracks = useMemo(
     () =>
       activeTrackId == null

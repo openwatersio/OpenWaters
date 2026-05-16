@@ -10,6 +10,7 @@ import { readLocalPaths } from "@/charts/style";
 import { resolveTheme, useThemePreference } from "@/charts/theme";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
 import { useCameraPosition } from "@/map/hooks/useCameraPosition";
+import { usePosition } from "@/navigation/hooks/useNavigation";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { useEffect, useMemo, useState } from "react";
 
@@ -42,13 +43,18 @@ export function useChart(chartId: string): InstalledChart | undefined {
 const AUTO_THEME_TICK_MS = 5 * 60_000;
 
 /**
- * Resolve the active theme from the user's preference, using the last
- * known camera position as a proxy for location when in "auto" mode.
+ * Resolve the active theme from the user's preference, using the device
+ * position when in "auto" mode, falling back to the camera center until
+ * GPS acquires a lock.
  */
 export function useActiveTheme() {
   const { preference } = useThemePreference();
+  const position = usePosition();
   const { center } = useCameraPosition();
   const [tick, setTick] = useState(0);
+
+  const latitude = position?.latitude ?? center?.[1];
+  const longitude = position?.longitude ?? center?.[0];
 
   useEffect(() => {
     if (preference !== "auto") return;
@@ -57,11 +63,10 @@ export function useActiveTheme() {
   }, [preference]);
 
   return useMemo(() => {
-    const [longitude, latitude] = center ?? [];
     return resolveTheme(preference, { latitude, longitude });
     // `tick` forces re-resolution on auto-mode timer
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preference, center, tick]);
+  }, [preference, latitude, longitude, tick]);
 }
 
 /** Get the active source filters (theme + preferred depth units). */
