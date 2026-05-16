@@ -16,6 +16,7 @@
     ],
     "moduleNameMapper": {
       "\\.md$": "<rootDir>/tests/__mocks__/mdAsset.js",
+      "^@/assets/(.*)$": "<rootDir>/assets/$1",
       "^@/(.*)$": "<rootDir>/src/$1",
       "^@react-native-async-storage/async-storage$": "@react-native-async-storage/async-storage/jest/async-storage-mock"
     },
