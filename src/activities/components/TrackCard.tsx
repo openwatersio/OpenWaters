@@ -2,6 +2,7 @@ import ActivityCard from "@/activities/components/ActivityCard";
 import { formatElapsedMs } from "@/format";
 import { useElapsedMs } from "@/hooks/useElapsedMs";
 import { toDistance, toSpeed } from "@/hooks/usePreferredUnits";
+import useTheme from "@/hooks/useTheme";
 import { stopTrackRecording, useTrackRecording } from "@/tracks/hooks/useTrackRecording";
 import { StatItem } from "@/ui/StatItem";
 import { Host, HStack, Image, Text, VStack } from "@expo/ui/swift-ui";
@@ -10,6 +11,7 @@ import * as Haptics from "expo-haptics";
 import { ActionSheetIOS, Alert } from "react-native";
 
 export default function TrackCard() {
+  const theme = useTheme();
   const { track, distance, averageSpeed } = useTrackRecording();
   const elapsedMs = useElapsedMs(track?.started_at ?? null);
   const dist = toDistance(distance);
@@ -19,13 +21,16 @@ export default function TrackCard() {
     <ActivityCard onPress={showTrackActions}>
       <Host matchContents>
         <HStack spacing={16}>
-          <Image systemName="point.bottomleft.forward.to.arrow.triangle.scurvepath" color="red" />
+          <Image
+            systemName="point.bottomleft.forward.to.arrow.triangle.scurvepath"
+            color={theme.tracks}
+          />
           <StatItem label="Elapsed" value={formatElapsedMs(elapsedMs)} />
           <VStack alignment="trailing">
             <HStack alignment="firstTextBaseline" spacing={1}>
               <Text
                 modifiers={[
-                  font({ size: 24, weight: "bold" }),
+                  font({ size: 24, weight: "semibold" }),
                   monospacedDigit(),
                 ]}
               >

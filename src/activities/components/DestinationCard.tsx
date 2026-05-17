@@ -1,58 +1,42 @@
 import ActivityCard from "@/activities/components/ActivityCard";
 import { showRouteActions } from "@/activities/components/routeActions";
-import {
-  calculateDestinationProgress,
-  calculateWaypointProgress,
-} from "@/geo";
-import { useNavigation } from "@/navigation/hooks/useNavigation";
+import { toDistance } from "@/hooks/usePreferredUnits";
+import useTheme from "@/hooks/useTheme";
 import WaypointBadge from "@/routes/components/WaypointBadge";
+import { useRouteProgress } from "@/routes/hooks/useRouteProgress";
 import { useActiveRoute } from "@/routes/hooks/useRoutes";
-import { ArrivalTimeStat, DistanceStat, EtaStat } from "@/ui/StatItem";
-import { Host, HStack } from "@expo/ui/swift-ui";
-import { useMemo } from "react";
-import { View } from "react-native";
+import { ArrivalTime } from "@/ui/ArrivalTime";
+import { Duration } from "@/ui/Duration";
+import { StatItem } from "@/ui/StatItem";
+import { Host, HStack, ProgressView, Spacer, VStack } from "@expo/ui/swift-ui";
+import { tint } from "@expo/ui/swift-ui/modifiers";
 
 export default function DestinationCard() {
-  const { points, activeIndex } = useActiveRoute();
-  const idx = activeIndex ?? 0;
-  const nav = useNavigation();
+  const theme = useTheme();
+  const { points } = useActiveRoute();
+  const { destination } = useRouteProgress();
 
-  const target = points[idx] ?? null;
-  const previous = idx > 0 ? points[idx - 1] ?? null : null;
-
-  const position =
-    nav.latitude !== null && nav.longitude !== null
-      ? { latitude: nav.latitude, longitude: nav.longitude }
-      : null;
-
-  const waypoint = useMemo(() => {
-    if (!position || !target) return null;
-    return calculateWaypointProgress(
-      position,
-      nav.speed ?? 0,
-      nav.heading ?? 0,
-      target,
-      previous,
-    );
-  }, [position, nav.speed, nav.heading, target, previous]);
-
-  const destination = useMemo(() => {
-    if (!waypoint || !position) return null;
-    return calculateDestinationProgress(waypoint, points, idx, nav.speed ?? 0);
-  }, [waypoint, position, points, idx, nav.speed]);
+  const distance = toDistance(destination?.distance);
 
   return (
     <ActivityCard onPress={showRouteActions}>
-      <View style={{ flex: 1 }}>
-        <Host matchContents>
-          <HStack spacing={16}>
-            <WaypointBadge index={points.length - 1} points={points} />
-            <ArrivalTimeStat fromNow={destination?.eta} />
-            <EtaStat value={destination?.eta} />
-            <DistanceStat value={destination?.distance} />
-          </HStack>
-        </Host>
-      </View>
+      <Host matchContents>
+        <HStack spacing={4}>
+          <WaypointBadge index={0} points={points} />
+          <VStack spacing={4}>
+            <StatItem value={distance.value} suffix={distance.abbr} />
+            <HStack spacing={8}>
+              <ProgressView value={destination?.progress ?? 0} modifiers={[tint(theme.routes)]} />
+            </HStack>
+            <HStack spacing={8}>
+              <Duration seconds={destination?.eta} />
+              <Spacer />
+              <ArrivalTime fromNow={destination?.eta} />
+            </HStack>
+          </VStack>
+          <WaypointBadge index={points.length - 1} points={points} />
+        </HStack>
+      </Host>
     </ActivityCard>
   );
 }

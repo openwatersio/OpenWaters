@@ -1,6 +1,3 @@
-import { formatETA } from "@/format";
-import { formatBearing } from "@/geo";
-import { toDistance } from "@/hooks/usePreferredUnits";
 import { HStack, Text, VStack } from "@expo/ui/swift-ui";
 import {
   font,
@@ -9,29 +6,41 @@ import {
   monospacedDigit,
   textCase,
 } from "@expo/ui/swift-ui/modifiers";
+import { ReactNode } from "react";
 
-export function StatItem({ label, value, suffix }: { label: string; value: string; suffix?: string }) {
+export type StatItemProps = {
+  value: string | ReactNode;
+  label?: string;
+  suffix?: string;
+  alignment?: "leading" | "center" | "trailing"
+}
+
+export function StatItem({ label, value, suffix, alignment = "leading" }: StatItemProps) {
   return (
-    <VStack alignment="center" spacing={0} modifiers={[frame({ maxWidth: Infinity })]}>
+    <VStack alignment={alignment} spacing={2} modifiers={[frame({ maxWidth: Infinity, alignment })]}>
       <HStack alignment="firstTextBaseline" spacing={1}>
-        <Text
-          modifiers={[
-            font({ size: 24, weight: "bold" }),
-            monospacedDigit(),
-          ]}
-        >
-          {value}
-        </Text>
+        {typeof value === "string" ? (
+          <Text
+            modifiers={[
+              font({ size: 24, weight: "semibold" }),
+              monospacedDigit(),
+            ]}
+          >
+            {value}
+          </Text>
+        ) : (
+          value
+        )}
         {suffix && (
           <Text modifiers={[
-            font({ size: 13 }),
-            foregroundStyle({ type: "hierarchical", style: "secondary" }),
+            textCase("uppercase"),
+            font({ size: 14 })
           ]}>
             {suffix}
           </Text>
         )}
       </HStack>
-      <Text
+      {label && <Text
         modifiers={[
           textCase("uppercase"),
           font({ size: 13 }),
@@ -40,39 +49,7 @@ export function StatItem({ label, value, suffix }: { label: string; value: strin
       >
         {label}
       </Text>
+      }
     </VStack>
   );
-}
-
-export function MeasurementStat({ value, abbr, label }: { value: string; abbr: string, label: string }) {
-  return <StatItem value={value} suffix={abbr} label={label} />;
-}
-
-export function DistanceStat({ value }: { value: number | undefined }) {
-  return <MeasurementStat {...toDistance(value)} label="Distance" />;
-}
-
-export function BearingStat({ value }: { value: number | undefined }) {
-  return <StatItem label="Bearing" value={value != null ? formatBearing(value) : "—"} />;
-}
-
-export function EtaStat({ value }: { value: number | null | undefined }) {
-  const formatted = value != null ? formatETA(value) : "—";
-  return <StatItem label="Remaining" value={formatted} />;
-}
-
-export function ArrivalTimeStat({ fromNow }: { fromNow: number | null | undefined }) {
-  if (fromNow == null) return <StatItem label="Arrival" value="—" />;
-  const arrival = new Date(Date.now() + fromNow * 1000);
-
-  // Format time and split off AM/PM period for smaller rendering via suffix
-  const formatted = arrival.toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  const periodMatch = formatted.match(/\s*(AM|PM|am|pm)\s*$/);
-  const time = periodMatch ? formatted.slice(0, periodMatch.index) : formatted;
-  const period = periodMatch?.[1];
-
-  return <StatItem label="Arrival" value={time} suffix={period} />;
 }

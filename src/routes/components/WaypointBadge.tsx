@@ -16,17 +16,17 @@ export default function WaypointBadge({
 }: WaypointBadgeProps) {
   const theme = useTheme();
   const modifiers = [
-    font({ size: 12, weight: "black" as const }),
+    font({ size: 12, weight: "semibold" }),
     foregroundStyle(theme.contrast),
-    frame({ width: 24, height: 24 }),
+    frame({ width: 18, height: 18 }),
     background(theme.routes, shapes.circle()),  // inner fill
   ];
 
-  if (index === 0 || last) {
+  if (last) {
     return (
       <Image
-        systemName={last ? "flag.pattern.checkered" : "flag.fill"}
-        size={12}
+        systemName="flag.pattern.checkered"
+        size={10}
         color={theme.contrast}
         modifiers={modifiers}
       />

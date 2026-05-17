@@ -168,6 +168,10 @@ export type WaypointProgress = {
   /** ETA in seconds, or null if not making meaningful progress.
    *  Uses `legVmg` when a previous waypoint is provided, otherwise `vmg`. */
   eta: number | null;
+  /** Fraction of the current leg completed, clamped to [0, 1].
+   *  Zero when there's no previous waypoint (no defined leg) or the leg
+   *  is degenerate (zero length). */
+  progress: number;
 };
 
 /**
@@ -203,15 +207,20 @@ export function calculateWaypointProgress(
 
   let legVmg: number | null = null;
   let eta: number | null;
+  let progress = 0;
   if (previous) {
     const legBearing = getGreatCircleBearing(previous, waypoint);
     legVmg = calculateVMG(sog, cog, legBearing);
     eta = legVmg > MIN_VMG_FOR_ETA ? distance / legVmg : null;
+    const legLength = getDistance(previous, waypoint);
+    if (legLength > 0) {
+      progress = Math.max(0, Math.min(1, 1 - distance / legLength));
+    }
   } else {
     eta = vmg > MIN_VMG_FOR_ETA ? distance / vmg : null;
   }
 
-  return { distance, bearing, vmg, legVmg, eta };
+  return { distance, bearing, vmg, legVmg, eta, progress };
 }
 
 /** Earth mean radius in meters (same value geolib uses internally). */
@@ -339,6 +348,10 @@ export type DestinationProgress = {
   distance: number;
   /** ETA to the final waypoint in seconds, or null if not making progress */
   eta: number | null;
+  /** Fraction of the entire route completed, clamped to [0, 1].
+   *  Computed as `1 - distance / totalRouteLength`. Zero for routes with
+   *  fewer than two points or zero total length. */
+  progress: number;
 };
 
 /**
@@ -359,9 +372,12 @@ export function calculateDestinationProgress(
   activeIndex: number,
   sog: number,
 ): DestinationProgress {
+  let totalRouteDistance = 0;
   let remainingLegsDistance = 0;
-  for (let i = activeIndex; i < points.length - 1; i++) {
-    remainingLegsDistance += getDistance(points[i], points[i + 1]);
+  for (let i = 0; i < points.length - 1; i++) {
+    const legDistance = getDistance(points[i], points[i + 1]);
+    totalRouteDistance += legDistance;
+    if (i >= activeIndex) remainingLegsDistance += legDistance;
   }
 
   const distance = nextWaypointProgress.distance + remainingLegsDistance;
@@ -375,7 +391,12 @@ export function calculateDestinationProgress(
     }
   }
 
-  return { distance, eta };
+  const progress =
+    totalRouteDistance > 0
+      ? Math.max(0, Math.min(1, 1 - distance / totalRouteDistance))
+      : 0;
+
+  return { distance, eta, progress };
 }
 
 /** Test whether two bounding boxes [west, south, east, north] intersect */

@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { Pressable, type StyleProp, type ViewStyle } from "react-native";
 import { LinearTransition } from "react-native-reanimated";
 
-export const ACTIVITY_CARD_HEIGHT = 72;
+export const ACTIVITY_CARD_HEIGHT = 84;
 
 type Props = {
   onPress?: () => void;

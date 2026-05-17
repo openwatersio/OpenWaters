@@ -27,7 +27,7 @@ const useStyles = createStyles((theme) => ({
   label: { fontSize: 14, textTransform: "uppercase", color: theme.label },
   value: {
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "600",
     textAlign: "center",
     letterSpacing: -0.8,
     fontVariant: ["tabular-nums"],
