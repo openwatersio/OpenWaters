@@ -28,16 +28,24 @@ mkdir -p "$PNG_DIR"
 SCALE=2
 # Build params shared with the rendering side via icon-config.json so layer
 # `icon-size` values stay in sync (via src/map/iconSize.ts) when these change.
+#   - icon:   rendered-icon size in source pixels (the SVG renders to this;
+#             matches the SVG viewBox dimensions: 48 × 48)
+#   - canvas: total canvas size in source pixels (icon is centered, with
+#             transparent margin around it)
+# The icon-to-canvas ratio determines MapLibre's `icon-halo-width` headroom:
+# the smaller the icon relative to the canvas, the larger the icon-size
+# multiplier needed to render the icon at any given CSS size, which lifts
+# the shader's `halo_width < 6 × icon_size` constraint proportionally. With
+# icon=48 and canvas=96 the ratio gives ~10% halo headroom (~1 CSS px halo
+# on icons rendered as small as 10 CSS px). The transparent margin must also
+# hold bitmap-sdf's outside gradient (~6 source texels past the shape edge
+# with radius=8, cutoff=0.25 defaults).
 CONFIG="$PROJECT_DIR/assets/map/icon-config.json"
-ICON_BASE=$(node -p "require('$CONFIG').size")
-PAD_BASE=$(node -p "require('$CONFIG').padding")
+ICON_BASE=$(node -p "require('$CONFIG').icon")
+CANVAS_BASE=$(node -p "require('$CONFIG').canvas")
 ICON_SIZE=$((ICON_BASE * SCALE))
-# Padding must hold the SDF outside gradient. bitmap-sdf with the MapLibre
-# defaults (radius=8, cutoff=0.25) puts useful gradient out to 6 texels past
-# the shape edge; padding ≥ that prevents the halo from clipping at the
-# canvas border (which renders as a square).
-PADDING=$((PAD_BASE * SCALE))
-CANVAS_SIZE=$((ICON_SIZE + 2 * PADDING))
+CANVAS_SIZE=$((CANVAS_BASE * SCALE))
+ICON_OFFSET=$(((CANVAS_SIZE - ICON_SIZE) / 2))
 
 SVG_COUNT=$(ls "$SVG_DIR"/*.svg 2>/dev/null | wc -l | tr -d ' ')
 if [ "$SVG_COUNT" = "0" ]; then
@@ -45,12 +53,12 @@ if [ "$SVG_COUNT" = "0" ]; then
   exit 0
 fi
 
-echo "Rasterizing $SVG_COUNT SVGs at ${SCALE}x (${ICON_SIZE}px icon + ${PADDING}px padding = ${CANVAS_SIZE}px canvas)..."
+echo "Rasterizing $SVG_COUNT SVGs at ${SCALE}x (${ICON_SIZE}px icon centered in ${CANVAS_SIZE}px canvas)..."
 for svg in "$SVG_DIR"/*.svg; do
   name=$(basename "$svg" .svg)
   rsvg-convert -w $ICON_SIZE -h $ICON_SIZE \
     --page-width $CANVAS_SIZE --page-height $CANVAS_SIZE \
-    --left $PADDING --top $PADDING \
+    --left $ICON_OFFSET --top $ICON_OFFSET \
     -b none \
     -o "$TMP_DIR/${name}.png" "$svg"
   echo "  $name.svg → temp PNG (${CANVAS_SIZE}x${CANVAS_SIZE})"

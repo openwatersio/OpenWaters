@@ -2,7 +2,7 @@ import { type AISVessel, useAIS } from "@/ais/hooks/useAIS";
 import { projectPosition } from "@/geo";
 import useTheme from "@/hooks/useTheme";
 import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
-import { iconSize, vesselMppFactor, vesselScaleAt, vesselScaleDamped } from "@/map/iconSize";
+import { clampHalo, vesselMppFactor, vesselScaleAt, vesselScaleDamped } from "@/map/iconSize";
 import type { ExpressionSpecification } from "@maplibre/maplibre-gl-style-spec";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -28,9 +28,6 @@ const COMPRESSION_POWER = 0.15;
 const COMPRESSED_REF_LOA_M = 50;
 const REF_PX_AT_Z10 = 24;
 const REF_PX_AT_Z14 = 44;
-// Halo width (per side) for the contrast outline around the vessel.
-const HALO_PX = 1.5;
-const HALO_PX_SELECTED = 3;
 // Default LOA for vessels with no broadcast static report (typically Class B
 // before Type 24B arrives). 12 m approximates a small recreational boat —
 // the prevailing target type at this data-completeness level.
@@ -39,8 +36,7 @@ const DEFAULT_LOA_M = 12;
 /** AIS ship type code → sprite icon ID */
 function shipTypeIcon(code: number | undefined): string {
   if (code === undefined) return "vessel-unknown";
-  if (code >= 80 && code <= 89) return "vessel-tanker";
-  if (code >= 70 && code <= 79) return "vessel-cargo";
+  if (code >= 70 && code <= 89) return "vessel-tanker";
   if (code >= 60 && code <= 69) return "vessel-passenger";
   if (code === 52) return "vessel-tug";
   if (code >= 50 && code <= 59) return "vessel-default";
@@ -188,9 +184,9 @@ export default function AISLayer() {
 
   // Top-level zoom interpolate so MapLibre's `["zoom"]` constraint is met
   // (zoom may only appear as the input of a top-level step/interpolate).
-  // Low/mid zoom uses cube-root compression so size differences stay readable
-  // without inflating large vessels to their (gigantic) true on-chart length.
-  // At z=18+ the curve hands off to true real-world scale.
+  // Low/mid zoom uses heavily compressed power-law scaling so size differences
+  // stay readable without inflating large vessels to their (gigantic) true
+  // on-chart length. At z=18+ the curve hands off to true real-world scale.
   const fillIconSize = useMemo<ExpressionSpecification>(() => [
     "interpolate", ["exponential", 2], ["zoom"],
     10, vesselScaleDamped(COMPRESSED_REF_LOA_M, REF_PX_AT_Z10, COMPRESSION_POWER),
@@ -198,24 +194,6 @@ export default function AISLayer() {
     18, vesselScaleAt(18),
     22, vesselScaleAt(22),
   ] as ExpressionSpecification, []);
-
-  // Halo: a constant CSS-pixel pad around the fill, thicker when selected.
-  // Adding the pad inside each stop value keeps the pad constant across zoom.
-  const haloIconSize = useMemo<ExpressionSpecification>(() => {
-    const pad: ExpressionSpecification = [
-      "case",
-      ["==", ["get", "mmsi"], selectedMmsi],
-      iconSize(HALO_PX_SELECTED * 2),
-      iconSize(HALO_PX * 2),
-    ];
-    return [
-      "interpolate", ["exponential", 2], ["zoom"],
-      10, ["+", vesselScaleDamped(COMPRESSED_REF_LOA_M, REF_PX_AT_Z10, COMPRESSION_POWER), pad],
-      14, ["+", vesselScaleDamped(COMPRESSED_REF_LOA_M, REF_PX_AT_Z14, COMPRESSION_POWER), pad],
-      18, ["+", vesselScaleAt(18), pad],
-      22, ["+", vesselScaleAt(22), pad],
-    ] as ExpressionSpecification;
-  }, [selectedMmsi]);
 
   return (
     <>
@@ -239,24 +217,6 @@ export default function AISLayer() {
         hitbox={{ top: 22, right: 22, bottom: 22, left: 22 }}
         onPress={handlePress}
       >
-        {/* Halo (drawn first, underneath the fill) */}
-        <Layer
-          id="ais-vessels-halo"
-          type="symbol"
-          layout={{
-            "icon-image": ["get", "icon"],
-            "icon-size": haloIconSize,
-            "icon-rotate": ["get", "rotation"],
-            "icon-rotation-alignment": "map",
-            "icon-allow-overlap": true,
-            "icon-ignore-placement": true,
-          }}
-          paint={{
-            "icon-color": theme.contrast,
-            "icon-opacity": ["match", ["get", "state"], "stale", 0.3, "moored", 0.6, 1.0],
-          }}
-        />
-        {/* Vessel fill */}
         <Layer
           id="ais-vessels-symbol"
           type="symbol"
@@ -275,6 +235,12 @@ export default function AISLayer() {
               ["match", ["get", "state"], "stale", 0.3, "moored", 0.6, 1.0],
               ["match", ["get", "state"], "stale", 0.2, "moored", 0.5, 1.0],
             ],
+            "icon-halo-color": theme.contrast,
+            // Vessels render between ~19 CSS px (small craft at z=10) and
+            // 500+ px (large vessels at high zoom). clampHalo(19, …) gives
+            // the worst-case safe halo for the smallest vessel — bigger
+            // ones automatically get the same width without clipping.
+            "icon-halo-width": clampHalo(19, 1.5),
           }}
         />
       </GeoJSONSource>

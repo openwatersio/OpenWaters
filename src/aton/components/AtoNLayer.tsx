@@ -1,6 +1,6 @@
 import { type AtoN, useAtoN } from "@/aton/hooks/useAtoN";
 import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
-import { iconSize } from "@/map/iconSize";
+import { clampHalo, iconSize } from "@/map/iconSize";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { useCallback, useMemo } from "react";
 import type { NativeSyntheticEvent } from "react-native";
@@ -97,7 +97,15 @@ export default function AtoNLayer() {
             "rgba(255, 255, 255, 0.3)",
             "rgba(0, 0, 0, 0.3)",
           ],
-          "icon-halo-width": ["case", ["==", ["get", "id"], selectedId], 2, 1],
+          // Halo-width clamped per-zoom via `clampHalo()` so it never exceeds
+          // MapLibre's `halo_width < 6 × icon_size` shader constraint — which
+          // otherwise renders the SDF gradient as a dark canvas-bounded box.
+          // See `clampHalo` for details.
+          "icon-halo-width": [
+            "interpolate", ["linear"], ["zoom"],
+            6, ["case", ["==", ["get", "id"], selectedId], clampHalo(14, 2), clampHalo(8, 1)],
+            18, ["case", ["==", ["get", "id"], selectedId], clampHalo(54, 2), clampHalo(32, 1)],
+          ],
         }}
       />
     </GeoJSONSource>

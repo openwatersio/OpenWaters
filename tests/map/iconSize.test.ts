@@ -2,7 +2,7 @@ import { iconSize, vesselMppFactor, vesselScaleAt, vesselScaleDamped } from "@/m
 import config from "@/assets/map/icon-config.json";
 import { createPropertyExpression, v8 } from "@maplibre/maplibre-gl-style-spec";
 
-const NATURAL_LAYOUT_PX = config.size + 2 * config.padding;
+const ICON_PX = config.icon;
 const METERS_PER_PIXEL_Z0 = 156543.03392;
 
 describe("vesselMppFactor", () => {
@@ -35,7 +35,7 @@ describe("vesselScaleAt", () => {
     const expr = vesselScaleAt(effectiveZoom) as ["*", unknown, number];
     const k = expr[2];
     const mppFactor = vesselMppFactor(loaMeters, latitudeDegrees);
-    return mppFactor * k * NATURAL_LAYOUT_PX;
+    return mppFactor * k * ICON_PX;
   }
 
   it("matches the closed-form on-chart length at the equator", () => {
@@ -78,7 +78,7 @@ describe("vesselScaleDamped", () => {
     const multiplier = expr[1];
     const pow = expr[2][2];
     const mppFactor = vesselMppFactor(loaMeters, 0);
-    return multiplier * mppFactor ** pow * NATURAL_LAYOUT_PX;
+    return multiplier * mppFactor ** pow * ICON_PX;
   }
 
   it("anchors the reference vessel at the requested CSS-pixel size", () => {
@@ -100,8 +100,8 @@ describe("vesselScaleDamped", () => {
 
 describe("iconSize", () => {
   it("returns the expected icon-size factor for a CSS-pixel value", () => {
-    expect(iconSize(NATURAL_LAYOUT_PX)).toBe(1);
-    expect(iconSize(NATURAL_LAYOUT_PX / 2)).toBe(0.5);
+    expect(iconSize(ICON_PX)).toBe(1);
+    expect(iconSize(ICON_PX / 2)).toBe(0.5);
   });
 });
 

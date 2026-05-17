@@ -1,11 +1,13 @@
 import config from "@/assets/map/icon-config.json";
 import type { ExpressionSpecification } from "@maplibre/maplibre-gl-style-spec";
 
-// Natural CSS-pixel footprint of an icon at icon-size=1, computed from the
-// build-time canvas size (icon shape + padding on each side). Padding is
-// included because MapLibre's icon-size scales the full raster including
-// padding, not just the shape.
-const NATURAL_LAYOUT_PX = config.size + 2 * config.padding;
+// Rendered-icon size in source pixels at SCALE=1 (the build script renders
+// the SVG to this many texels). The icon is centered in a larger source
+// canvas (`config.canvas`); the surrounding transparent margin holds
+// bitmap-sdf's gradient AND lifts MapLibre's `icon-halo-width` shader
+// constraint. See `clampHalo` and the build script for the math — `ICON_PX`
+// is the reference dimension for both `iconSize()` and the halo math.
+const ICON_PX = config.icon;
 
 // Web Mercator CSS-pixels-to-meters at zoom 0 at the equator. Meters-per-pixel
 // at any (zoom, latitude) is METERS_PER_PIXEL_Z0 * cos(latitude) / 2^zoom.
@@ -18,23 +20,51 @@ const METERS_PER_PIXEL_Z0 = 156543.03392;
  * `assets/map/icon-config.json` doesn't require updating every layer.
  */
 export function iconSize(cssPx: number): number {
-  return cssPx / NATURAL_LAYOUT_PX;
+  return cssPx / ICON_PX;
 }
 
+// MapLibre's symbol_sdf shader has a HARDCODED constraint:
+//   halo_width < 6 × icon_size  (icon_size is the multiplier — what iconSize()
+//                                returns, not CSS pixels)
+// Source: https://github.com/maplibre/maplibre-native shaders/symbol_sdf.fragment.glsl
+//   `halo_edge = (6.0 - halo_width / fontScale) / SDF_PX`  with `SDF_PX = 8.0`
+// When violated, the shader samples outside the SDF gradient and the halo
+// clips to the rectangular source canvas — producing dark square boxes.
+// SDF_PX = 8 is a `#define`; you CANNOT change it by regenerating the source
+// PNG with a wider gradient (that just breaks the shader's math).
+//
+// The icon-design fix (shape rendered at ICON_PX out of `config.size` source
+// texels) lifts this limit proportionally — a smaller ICON_PX means a larger
+// icon-size multiplier is required to render the shape at any given CSS px,
+// which raises the absolute halo headroom. MAX_HALO_FACTOR uses 5 instead of
+// the shader's hard 6 to leave margin for antialiasing and rounding.
+const MAX_HALO_FACTOR = 5 / ICON_PX;
+
 /**
- * Returns the `icon-size` for a "halo" version of an icon — a larger sibling
- * layer rendered underneath the fill icon so its outline shows around the
- * edges. Use this to work around MapLibre's `icon-halo-width` constraint
- * (`halo_width < 6 × icon_size` for clean halos, per the symbol_sdf shader),
- * which makes thick halos on small icons render as canvas-bounded squares.
+ * Returns a safe `icon-halo-width` in CSS pixels for an icon rendered at
+ * `iconCssPx`. Clamps `requestedHaloPx` to the maximum width that won't trip
+ * MapLibre's SDF halo shader constraint and render as a dark square box.
+ *
+ * Use at every interpolation stop where halo-width is specified, e.g.:
+ * ```
+ * "icon-halo-width": ["interpolate", ["linear"], ["zoom"],
+ *   6,  clampHalo(8,  1),   // tiny icon → halo gets clamped down
+ *   18, clampHalo(32, 1),   // bigger icon → halo stays at 1
+ * ]
+ * ```
+ *
+ * Rule of thumb (with current ICON_PX = 48): halo-width can be up to ~10%
+ * of the icon's CSS-pixel size. To draw a 1-px halo cleanly, the icon must
+ * be ≥ 10 CSS px; for a 2-px halo, ≥ 20 CSS px. Below those sizes the helper
+ * clamps the halo down so it still renders cleanly (just thinner).
  */
-export function iconSizeWithHalo(cssPx: number, haloWidth: number): number {
-  return iconSize(cssPx + 2 * haloWidth);
+export function clampHalo(iconCssPx: number, requestedHaloPx: number): number {
+  return Math.min(requestedHaloPx, iconCssPx * MAX_HALO_FACTOR);
 }
 
 /**
- * Per-feature scale factor consumed by `vesselScaleExpression()` to size a
- * vessel symbol so it spans its broadcast LOA on the chart. Returns
+ * Per-feature scale factor consumed by `vesselScaleAt()` and `vesselScaleDamped()`
+ * to size a vessel symbol so it spans its broadcast LOA on the chart. Returns
  * `length / cos(latitude)` (in meters); the cosine term folds in Web Mercator
  * latitude stretching so the rendered length is correct at any latitude.
  */
@@ -55,7 +85,7 @@ export function vesselMppFactor(lengthMeters: number, latitudeDegrees: number): 
  * `mppFactor` property (`LOA / cos(latitude)`; see `vesselMppFactor`).
  */
 export function vesselScaleAt(zoom: number): ExpressionSpecification {
-  const k = 1 / (METERS_PER_PIXEL_Z0 * NATURAL_LAYOUT_PX);
+  const k = 1 / (METERS_PER_PIXEL_Z0 * ICON_PX);
   return ["*", ["get", "mppFactor"], k * 2 ** zoom];
 }
 
