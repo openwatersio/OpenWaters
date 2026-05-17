@@ -3,7 +3,9 @@ import {
   clearAIS,
   flushAIS,
   pruneStaleVessels,
+  shouldAccept,
   updateAISVessel,
+  vesselPrimarySource,
 } from "@/ais/hooks/useAIS";
 
 beforeEach(() => {
@@ -151,6 +153,215 @@ describe("useAIS", () => {
       flushAIS();
       clearAIS();
       expect(aisState.vessels).toEqual({});
+    });
+  });
+
+  describe("shouldAccept", () => {
+    it("accepts when nothing exists yet", () => {
+      expect(
+        shouldAccept(undefined, { value: 1, timestamp: 100, source: "x" }),
+      ).toBe(true);
+    });
+
+    it("accepts strictly-newer timestamps", () => {
+      expect(
+        shouldAccept(
+          { value: 1, timestamp: 100, source: "a" },
+          { value: 2, timestamp: 101, source: "b" },
+        ),
+      ).toBe(true);
+    });
+
+    it("drops older timestamps", () => {
+      expect(
+        shouldAccept(
+          { value: 1, timestamp: 100, source: "a" },
+          { value: 2, timestamp: 99, source: "b" },
+        ),
+      ).toBe(false);
+    });
+
+    it("drops equal timestamps", () => {
+      // Same broadcast received via two pipes — first writer wins, no overwrite.
+      expect(
+        shouldAccept(
+          { value: 1, timestamp: 100, source: "a" },
+          { value: 2, timestamp: 100, source: "b" },
+        ),
+      ).toBe(false);
+    });
+  });
+
+  describe("merge gate in updateAISVessel", () => {
+    it("drops older-timestamp updates for an existing path", () => {
+      updateAISVessel("211234567", {
+        "navigation.position": {
+          value: { latitude: 47.6, longitude: -122.3 },
+          timestamp: 2000,
+          source: "signalk.local",
+        },
+      });
+      flushAIS();
+      // Older timestamp from another source — should not overwrite.
+      updateAISVessel("211234567", {
+        "navigation.position": {
+          value: { latitude: 0, longitude: 0 },
+          timestamp: 1000,
+          source: "aisstream",
+        },
+      });
+      flushAIS();
+
+      const dp = aisState.vessels["211234567"].data["navigation.position"];
+      expect(dp?.value).toEqual({ latitude: 47.6, longitude: -122.3 });
+      expect(dp?.source).toBe("signalk.local");
+    });
+
+    it("accepts newer-timestamp updates from any source", () => {
+      updateAISVessel("211234567", {
+        "navigation.position": {
+          value: { latitude: 47.6, longitude: -122.3 },
+          timestamp: 1000,
+          source: "aisstream",
+        },
+      });
+      flushAIS();
+      updateAISVessel("211234567", {
+        "navigation.position": {
+          value: { latitude: 48.0, longitude: -123.0 },
+          timestamp: 2000,
+          source: "signalk.local",
+        },
+      });
+      flushAIS();
+
+      const dp = aisState.vessels["211234567"].data["navigation.position"];
+      expect(dp?.value).toEqual({ latitude: 48.0, longitude: -123.0 });
+      expect(dp?.source).toBe("signalk.local");
+    });
+
+    it("merges different paths from different sources", () => {
+      updateAISVessel("211234567", {
+        "navigation.position": {
+          value: { latitude: 47.6, longitude: -122.3 },
+          timestamp: 1000,
+          source: "signalk.local",
+        },
+      });
+      updateAISVessel("211234567", {
+        "design.aisShipType": {
+          value: 70,
+          timestamp: 2000,
+          source: "aisstream",
+        },
+      });
+      flushAIS();
+
+      const vessel = aisState.vessels["211234567"];
+      expect(vessel.data["navigation.position"]?.source).toBe("signalk.local");
+      expect(vessel.data["design.aisShipType"]?.source).toBe("aisstream");
+    });
+
+    it("collapses older-then-newer within a single flush window", () => {
+      // First call: queue an older value into the buffer.
+      updateAISVessel("211234567", {
+        "navigation.position": {
+          value: { latitude: 0, longitude: 0 },
+          timestamp: 1000,
+          source: "aisstream",
+        },
+      });
+      // Second call before flush: newer value should replace the buffered one.
+      updateAISVessel("211234567", {
+        "navigation.position": {
+          value: { latitude: 47.6, longitude: -122.3 },
+          timestamp: 2000,
+          source: "signalk.local",
+        },
+      });
+      flushAIS();
+
+      const dp = aisState.vessels["211234567"].data["navigation.position"];
+      expect(dp?.value).toEqual({ latitude: 47.6, longitude: -122.3 });
+      expect(dp?.source).toBe("signalk.local");
+    });
+  });
+
+  describe("vesselPrimarySource", () => {
+    it("returns 'unknown' when the vessel has no data", () => {
+      expect(
+        vesselPrimarySource({ mmsi: "211234567", data: {}, lastSeen: 0 }),
+      ).toBe("unknown");
+    });
+
+    it("identifies signalk family by prefix", () => {
+      expect(
+        vesselPrimarySource({
+          mmsi: "211234567",
+          lastSeen: 0,
+          data: {
+            "navigation.position": {
+              value: { latitude: 0, longitude: 0 },
+              timestamp: 100,
+              source: "signalk.signalk-abc",
+            },
+          },
+        }),
+      ).toBe("signalk");
+    });
+
+    it("identifies nmea family by prefix", () => {
+      expect(
+        vesselPrimarySource({
+          mmsi: "211234567",
+          lastSeen: 0,
+          data: {
+            "navigation.position": {
+              value: { latitude: 0, longitude: 0 },
+              timestamp: 100,
+              source: "nmea.nmea-tcp-xyz",
+            },
+          },
+        }),
+      ).toBe("nmea");
+    });
+
+    it("identifies aisstream by exact match", () => {
+      expect(
+        vesselPrimarySource({
+          mmsi: "211234567",
+          lastSeen: 0,
+          data: {
+            "navigation.position": {
+              value: { latitude: 0, longitude: 0 },
+              timestamp: 100,
+              source: "aisstream",
+            },
+          },
+        }),
+      ).toBe("aisstream");
+    });
+
+    it("returns the family of the most-recent timestamp when sources mix", () => {
+      // Old AIS Stream + newer Signal K → Signal K wins.
+      expect(
+        vesselPrimarySource({
+          mmsi: "211234567",
+          lastSeen: 0,
+          data: {
+            "design.aisShipType": {
+              value: 70,
+              timestamp: 100,
+              source: "aisstream",
+            },
+            "navigation.position": {
+              value: { latitude: 0, longitude: 0 },
+              timestamp: 200,
+              source: "signalk.local",
+            },
+          },
+        }),
+      ).toBe("signalk");
     });
   });
 });

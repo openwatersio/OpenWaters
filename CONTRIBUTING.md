@@ -32,9 +32,16 @@ This project is built with [Expo](https://expo.dev/), a framework and platform f
 
 ```sh
 npm install
+cp .env.example .env.local # then fill in any keys you have (optional)
 npx expo prebuild          # generate native projects
 npx expo run:ios
 ```
+
+`.env.local` is gitignored and loaded automatically by Expo CLI. Variables
+prefixed with `EXPO_PUBLIC_` (e.g. `EXPO_PUBLIC_AISSTREAM_API_KEY`) are inlined
+into the JS bundle by Metro's Babel plugin and read at runtime via
+`process.env.EXPO_PUBLIC_*`. Missing keys degrade gracefully — features that
+need them stay disabled.
 
 ### Development Commands
 
