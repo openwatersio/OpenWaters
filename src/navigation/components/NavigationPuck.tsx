@@ -206,7 +206,7 @@ export const NavigationPuck = memo(function NavigationPuck() {
           type="symbol"
           layout={{
             "icon-image": "nav-puck",
-            "icon-size": iconSize(44),
+            "icon-size": iconSize(28),
             "icon-rotate": ["get", "heading"],
             "icon-rotation-alignment": "map",
             "icon-pitch-alignment": "map",
