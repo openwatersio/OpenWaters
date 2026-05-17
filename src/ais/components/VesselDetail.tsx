@@ -2,7 +2,7 @@ import MarkerButton from "@/markers/components/MarkerButton";
 import RouteButton from "@/routes/components/RouteButton";
 import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
 import SheetHeader from "@/ui/SheetHeader";
-import { useAISVessel } from "@/ais/hooks/useAIS";
+import { type SourceFamily, useAISVessel, vesselPrimarySource } from "@/ais/hooks/useAIS";
 import { useNavigation, usePosition } from "@/navigation/hooks/useNavigation";
 import { toDepth, toDistance, toSpeed } from "@/hooks/usePreferredUnits";
 import { calculateCPA, formatBearing } from "@/geo";
@@ -46,6 +46,16 @@ function shipTypeName(code: number | undefined): string {
   if (code >= 70 && code <= 79) return "Cargo";
   if (code >= 80 && code <= 89) return "Tanker";
   return `Other (${code})`;
+}
+
+/** Human-readable label for a vessel's data source. */
+function sourceLabel(family: SourceFamily): string {
+  switch (family) {
+    case "signalk": return "Signal K";
+    case "nmea": return "NMEA";
+    case "aisstream": return "AIS Stream";
+    case "unknown": return "—";
+  }
 }
 
 /** Determine AIS class from MMSI pattern */
@@ -241,6 +251,9 @@ export default function VesselDetail({ id }: { id: string }) {
             </LabeledContent>
             <LabeledContent label="IMO">
               <Text modifiers={valueMods}>{imo ?? "—"}</Text>
+            </LabeledContent>
+            <LabeledContent label="Source">
+              <Text modifiers={valueMods}>{sourceLabel(vesselPrimarySource(vessel))}</Text>
             </LabeledContent>
           </Section>
         </Form>

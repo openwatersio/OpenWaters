@@ -17,43 +17,64 @@
           "_signalk-ws._tcp",
           "_nmea-0183._tcp"
         ],
-        "UIBackgroundModes": ["location", "processing"],
+        "UIBackgroundModes": [
+          "location",
+          "processing"
+        ],
         "CFBundleDocumentTypes": [
           {
             "CFBundleTypeName": "MBTiles Chart Archive",
             "CFBundleTypeRole": "Viewer",
             "LSHandlerRank": "Alternate",
-            "LSItemContentTypes": ["io.openwaters.mbtiles"]
+            "LSItemContentTypes": [
+              "io.openwaters.mbtiles"
+            ]
           },
           {
             "CFBundleTypeName": "GPX Route",
             "CFBundleTypeRole": "Viewer",
             "LSHandlerRank": "Alternate",
-            "LSItemContentTypes": ["com.topografix.gpx"]
+            "LSItemContentTypes": [
+              "com.topografix.gpx"
+            ]
           },
           {
             "CFBundleTypeName": "ZIP Archive",
             "CFBundleTypeRole": "Viewer",
             "LSHandlerRank": "Alternate",
-            "LSItemContentTypes": ["public.zip-archive"]
+            "LSItemContentTypes": [
+              "public.zip-archive"
+            ]
           }
         ],
         "UTImportedTypeDeclarations": [
           {
             "UTTypeIdentifier": "io.openwaters.mbtiles",
             "UTTypeDescription": "MBTiles Chart Archive",
-            "UTTypeConformsTo": ["public.database", "public.data"],
+            "UTTypeConformsTo": [
+              "public.database",
+              "public.data"
+            ],
             "UTTypeTagSpecification": {
-              "public.filename-extension": ["mbtiles"]
+              "public.filename-extension": [
+                "mbtiles"
+              ]
             }
           },
           {
             "UTTypeIdentifier": "com.topografix.gpx",
             "UTTypeDescription": "GPX Route",
-            "UTTypeConformsTo": ["public.xml", "public.text"],
+            "UTTypeConformsTo": [
+              "public.xml",
+              "public.text"
+            ],
             "UTTypeTagSpecification": {
-              "public.filename-extension": ["gpx"],
-              "public.mime-type": ["application/gpx+xml"]
+              "public.filename-extension": [
+                "gpx"
+              ],
+              "public.mime-type": [
+                "application/gpx+xml"
+              ]
             }
           }
         ],
@@ -75,19 +96,30 @@
         "NSPrivacyAccessedAPITypes": [
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
-            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
           },
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
-            "NSPrivacyAccessedAPITypeReasons": ["0A2A.1", "3B52.1", "C617.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "0A2A.1",
+              "3B52.1",
+              "C617.1"
+            ]
           },
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
-            "NSPrivacyAccessedAPITypeReasons": ["E174.1", "85F4.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "E174.1",
+              "85F4.1"
+            ]
           },
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
-            "NSPrivacyAccessedAPITypeReasons": ["35F9.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "35F9.1"
+            ]
           }
         ]
       },

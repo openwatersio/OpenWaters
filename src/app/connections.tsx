@@ -1,3 +1,7 @@
+import {
+  setAISStreamEnabled,
+  useAISStream,
+} from "@/aisstream/hooks/useAISStream";
 import useTheme from "@/hooks/useTheme";
 import {
   type DiscoveredService,
@@ -11,7 +15,7 @@ import {
   useConnections,
 } from "@/instruments/hooks/useConnections";
 import SheetView from "@/ui/SheetView";
-import { Button, Host, HStack, Image, List, Picker, ProgressView, Section, Spacer, Text, TextField, VStack } from "@expo/ui/swift-ui";
+import { Button, Host, HStack, Image, List, Picker, ProgressView, Section, Spacer, Text, TextField, Toggle, VStack } from "@expo/ui/swift-ui";
 import { autocorrectionDisabled, buttonStyle, clipShape, font, foregroundStyle, frame, keyboardType, labelStyle, onTapGesture, pickerStyle, progressViewStyle, tag, textInputAutocapitalization, tint } from "@expo/ui/swift-ui/modifiers";
 import { router, Stack } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -36,6 +40,7 @@ function StatusIcon({ status, hasError }: { status: ConnectionStatus; hasError: 
 
 export default function Connections() {
   const { connections } = useConnections();
+  const aisStream = useAISStream();
   const [discovered, setDiscovered] = useState<DiscoveredService[]>([]);
   const [addType, setAddType] = useState<"signalk" | "nmea">("signalk");
   const [signalKUrl, setSignalKUrl] = useState("");
@@ -121,6 +126,35 @@ export default function Connections() {
 
       <Host style={{ flex: 1 }}>
         <List>
+          <Section
+            title="AIS Stream"
+            footer={
+              <Text>
+                Streams worldwide AIS vessel positions over the internet from aisstream.io. Shows vessels beyond your AIS receiver's range, or anywhere when no receiver is connected. Turn off to save cellular data.
+              </Text>
+            }
+          >
+            <HStack spacing={12}>
+              <VStack alignment="leading" spacing={2}>
+                <Text modifiers={[foregroundStyle("primary"), font({ weight: "semibold" })]}>
+                  Internet AIS
+                </Text>
+                <Text modifiers={[foregroundStyle("secondary"), font({ size: 12 })]}>
+                  aisstream.io
+                </Text>
+              </VStack>
+              <Spacer />
+              <StatusIcon
+                status={aisStream.status}
+                hasError={!!aisStream.error}
+              />
+              <Toggle
+                isOn={aisStream.enabled}
+                onIsOnChange={setAISStreamEnabled}
+              />
+            </HStack>
+          </Section>
+
           {connections.length > 0 ? (
             <Section title="Connections">
               {connections.map((conn) => (

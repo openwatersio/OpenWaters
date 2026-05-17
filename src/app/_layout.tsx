@@ -1,3 +1,4 @@
+import { activate as activateAISStream, deactivate as deactivateAISStream } from "@/aisstream";
 import { cancelAllDownloads } from "@/charts/download";
 import { useActiveTheme } from "@/charts/hooks/useCharts";
 import DisclaimerScreen from "@/disclaimer/components/DisclaimerScreen";
@@ -48,6 +49,12 @@ function RootLayout() {
   useEffect(() => {
     connectAll();
     return () => disconnectAll();
+  }, []);
+
+  // Bring up the AIS Stream cloud feed if enabled
+  useEffect(() => {
+    activateAISStream();
+    return () => deactivateAISStream();
   }, []);
 
   // Handle GPX/ZIP files opened via iOS share sheet or "Open in"
