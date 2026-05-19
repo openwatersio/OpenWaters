@@ -171,7 +171,7 @@ const LOOKAHEAD_RATIO = 0.4;
  * 0°/360° wraparound problem.
  *
  * Alpha ≈ 0.08 means ~12 updates to reach ~63% of a new heading,
- * which at 1 Hz GPS feels like a ~5 second settling time.
+ * which at 1 Hz GPS corresponds to roughly a 12 second settling time.
  */
 const ALPHA_MIN = 0.05; // near-stationary: very smooth
 const ALPHA_MAX = 0.4;  // fast moving: responsive
