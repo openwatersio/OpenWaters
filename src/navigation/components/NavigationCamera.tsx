@@ -210,7 +210,7 @@ function resetSmoothedCourse() {
  * third of the screen.
  *
  * In "course" mode the map rotates with heading, so "ahead" is always the
- * top of the screen → constant bottom padding. In "default" (north-up) mode,
+ * top of the screen → constant top padding. In "default" (north-up) mode,
  * the smoothed heading is decomposed into screen-space padding via sin/cos.
  */
 function lookaheadPadding(
