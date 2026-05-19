@@ -18,7 +18,7 @@ const speedUnits: Record<SpeedUnit, UnitInfo & { fromMps: number }> = {
   'km/h': { abbr: 'km/h', singular: 'Kilometer per hour', plural: 'Kilometers per hour', fromMps: 3.6 },
 };
 
-const distanceUnitDefs: Record<DistanceUnit, UnitInfo & { fromMeters: number }> = {
+export const distanceUnitDefs: Record<DistanceUnit, UnitInfo & { fromMeters: number }> = {
   'nm': { abbr: 'nm', singular: 'Nautical Mile', plural: 'Nautical Miles', fromMeters: 1 / 1852 },
   'mi': { abbr: 'mi', singular: 'Mile', plural: 'Miles', fromMeters: 1 / 1609.344 },
   'km': { abbr: 'km', singular: 'Kilometer', plural: 'Kilometers', fromMeters: 0.001 },

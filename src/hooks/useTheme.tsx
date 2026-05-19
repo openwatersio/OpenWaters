@@ -49,6 +49,8 @@ const tokens = {
   markers: { custom: "#007AFF" },
   ais: { custom: "#25AC00" },
   aton: { custom: "#F59E0B" },
+  measurements: { custom: { light: "#000000", dark: "#EEEEEE" } },
+
 
   // ── Chrome ────────────────────────────────────────────────
   separator: { ios: "opaqueSeparator" },

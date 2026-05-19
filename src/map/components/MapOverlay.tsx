@@ -6,6 +6,7 @@ import { FollowLocationButton } from "@/map/components/FollowLocationButton";
 import { MenuButton } from "@/map/components/MenuButton";
 import { ZoomButtons } from "@/map/components/ZoomButtons";
 import { useSheetOffset } from "@/map/hooks/useSheetPosition";
+import { DividerButton } from "@/measurements/components/DividerButton";
 import TrackRecordButton from "@/tracks/components/TrackRecordButton";
 import {
   GlassEffectContainer,
@@ -68,6 +69,7 @@ export default function MapOverlay() {
               <GlassEffectContainer>
                 <VStack spacing={16} modifiers={[tint("primary")]}>
                   <Compass />
+                  <DividerButton />
                   <ZoomButtons />
                   <FollowLocationButton />
                   <MenuButton />

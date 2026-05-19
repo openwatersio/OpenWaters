@@ -152,6 +152,8 @@ jest.mock("@expo/ui/swift-ui", () => {
       React.createElement(View, props, children),
     GlassEffectContainer: ({ children, ...props }: any) =>
       React.createElement(View, props, children),
+    RNHostView: ({ children, ...props }: any) =>
+      React.createElement(View, props, children),
   };
 });
 

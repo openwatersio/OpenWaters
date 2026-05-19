@@ -2,6 +2,7 @@ import { setThemePreference, useThemePreference, type ThemePreference } from "@/
 import { closeDatabase } from "@/database";
 import { ARRIVAL_RADIUS_OPTIONS, describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits, type ArrivalRadius } from "@/hooks/usePreferredUnits";
 import { setTelemetryEnabled, useTelemetry } from "@/hooks/useTelemetry";
+import { setMeasurements, useMeasurements } from "@/measurements/useMeasurements";
 import log from "@/logger";
 import SheetView from "@/ui/SheetView";
 import { Button, Host, List, Picker, Section, Text, Toggle, VStack } from "@expo/ui/swift-ui";
@@ -73,6 +74,7 @@ export default function Settings() {
   const { speed, distance, depth, temperature, arrivalRadius, arriveOnCircleOnly } = usePreferredUnits();
   const { preference: themePreference } = useThemePreference();
   const { enabled: telemetryEnabled } = useTelemetry();
+  const { rangeRings } = useMeasurements();
 
   return (
     <SheetView id="settings">
@@ -144,6 +146,13 @@ export default function Settings() {
                   </Text>
                 ))}
               </Picker>
+            </Section>
+            <Section title="Measurements">
+              <Toggle
+                label="Range rings"
+                isOn={rangeRings}
+                onIsOnChange={(value) => setMeasurements({ rangeRings: value })}
+              />
             </Section>
             <Section title="Routes">
               <Picker

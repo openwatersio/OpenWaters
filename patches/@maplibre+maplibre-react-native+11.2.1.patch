@@ -1,0 +1,272 @@
+diff --git a/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotation.m b/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotation.m
+index 71ee64d..f58dfa7 100644
+--- a/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotation.m
++++ b/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotation.m
+@@ -253,6 +253,15 @@ const float CENTER_Y_OFFSET_BASE = -0.5f;
+     return;
+   }
+ 
++  // PATCH: Don't fight the drag gesture: setting `coordinate` during a drag
++  // would reproject the annotation back to its original location and cancel
++  // the drag. Belt-and-suspenders for the diffing fix in
++  // MLRNPointAnnotationComponentView.mm — defends against any future caller
++  // that funnels through here.
++  if (self.dragState != MLNAnnotationViewDragStateNone) {
++    return;
++  }
++
+   double lng = [_reactLngLat[0] doubleValue];
+   double lat = [_reactLngLat[1] doubleValue];
+ 
+diff --git a/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotationComponentView.mm b/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotationComponentView.mm
+index 9ebd2ba..b29270b 100644
+--- a/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotationComponentView.mm
++++ b/node_modules/@maplibre/maplibre-react-native/ios/components/annotations/point-annotation/MLRNPointAnnotationComponentView.mm
+@@ -275,8 +275,20 @@ using namespace facebook::react;
+     [_view setReactDraggable:newViewProps.draggable];
+   }
+ 
+-  if (!oldViewProps.lngLat.isNull() || !newViewProps.lngLat.isNull()) {
+-    if (newViewProps.lngLat.isArray() && newViewProps.lngLat.size() >= 2) {
++  // PATCH: only forward lngLat when it actually changed. The original check
++  // (`!oldViewProps.lngLat.isNull() || !newViewProps.lngLat.isNull()`) is
++  // always true once a valid lngLat has been set, so every Fabric props
++  // update was calling setReactLngLat:, which dispatches a coordinate reset
++  // on the main queue. During a drag this fights and cancels the gesture.
++  // All other props in this method already diff old vs new — bring lngLat
++  // in line with that pattern.
++  if (newViewProps.lngLat.isArray() && newViewProps.lngLat.size() >= 2) {
++    BOOL lngLatChanged = YES;
++    if (oldViewProps.lngLat.isArray() && oldViewProps.lngLat.size() >= 2) {
++      lngLatChanged = (oldViewProps.lngLat[0].asDouble() != newViewProps.lngLat[0].asDouble() ||
++                       oldViewProps.lngLat[1].asDouble() != newViewProps.lngLat[1].asDouble());
++    }
++    if (lngLatChanged) {
+       NSArray<NSNumber *> *lngLat =
+           @[ @(newViewProps.lngLat[0].asDouble()), @(newViewProps.lngLat[1].asDouble()) ];
+       [_view setReactLngLat:lngLat];
+diff --git a/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapView.h b/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapView.h
+index f24e510..3082de9 100644
+--- a/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapView.h
++++ b/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapView.h
+@@ -49,6 +49,13 @@ typedef void (^StyleLoadedBlock)(MLNStyle *__nonnull style);
+ @property (nonatomic, assign) BOOL reactRotateEnabled;
+ @property (nonatomic, assign) BOOL reactPitchEnabled;
+ 
++/**
++ * Override the minimum press duration before a draggable annotation begins
++ * dragging. -1 (default) leaves MapLibre's value untouched (~0.3s); 0 makes
++ * the drag start immediately on touch.
++ */
++@property (nonatomic, assign) double reactDragMinimumPressDuration;
++
+ @property (nonatomic, assign) BOOL reactAttributionEnabled;
+ @property (nonatomic, strong, nullable)
+     NSDictionary<NSString *, NSNumber *> *reactAttributionPosition;
+diff --git a/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapView.m b/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapView.m
+index ac3892a..3db5704 100644
+--- a/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapView.m
++++ b/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapView.m
+@@ -14,6 +14,10 @@
+ @implementation MLRNMapView {
+   BOOL _pendingInitialLayout;
+   CGPoint _lastTapPoint;
++  // Reference to our own long-press recognizer (for the onLongPress event)
++  // so `_applyDragMinimumPressDuration` can skip it when retuning the
++  // annotation-drag recognizer.
++  UILongPressGestureRecognizer *_reactLongPress;
+ }
+ 
+ static double const DEG2RAD = M_PI / 180;
+@@ -32,6 +36,7 @@ static double const M2PI = M_PI * 2;
+     _reactTouchZoomEnabled = YES;
+     _reactDoubleTapZoomEnabled = YES;
+     _reactDoubleTapHoldZoomEnabled = YES;
++    _reactDragMinimumPressDuration = -1; // -1 = leave MapLibre's default alone
+     _cameraUpdateQueue = [[CameraUpdateQueue alloc] init];
+     _sources = [[NSMutableArray alloc] init];
+     _images = [[NSMutableArray alloc] init];
+@@ -66,10 +71,40 @@ static double const M2PI = M_PI * 2;
+ 
+     [self addGestureRecognizer:tap];
+     [self addGestureRecognizer:longPress];
++    _reactLongPress = longPress;
+   }
+   return self;
+ }
+ 
++- (void)setReactDragMinimumPressDuration:(double)duration {
++  _reactDragMinimumPressDuration = duration;
++  [self _applyDragMinimumPressDuration];
++}
++
++// Apply the configured duration to MapLibre's annotation-drag UILongPressGestureRecognizer.
++// MLNMapView attaches several long-press recognizers; we identify the drag one by
++// elimination: it's a UILongPressGestureRecognizer that isn't the double-tap-hold
++// zoom one (which has `minimumPressDuration == 0`) and isn't our own onLongPress
++// recognizer (`_reactLongPress`).
++- (void)_applyDragMinimumPressDuration {
++  if (_reactDragMinimumPressDuration < 0) {
++    return;
++  }
++  for (UIGestureRecognizer *recognizer in self.gestureRecognizers) {
++    if (![recognizer isKindOfClass:[UILongPressGestureRecognizer class]]) {
++      continue;
++    }
++    UILongPressGestureRecognizer *lp = (UILongPressGestureRecognizer *)recognizer;
++    if (lp == _reactLongPress) {
++      continue;
++    }
++    if (lp.minimumPressDuration == 0) {
++      continue;
++    }
++    lp.minimumPressDuration = _reactDragMinimumPressDuration;
++  }
++}
++
+ - (void)layoutSubviews {
+   [super layoutSubviews];
+   if (_pendingInitialLayout) {
+diff --git a/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapViewComponentView.mm b/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapViewComponentView.mm
+index f354c7b..35c6b8c 100644
+--- a/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapViewComponentView.mm
++++ b/node_modules/@maplibre/maplibre-react-native/ios/components/map-view/MLRNMapViewComponentView.mm
+@@ -340,6 +340,10 @@ ViewState createViewState(NSDictionary *dict) {
+     [_view setPitchEnabled:newViewProps.touchPitch];
+   }
+ 
++  if (oldViewProps.dragMinimumPressDuration != newViewProps.dragMinimumPressDuration) {
++    [_view setReactDragMinimumPressDuration:newViewProps.dragMinimumPressDuration];
++  }
++
+   if (oldViewProps.tintColor != newViewProps.tintColor) {
+     [_view setTintColor:RCTUIColorFromSharedColor(newViewProps.tintColor)];
+   }
+diff --git a/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/AndroidTextureMapViewNativeComponent.d.ts b/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/AndroidTextureMapViewNativeComponent.d.ts
+index 47f536b..f7eeba5 100644
+--- a/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/AndroidTextureMapViewNativeComponent.d.ts
++++ b/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/AndroidTextureMapViewNativeComponent.d.ts
+@@ -48,6 +48,7 @@ export interface NativeProps extends ViewProps {
+     doubleTapHoldZoom?: CodegenTypes.WithDefault<boolean, true>;
+     touchRotate?: CodegenTypes.WithDefault<boolean, true>;
+     touchPitch?: CodegenTypes.WithDefault<boolean, true>;
++    dragMinimumPressDuration?: CodegenTypes.WithDefault<CodegenTypes.Double, -1>;
+     tintColor?: ColorValue | undefined;
+     attribution?: CodegenTypes.WithDefault<boolean, true>;
+     attributionPosition?: NativeOrnamentViewPosition;
+diff --git a/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/Map.d.ts b/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/Map.d.ts
+index 20bfebd..c81f97a 100644
+--- a/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/Map.d.ts
++++ b/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/Map.d.ts
+@@ -298,6 +298,13 @@ export interface MapProps extends BaseProps, ViewProps {
+      * @defaultValue true
+      */
+     touchPitch?: boolean;
++    /**
++     * Override the minimum press duration (seconds) before a draggable
++     * annotation begins dragging. iOS only; set to 0 for immediate drag.
++     *
++     * @defaultValue -1 (use MapLibre's default)
++     */
++    dragMinimumPressDuration?: number;
+     /**
+      * Tints UI elements like the attribution button
+      */
+diff --git a/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/MapViewNativeComponent.d.ts b/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/MapViewNativeComponent.d.ts
+index e337bbf..6263e68 100644
+--- a/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/MapViewNativeComponent.d.ts
++++ b/node_modules/@maplibre/maplibre-react-native/lib/typescript/commonjs/components/map/MapViewNativeComponent.d.ts
+@@ -48,6 +48,7 @@ export interface NativeProps extends ViewProps {
+     doubleTapHoldZoom?: CodegenTypes.WithDefault<boolean, true>;
+     touchRotate?: CodegenTypes.WithDefault<boolean, true>;
+     touchPitch?: CodegenTypes.WithDefault<boolean, true>;
++    dragMinimumPressDuration?: CodegenTypes.WithDefault<CodegenTypes.Double, -1>;
+     tintColor?: ColorValue | undefined;
+     attribution?: CodegenTypes.WithDefault<boolean, true>;
+     attributionPosition?: NativeOrnamentViewPosition;
+diff --git a/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/AndroidTextureMapViewNativeComponent.d.ts b/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/AndroidTextureMapViewNativeComponent.d.ts
+index 47f536b..f7eeba5 100644
+--- a/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/AndroidTextureMapViewNativeComponent.d.ts
++++ b/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/AndroidTextureMapViewNativeComponent.d.ts
+@@ -48,6 +48,7 @@ export interface NativeProps extends ViewProps {
+     doubleTapHoldZoom?: CodegenTypes.WithDefault<boolean, true>;
+     touchRotate?: CodegenTypes.WithDefault<boolean, true>;
+     touchPitch?: CodegenTypes.WithDefault<boolean, true>;
++    dragMinimumPressDuration?: CodegenTypes.WithDefault<CodegenTypes.Double, -1>;
+     tintColor?: ColorValue | undefined;
+     attribution?: CodegenTypes.WithDefault<boolean, true>;
+     attributionPosition?: NativeOrnamentViewPosition;
+diff --git a/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/Map.d.ts b/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/Map.d.ts
+index 20bfebd..c81f97a 100644
+--- a/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/Map.d.ts
++++ b/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/Map.d.ts
+@@ -298,6 +298,13 @@ export interface MapProps extends BaseProps, ViewProps {
+      * @defaultValue true
+      */
+     touchPitch?: boolean;
++    /**
++     * Override the minimum press duration (seconds) before a draggable
++     * annotation begins dragging. iOS only; set to 0 for immediate drag.
++     *
++     * @defaultValue -1 (use MapLibre's default)
++     */
++    dragMinimumPressDuration?: number;
+     /**
+      * Tints UI elements like the attribution button
+      */
+diff --git a/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/MapViewNativeComponent.d.ts b/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/MapViewNativeComponent.d.ts
+index e337bbf..6263e68 100644
+--- a/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/MapViewNativeComponent.d.ts
++++ b/node_modules/@maplibre/maplibre-react-native/lib/typescript/module/components/map/MapViewNativeComponent.d.ts
+@@ -48,6 +48,7 @@ export interface NativeProps extends ViewProps {
+     doubleTapHoldZoom?: CodegenTypes.WithDefault<boolean, true>;
+     touchRotate?: CodegenTypes.WithDefault<boolean, true>;
+     touchPitch?: CodegenTypes.WithDefault<boolean, true>;
++    dragMinimumPressDuration?: CodegenTypes.WithDefault<CodegenTypes.Double, -1>;
+     tintColor?: ColorValue | undefined;
+     attribution?: CodegenTypes.WithDefault<boolean, true>;
+     attributionPosition?: NativeOrnamentViewPosition;
+diff --git a/node_modules/@maplibre/maplibre-react-native/src/components/map/AndroidTextureMapViewNativeComponent.ts b/node_modules/@maplibre/maplibre-react-native/src/components/map/AndroidTextureMapViewNativeComponent.ts
+index af4549f..8361014 100644
+--- a/node_modules/@maplibre/maplibre-react-native/src/components/map/AndroidTextureMapViewNativeComponent.ts
++++ b/node_modules/@maplibre/maplibre-react-native/src/components/map/AndroidTextureMapViewNativeComponent.ts
+@@ -65,6 +65,7 @@ export interface NativeProps extends ViewProps {
+   doubleTapHoldZoom?: CodegenTypes.WithDefault<boolean, true>;
+   touchRotate?: CodegenTypes.WithDefault<boolean, true>;
+   touchPitch?: CodegenTypes.WithDefault<boolean, true>;
++  dragMinimumPressDuration?: CodegenTypes.WithDefault<CodegenTypes.Double, -1>;
+ 
+   tintColor?: ColorValue | undefined;
+ 
+diff --git a/node_modules/@maplibre/maplibre-react-native/src/components/map/Map.tsx b/node_modules/@maplibre/maplibre-react-native/src/components/map/Map.tsx
+index d8ccd4e..776a4a7 100644
+--- a/node_modules/@maplibre/maplibre-react-native/src/components/map/Map.tsx
++++ b/node_modules/@maplibre/maplibre-react-native/src/components/map/Map.tsx
+@@ -366,6 +366,15 @@ export interface MapProps extends BaseProps, ViewProps {
+    */
+   touchPitch?: boolean;
+ 
++  /**
++   * Override the minimum press duration (seconds) before a draggable
++   * annotation begins dragging. Defaults to MapLibre's value (~0.3s); set
++   * to `0` for immediate drag-on-touch. iOS only.
++   *
++   * @defaultValue -1 (use MapLibre's default)
++   */
++  dragMinimumPressDuration?: number;
++
+   /**
+    * Tints UI elements like the attribution button
+    */
+diff --git a/node_modules/@maplibre/maplibre-react-native/src/components/map/MapViewNativeComponent.ts b/node_modules/@maplibre/maplibre-react-native/src/components/map/MapViewNativeComponent.ts
+index 8d387ef..057d5fd 100644
+--- a/node_modules/@maplibre/maplibre-react-native/src/components/map/MapViewNativeComponent.ts
++++ b/node_modules/@maplibre/maplibre-react-native/src/components/map/MapViewNativeComponent.ts
+@@ -62,6 +62,7 @@ export interface NativeProps extends ViewProps {
+   doubleTapHoldZoom?: CodegenTypes.WithDefault<boolean, true>;
+   touchRotate?: CodegenTypes.WithDefault<boolean, true>;
+   touchPitch?: CodegenTypes.WithDefault<boolean, true>;
++  dragMinimumPressDuration?: CodegenTypes.WithDefault<CodegenTypes.Double, -1>;
+ 
+   tintColor?: ColorValue | undefined;
+ 
