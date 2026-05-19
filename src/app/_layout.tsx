@@ -21,6 +21,7 @@ import { setOverrideUserInterfaceStyle } from "expo-platform-colors";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { useColorScheme, View } from 'react-native';
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 function RootLayout() {
   const colorScheme = useColorScheme();
@@ -73,189 +74,183 @@ function RootLayout() {
     setTimeout(resumeImportIfNeeded, 0);
   }, []);
 
-  if (!hydrated) {
-    return (
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <View style={{ flex: 1 }} />
-      </ThemeProvider>
-    );
-  }
-
-  if (showDisclaimer) {
-    return (
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <DisclaimerScreen />
-      </ThemeProvider>
-    );
-  }
+  const themeValue = colorScheme === "dark" ? DarkTheme : DefaultTheme;
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="charts/index" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [0.5, 1],
-          sheetGrabberVisible: true,
-          sheetExpandsWhenScrolledToEdge: true,
-          title: "Charts",
-        }} />
-        <Stack.Screen name="charts/add" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [1],
-          sheetGrabberVisible: true,
-          title: "Add Chart Source",
-        }} />
-        <Stack.Screen name="charts/catalog/index" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [1],
-          sheetGrabberVisible: true,
-          title: "Chart Catalog",
-        }} />
-        <Stack.Screen name="charts/catalog/[id]" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [1],
-          sheetGrabberVisible: true,
-        }} />
-        <Stack.Screen name="charts/[id]/index" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [1],
-          sheetGrabberVisible: true,
-        }} />
-        <Stack.Screen name="charts/[id]/offline" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [0.3, 0.5, 1],
-        }} />
-        <Stack.Screen name="charts/[id]/download" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [0.4, 0.55],
-          sheetGrabberVisible: true,
-          title: "Download",
-        }} />
-        <Stack.Screen name="offline/index" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [1],
-          sheetGrabberVisible: true,
-          sheetExpandsWhenScrolledToEdge: true,
-          title: "Offline Data",
-        }} />
-        <Stack.Screen name="settings" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [1],
-          sheetGrabberVisible: true,
-          title: "Settings",
-        }} />
-        <Stack.Screen name="(menu)/about" options={{
-          presentation: "formSheet",
-          sheetAllowedDetents: [1],
-          title: "About",
-        }} />
-        <Stack.Screen name="(menu)/notice" options={{
-          presentation: "formSheet",
-          sheetAllowedDetents: [1],
-          title: "Notice",
-        }} />
-        <Stack.Screen name="(menu)/attributions" options={{
-          presentation: "formSheet",
-          sheetAllowedDetents: [1],
-          title: "Attributions",
-        }} />
-        <Stack.Screen name="(menu)/license" options={{
-          presentation: "formSheet",
-          sheetAllowedDetents: [1],
-          title: "License",
-        }} />
-        <Stack.Screen name="feature/[type]/[id]" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [0, 0.3, 0.5, 1],
-          sheetInitialDetentIndex: 1,
-          sheetGrabberVisible: true,
-        }} />
-        <Stack.Screen name="menu" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [0.5, 1],
-          sheetGrabberVisible: true,
-          headerShown: false,
-        }} />
-        <Stack.Screen name="tracks/index" options={{
-          presentation: "formSheet",
-          sheetAllowedDetents: [0.5, 1],
-          sheetInitialDetentIndex: 0,
-          sheetGrabberVisible: true,
-          sheetExpandsWhenScrolledToEdge: true,
-          title: "Tracks",
-        }} />
-        <Stack.Screen name="routes/index" options={{
-          presentation: "formSheet",
-          sheetAllowedDetents: [0.5, 1],
-          sheetInitialDetentIndex: 0,
-          sheetGrabberVisible: true,
-          sheetExpandsWhenScrolledToEdge: true,
-          title: "Routes",
-        }} />
-        <Stack.Screen name="route/[id]" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          // Updated dynamically by DetentProvider
-          sheetAllowedDetents: [0.1, 0.5, 1],
-          sheetGrabberVisible: true,
-        }} />
-        <Stack.Screen name="route/new" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          // Updated dynamically by DetentProvider
-          sheetAllowedDetents: [0.1, 0.5, 1],
-          sheetGrabberVisible: true,
-        }} />
-        <Stack.Screen name="markers/index" options={{
-          presentation: "formSheet",
-          sheetAllowedDetents: [0.5, 1],
-          sheetInitialDetentIndex: 0,
-          sheetGrabberVisible: true,
-          sheetExpandsWhenScrolledToEdge: true,
-          title: "Markers",
-        }} />
-        <Stack.Screen name="marker/edit" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [0.6],
-          sheetInitialDetentIndex: 0,
-          sheetGrabberVisible: true,
-        }} />
-        <Stack.Screen name="connection/[id]" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [1],
-          sheetInitialDetentIndex: 0,
-          sheetGrabberVisible: true,
-        }} />
-        <Stack.Screen name="import" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [1],
-          sheetGrabberVisible: true,
-          title: "Import",
-        }} />
-        <Stack.Screen name="connections" options={{
-          presentation: "formSheet",
-          sheetLargestUndimmedDetentIndex: "last",
-          sheetAllowedDetents: [1],
-          sheetGrabberVisible: true,
-          title: "Connections",
-        }} />
-      </Stack>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={themeValue}>
+        {!hydrated ? (
+          <View style={{ flex: 1 }} />
+        ) : showDisclaimer ? (
+          <DisclaimerScreen />
+        ) : (
+          <Stack>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="charts/index" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [0.5, 1],
+              sheetGrabberVisible: true,
+              sheetExpandsWhenScrolledToEdge: true,
+              title: "Charts",
+            }} />
+            <Stack.Screen name="charts/add" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [1],
+              sheetGrabberVisible: true,
+              title: "Add Chart Source",
+            }} />
+            <Stack.Screen name="charts/catalog/index" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [1],
+              sheetGrabberVisible: true,
+              title: "Chart Catalog",
+            }} />
+            <Stack.Screen name="charts/catalog/[id]" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [1],
+              sheetGrabberVisible: true,
+            }} />
+            <Stack.Screen name="charts/[id]/index" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [1],
+              sheetGrabberVisible: true,
+            }} />
+            <Stack.Screen name="charts/[id]/offline" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [0.3, 0.5, 1],
+            }} />
+            <Stack.Screen name="charts/[id]/download" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [0.4, 0.55],
+              sheetGrabberVisible: true,
+              title: "Download",
+            }} />
+            <Stack.Screen name="offline/index" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [1],
+              sheetGrabberVisible: true,
+              sheetExpandsWhenScrolledToEdge: true,
+              title: "Offline Data",
+            }} />
+            <Stack.Screen name="settings" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [1],
+              sheetGrabberVisible: true,
+              title: "Settings",
+            }} />
+            <Stack.Screen name="(menu)/about" options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: [1],
+              title: "About",
+            }} />
+            <Stack.Screen name="(menu)/notice" options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: [1],
+              title: "Notice",
+            }} />
+            <Stack.Screen name="(menu)/attributions" options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: [1],
+              title: "Attributions",
+            }} />
+            <Stack.Screen name="(menu)/license" options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: [1],
+              title: "License",
+            }} />
+            <Stack.Screen name="feature/[type]/[id]" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [0, 0.3, 0.5, 1],
+              sheetInitialDetentIndex: 1,
+              sheetGrabberVisible: true,
+            }} />
+            <Stack.Screen name="menu" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [0.5, 1],
+              sheetGrabberVisible: true,
+              headerShown: false,
+            }} />
+            <Stack.Screen name="tracks/index" options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: [0.5, 1],
+              sheetInitialDetentIndex: 0,
+              sheetGrabberVisible: true,
+              sheetExpandsWhenScrolledToEdge: true,
+              title: "Tracks",
+            }} />
+            <Stack.Screen name="routes/index" options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: [0.5, 1],
+              sheetInitialDetentIndex: 0,
+              sheetGrabberVisible: true,
+              sheetExpandsWhenScrolledToEdge: true,
+              title: "Routes",
+            }} />
+            <Stack.Screen name="route/[id]" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              // Updated dynamically by DetentProvider
+              sheetAllowedDetents: [0.1, 0.5, 1],
+              sheetGrabberVisible: true,
+            }} />
+            <Stack.Screen name="route/new" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              // Updated dynamically by DetentProvider
+              sheetAllowedDetents: [0.1, 0.5, 1],
+              sheetGrabberVisible: true,
+            }} />
+            <Stack.Screen name="markers/index" options={{
+              presentation: "formSheet",
+              sheetAllowedDetents: [0.5, 1],
+              sheetInitialDetentIndex: 0,
+              sheetGrabberVisible: true,
+              sheetExpandsWhenScrolledToEdge: true,
+              title: "Markers",
+            }} />
+            <Stack.Screen name="marker/edit" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [0.6],
+              sheetInitialDetentIndex: 0,
+              sheetGrabberVisible: true,
+            }} />
+            <Stack.Screen name="connection/[id]" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [1],
+              sheetInitialDetentIndex: 0,
+              sheetGrabberVisible: true,
+            }} />
+            <Stack.Screen name="import" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [1],
+              sheetGrabberVisible: true,
+              title: "Import",
+            }} />
+            <Stack.Screen name="connections" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [1],
+              sheetGrabberVisible: true,
+              title: "Connections",
+            }} />
+          </Stack>
+        )}
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 

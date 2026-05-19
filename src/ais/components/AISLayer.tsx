@@ -149,8 +149,10 @@ export default function AISLayer() {
         const mppFactor = vesselMppFactor(vesselLength(vessel), pos.latitude);
         return {
           type: "Feature",
+          id: `vessel-${vessel.mmsi}`,
           properties: {
             mmsi: vessel.mmsi,
+            snappable: true,
             name: vesselName(vessel),
             rotation: vesselRotation(vessel),
             sog: vesselSOG(vessel),

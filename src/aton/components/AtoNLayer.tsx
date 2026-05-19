@@ -33,8 +33,10 @@ export default function AtoNLayer() {
         if (!pos) return null;
         return {
           type: "Feature",
+          id: `aton-${aton.id}`,
           properties: {
             id: aton.id,
+            snappable: true,
             name: atonName(aton),
             icon: ATON_ICON,
             color: ATON_COLOR,

@@ -74,7 +74,8 @@ export const NavigationPuck = memo(function NavigationPuck() {
         features: [
           {
             type: "Feature",
-            properties: { heading: headingValue },
+            id: "current-location",
+            properties: { heading: headingValue, snappable: true },
             // AnimatedPoint slots in at `geometry`, not `coordinates`:
             // its __getValue() returns `{type:"Point", coordinates:[...]}`,
             // a full geometry object.

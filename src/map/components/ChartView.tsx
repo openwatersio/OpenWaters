@@ -1,28 +1,31 @@
-import { cameraPositionState } from "@/map/hooks/useCameraPosition";
+import AISLayer from "@/ais/components/AISLayer";
+import AtoNLayer from "@/aton/components/AtoNLayer";
+import { DownloadRegionOverlay } from "@/charts/components/DownloadRegionOverlay";
 import { useMapStyle } from "@/charts/hooks/useCharts";
+import { findNearestLegIndex, metersPerPixel } from "@/geo";
+import { cameraPositionState } from "@/map/hooks/useCameraPosition";
 import { mapRef } from "@/map/hooks/useMapRef";
+import { useSelectionHandler } from "@/map/hooks/useSelection";
+import MarkerOverlay from "@/markers/components/MarkerOverlay";
+import { DividerGesture } from "@/measurements/components/DividerGesture";
+import { DividerOverlay } from "@/measurements/components/DividerOverlay";
+import { RangeRings } from "@/measurements/components/RangeRings";
+import { handleRegionDidChange, handleRegionIsChanging, NavigationCamera } from "@/navigation/components/NavigationCamera";
+import { NavigationPuck } from "@/navigation/components/NavigationPuck";
+import RouteOverlay from "@/routes/components/RouteOverlay";
 import {
   addRouteWaypoint,
   getActiveRoute,
   RouteMode,
   setActiveIndex
 } from "@/routes/hooks/useRoutes";
-import { useSelectionHandler } from "@/map/hooks/useSelection";
-import { findNearestLegIndex, metersPerPixel } from "@/geo";
+import TrackOverlay from "@/tracks/components/TrackOverlay";
 import { Images, Map, PressEvent } from "@maplibre/maplibre-react-native";
 import { useCallback } from "react";
 import { LogBox, NativeSyntheticEvent } from "react-native";
-import AISLayer from "@/ais/components/AISLayer";
-import AtoNLayer from "@/aton/components/AtoNLayer";
-import { DownloadRegionOverlay } from "@/charts/components/DownloadRegionOverlay";
-import { handleRegionDidChange, handleRegionIsChanging, NavigationCamera } from "@/navigation/components/NavigationCamera";
-import { NavigationPuck } from "@/navigation/components/NavigationPuck";
 import { MARKER_IMAGES } from "./AnnotationIcon";
-import SelectedLocationAnnotation from "./SelectedLocationAnnotation";
 import MapOverlay from "./MapOverlay";
-import MarkerOverlay from "@/markers/components/MarkerOverlay";
-import RouteOverlay from "@/routes/components/RouteOverlay";
-import TrackOverlay from "@/tracks/components/TrackOverlay";
+import SelectedLocationAnnotation from "./SelectedLocationAnnotation";
 
 // Downgrade expected MapLibre network errors from red overlay to warnings.
 LogBox.ignoreLogs([
@@ -64,45 +67,51 @@ export default function ChartView() {
   }, []);
 
   return <>
-    <Map
-      ref={mapRef}
-      style={{ flex: 1 }}
-      mapStyle={mapStyle}
-      touchRotate={false}
-      touchPitch={false}
-      attribution={false}
-      compass={false}
-      compassPosition={{ top: -2000, right: -2000 }}
-      onRegionIsChanging={handleRegionIsChanging}
-      onRegionDidChange={handleRegionDidChange}
-      onLongPress={handleLongPress}
-      onPress={handlePress}
-      logo={false}
-    >
-      <NavigationCamera />
-      <Images images={{
-        "vessel-default": { source: require("@/assets/map/png/vessel-default.png"), sdf: true },
-        "vessel-unknown": { source: require("@/assets/map/png/vessel-unknown.png"), sdf: true },
-        "vessel-cargo": { source: require("@/assets/map/png/vessel-cargo.png"), sdf: true },
-        "vessel-tanker": { source: require("@/assets/map/png/vessel-tanker.png"), sdf: true },
-        "vessel-passenger": { source: require("@/assets/map/png/vessel-passenger.png"), sdf: true },
-        "vessel-sailing": { source: require("@/assets/map/png/vessel-sailing.png"), sdf: true },
-        "vessel-pleasure": { source: require("@/assets/map/png/vessel-pleasure.png"), sdf: true },
-        "vessel-highspeed": { source: require("@/assets/map/png/vessel-highspeed.png"), sdf: true },
-        "vessel-fishing": { source: require("@/assets/map/png/vessel-fishing.png"), sdf: true },
-        "vessel-tug": { source: require("@/assets/map/png/vessel-tug.png"), sdf: true },
-        "nav-puck": { source: require("@/assets/map/png/vessel-puck.png"), sdf: true },
-        "aton-default": { source: require("@/assets/map/png/aton-default.png"), sdf: true },
-        ...MARKER_IMAGES,
-      }} />
-      <TrackOverlay />
-      <MarkerOverlay />
-      <RouteOverlay />
-      <AISLayer />
-      <AtoNLayer />
-      <SelectedLocationAnnotation />
-      <NavigationPuck />
-    </Map>
+    <DividerGesture>
+      <Map
+        ref={mapRef}
+        style={{ flex: 1 }}
+        mapStyle={mapStyle}
+        touchRotate={false}
+        touchPitch={false}
+        dragMinimumPressDuration={0}
+        attribution={false}
+        compass={false}
+        compassPosition={{ top: -2000, right: -2000 }}
+        onRegionIsChanging={handleRegionIsChanging}
+        onRegionDidChange={handleRegionDidChange}
+        onLongPress={handleLongPress}
+        onPress={handlePress}
+        logo={false}
+      >
+        <NavigationCamera />
+        <Images images={{
+          "vessel-default": { source: require("@/assets/map/png/vessel-default.png"), sdf: true },
+          "vessel-unknown": { source: require("@/assets/map/png/vessel-unknown.png"), sdf: true },
+          "vessel-cargo": { source: require("@/assets/map/png/vessel-cargo.png"), sdf: true },
+          "vessel-tanker": { source: require("@/assets/map/png/vessel-tanker.png"), sdf: true },
+          "vessel-passenger": { source: require("@/assets/map/png/vessel-passenger.png"), sdf: true },
+          "vessel-sailing": { source: require("@/assets/map/png/vessel-sailing.png"), sdf: true },
+          "vessel-pleasure": { source: require("@/assets/map/png/vessel-pleasure.png"), sdf: true },
+          "vessel-highspeed": { source: require("@/assets/map/png/vessel-highspeed.png"), sdf: true },
+          "vessel-fishing": { source: require("@/assets/map/png/vessel-fishing.png"), sdf: true },
+          "vessel-tug": { source: require("@/assets/map/png/vessel-tug.png"), sdf: true },
+          "nav-puck": { source: require("@/assets/map/png/vessel-puck.png"), sdf: true },
+          "divider-scope": { source: require("@/assets/map/png/divider-scope.png"), sdf: true },
+          "aton-default": { source: require("@/assets/map/png/aton-default.png"), sdf: true },
+          ...MARKER_IMAGES,
+        }} />
+        <RangeRings />
+        <TrackOverlay />
+        <RouteOverlay />
+        <DividerOverlay />
+        <MarkerOverlay />
+        <AISLayer />
+        <AtoNLayer />
+        <SelectedLocationAnnotation />
+        <NavigationPuck />
+      </Map>
+    </DividerGesture>
     <DownloadRegionOverlay />
     <MapOverlay />
   </>;

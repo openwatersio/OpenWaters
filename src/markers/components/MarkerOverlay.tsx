@@ -32,8 +32,10 @@ export default function MarkerOverlay() {
   const geojson = useMemo((): GeoJSON.FeatureCollection => {
     const features: GeoJSON.Feature[] = markers.map((marker) => ({
       type: "Feature" as const,
+      id: `marker-${marker.id}`,
       properties: {
         id: marker.id,
+        snappable: true,
         icon: markerIconImage(marker.icon),
         color: marker.color ? theme.adapt(marker.color) : theme.markers,
       },
