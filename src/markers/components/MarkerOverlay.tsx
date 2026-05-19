@@ -43,7 +43,7 @@ export default function MarkerOverlay() {
       },
     }));
     return { type: "FeatureCollection", features };
-  }, [markers, theme.markers, theme.adapt]);
+  }, [markers, theme]);
 
   const handlePress = useCallback(
     (e: NativeSyntheticEvent<{ features: GeoJSON.Feature[] }>) => {

@@ -241,8 +241,6 @@ async function seedFromLastKnownPosition() {
 
 seedFromLastKnownPosition();
 
-let _locationSub: { remove(): void } | null = null;
-
 async function startLocationWatcher() {
   let { status } = await getForegroundPermissionsAsync();
   if (status !== "granted") {
@@ -252,7 +250,7 @@ async function startLocationWatcher() {
     logger.warn("Location permission not granted; GPS watcher not started.");
     return;
   }
-  _locationSub = await watchPositionAsync(
+  await watchPositionAsync(
     {
       accuracy: Accuracy.BestForNavigation,
       distanceInterval: 1,

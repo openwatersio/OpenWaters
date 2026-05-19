@@ -26,7 +26,7 @@ const BOUNDS_PAD_FACTOR = 0.5;
 const WORLD_BOUNDS: [number, number, number, number] = [-179, -89, 179, 89];
 
 let client: AISStreamClient | null = null;
-let unsubscribers: Array<() => void> = [];
+let unsubscribers: (() => void)[] = [];
 let appStateActive = AppState.currentState === "active";
 
 function getApiKey(): string | undefined {

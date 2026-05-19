@@ -130,7 +130,7 @@ export default function Connections() {
             title="AIS Stream"
             footer={
               <Text>
-                Streams worldwide AIS vessel positions over the internet from aisstream.io. Shows vessels beyond your AIS receiver's range, or anywhere when no receiver is connected. Turn off to save cellular data.
+                {"Streams worldwide AIS vessel positions over the internet from aisstream.io. Shows vessels beyond your AIS receiver's range, or anywhere when no receiver is connected. Turn off to save cellular data."}
               </Text>
             }
           >

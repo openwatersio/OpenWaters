@@ -48,7 +48,10 @@ export default function DownloadRegion() {
   // are deeply readonly; clone so we can pass them to MapLibre APIs that
   // expect a mutable tuple.
   const snap = useCameraView();
-  const bounds = snap.bounds ? ([...snap.bounds] as LngLatBounds) : undefined;
+  const bounds = useMemo<LngLatBounds | undefined>(
+    () => (snap.bounds ? ([...snap.bounds] as LngLatBounds) : undefined),
+    [snap.bounds],
+  );
   const { zoom } = snap;
 
   // Zoom range state — defaults from current map zoom
