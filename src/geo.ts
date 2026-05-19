@@ -428,16 +428,24 @@ export function expandBounds(
 /**
  * Test whether a position is inside a bounding box [west, south, east, north].
  *
+ * Returns `false` if either `position` lacks a fix (null lat or lng) or
+ * `bounds` is missing — callers don't need to pre-guard those cases.
+ *
  * `buffer` extends the box by that fraction of its width/height on each
  * side — e.g. 0.5 means "include points within half a viewport beyond the
  * edge", useful for prefetching markers that aren't quite on-screen yet so
  * they don't pop in while panning.
  */
-export function isInsideBounds(
-  position: { latitude: number; longitude: number },
-  bounds: Readonly<[number, number, number, number]>,
+export function isInsideBounds<
+  T extends { latitude: number | null; longitude: number | null },
+>(
+  position: T,
+  bounds: Readonly<[number, number, number, number]> | null | undefined,
   buffer: number = 0,
-): boolean {
+): position is T & { latitude: number; longitude: number } {
+  if (!bounds || position.latitude == null || position.longitude == null) {
+    return false;
+  }
   const [west, south, east, north] = bounds;
   const latBuf = (north - south) * buffer;
   const lngBuf = (east - west) * buffer;

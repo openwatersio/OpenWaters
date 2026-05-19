@@ -1,5 +1,6 @@
-import { metersPerPixel, projectPosition } from "@/geo";
+import { isInsideBounds, metersPerPixel, projectPosition } from "@/geo";
 import { cameraPositionState } from "@/map/hooks/useCameraPosition";
+import { cameraViewState } from "@/map/hooks/useCameraView";
 import type { SnapRef } from "@/measurements/snapTargets";
 import { navigationState } from "@/navigation/hooks/useNavigation";
 import { proxy, useSnapshot } from "valtio";
@@ -54,7 +55,11 @@ export const dragLiveState = proxy<DragLiveState>({
 });
 
 export function setDragLive(
-  value: { kind: "center" | "radius"; point: Point; snapTo?: SnapRef | null } | null,
+  value: {
+    kind: "center" | "radius";
+    point: Point;
+    snapTo?: SnapRef | null;
+  } | null,
 ) {
   dragLiveState.kind = value?.kind ?? null;
   dragLiveState.point = value?.point ?? null;
@@ -130,15 +135,18 @@ function seedDivider(): boolean {
   const { center: cameraCenter, zoom } = cameraPositionState;
   if (!cameraCenter || zoom == null) return false;
 
-  const nav = navigationState;
-  const hasGpsFix = nav.latitude != null && nav.longitude != null;
-  const latitude = hasGpsFix ? nav.latitude! : cameraCenter[1];
-  const longitude = hasGpsFix ? nav.longitude! : cameraCenter[0];
+  const useGpsAnchor = isInsideBounds(navigationState, cameraViewState.bounds);
+
+  // Snap-to-puck when the user's vessel is currently visible on screen.
+  // If the camera is panned away from the puck, fall back to the camera center.
+  const [longitude, latitude] = useGpsAnchor
+    ? [navigationState.longitude!, navigationState.latitude!]
+    : cameraCenter;
 
   // Screen-space offset so the seed looks the same at any zoom.
   const OFFSET_PX = 80;
   const offsetMeters = metersPerPixel(zoom, latitude) * OFFSET_PX;
-  const bearingRad = nav.course ?? Math.PI / 4;
+  const bearingRad = navigationState.course ?? Math.PI / 4;
   const [radiusLng, radiusLat] = projectPosition(
     latitude,
     longitude,
@@ -149,7 +157,7 @@ function seedDivider(): boolean {
   dividerState.center = {
     latitude,
     longitude,
-    snapTo: hasGpsFix ? { id: "current-location" } : null,
+    snapTo: useGpsAnchor ? { id: "current-location" } : null,
   };
   dividerState.radius = {
     latitude: radiusLat,
