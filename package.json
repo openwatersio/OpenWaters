@@ -31,7 +31,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.6.4",
-    "@react-navigation/native": "^7.1.6",
+    "@react-navigation/native": "^7.2.5",
     "@sentry/react-native": "~7.11.0",
     "coordinate-format": "^1.0.0",
     "expo": "^55.0.18",
