@@ -1,0 +1,63 @@
+name: Nightly Build
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+# Don't let two nightly builds run at once if a previous run is still going.
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    name: Build and submit to TestFlight
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v6
+        with:
+          # Need enough history for the "code changes in last 24h" check.
+          fetch-depth: 50
+
+      - name: 🔍 Check for code changes since last build
+        id: changes
+        if: github.event_name == 'schedule'
+        run: |
+          changed=$(git log --since='24 hours ago' --name-only --format= | sort -u)
+          code_changed=$(echo "$changed" | grep -vE '^(docs/|.*\.md$|^$)' || true)
+          if [ -z "$code_changed" ]; then
+            echo "No code changes in the last 24 hours; skipping nightly build."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Code changes detected:"
+            echo "$code_changed"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 🏗 Setup Node.js
+        if: steps.changes.outputs.skip != 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: 🏗 Setup EAS
+        if: steps.changes.outputs.skip != 'true'
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📦 Install dependencies
+        if: steps.changes.outputs.skip != 'true'
+        run: npm ci
+
+      - name: 🛠 Build for TestFlight
+        if: steps.changes.outputs.skip != 'true'
+        run: eas build --non-interactive --platform ios --profile production
+
+      - name: 🚀 Submit to TestFlight
+        if: steps.changes.outputs.skip != 'true'
+        run: eas submit --non-interactive --platform ios --profile production --latest
