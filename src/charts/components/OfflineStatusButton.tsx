@@ -14,9 +14,9 @@ import { useMemo } from "react";
 
 const NS_ID = "map-controls";
 
-type OfflineStatus = "full" | "partial" | "none";
+export type OfflineStatus = "full" | "partial" | "none";
 
-function useOfflineStatus(): { status: OfflineStatus; chartId: string | undefined } {
+export function useOfflineStatus(): { status: OfflineStatus; chartId: string | undefined } {
   const charts = useCharts();
   const { selectedChartId } = useChartStore();
   const { packs } = useOfflinePacks();

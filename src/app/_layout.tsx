@@ -86,6 +86,13 @@ function RootLayout() {
         ) : (
           <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="charts/select" options={{
+              presentation: "formSheet",
+              sheetLargestUndimmedDetentIndex: "last",
+              sheetAllowedDetents: [0.3, 0.5, 1],
+              sheetGrabberVisible: true,
+              sheetExpandsWhenScrolledToEdge: true,
+            }} />
             <Stack.Screen name="charts/index" options={{
               presentation: "formSheet",
               sheetLargestUndimmedDetentIndex: "last",

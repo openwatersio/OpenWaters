@@ -1,4 +1,3 @@
-import { setThemePreference, useThemePreference, type ThemePreference } from "@/charts/theme";
 import { closeDatabase } from "@/database";
 import { ARRIVAL_RADIUS_OPTIONS, describeUnit, getDepthUnits, getDistanceUnits, getSpeedUnits, getTemperatureUnits, setPreferredUnits, usePreferredUnits, type ArrivalRadius } from "@/hooks/usePreferredUnits";
 import { setTelemetryEnabled, useTelemetry } from "@/hooks/useTelemetry";
@@ -63,16 +62,8 @@ function resetAppData() {
   );
 }
 
-const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
-  { value: "auto", label: "Auto" },
-  { value: "day", label: "Day" },
-  { value: "dusk", label: "Dusk" },
-  { value: "night", label: "Night" },
-];
-
 export default function Settings() {
   const { speed, distance, depth, temperature, arrivalRadius, arriveOnCircleOnly } = usePreferredUnits();
-  const { preference: themePreference } = useThemePreference();
   const { enabled: telemetryEnabled } = useTelemetry();
   const { rangeRings } = useMeasurements();
 
@@ -128,21 +119,6 @@ export default function Settings() {
                 {getTemperatureUnits().map((unit) => (
                   <Text key={unit} modifiers={[tag(unit)]}>
                     {describeUnit(unit).plural}
-                  </Text>
-                ))}
-              </Picker>
-            </Section>
-            <Section title="Chart Theme">
-              <Picker
-                label="Theme"
-                selection={themePreference}
-                onSelectionChange={(value) =>
-                  setThemePreference(value as ThemePreference)
-                }
-              >
-                {THEME_OPTIONS.map(({ value, label }) => (
-                  <Text key={value} modifiers={[tag(value)]}>
-                    {label}
                   </Text>
                 ))}
               </Picker>

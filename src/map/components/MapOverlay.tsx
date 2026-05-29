@@ -1,5 +1,4 @@
 import ActivitiesOverlay from "@/activities/components/ActivitiesOverlay";
-import { OfflineStatusButton } from "@/charts/components/OfflineStatusButton";
 import { SelectChartButton } from "@/charts/components/SelectChartButton";
 import { Compass } from "@/map/components/Compass";
 import { FollowLocationButton } from "@/map/components/FollowLocationButton";
@@ -58,7 +57,6 @@ export default function MapOverlay() {
             <Namespace id={NS_ID}>
               <GlassEffectContainer>
                 <VStack spacing={16} modifiers={[tint("primary")]}>
-                  <OfflineStatusButton />
                   <SelectChartButton />
                 </VStack>
               </GlassEffectContainer>
