@@ -1,5 +1,6 @@
 import VesselDetail from "@/ais/components/VesselDetail";
 import AtoNDetail from "@/aton/components/AtoNDetail";
+import ChartFeatureDetail from "@/charts/components/ChartFeatureDetail";
 import LocationDetail from "@/map/components/LocationDetail";
 import MarkerDetail from "@/markers/components/MarkerDetail";
 import TrackDetail from "@/tracks/components/TrackDetail";
@@ -28,6 +29,8 @@ function FeatureDetail({ type, id }: { type: string; id: string }) {
       return <VesselDetail id={id} />;
     case "aton":
       return <AtoNDetail id={id} />;
+    case "chart":
+      return <ChartFeatureDetail id={id} />;
     case "location":
       return <LocationDetail id={id} />;
     default:

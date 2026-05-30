@@ -1,32 +1,13 @@
+import DistanceAndBearingText from "@/map/components/DistanceAndBearingText";
+import NearbyList from "@/map/components/NearbyList";
+import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
 import MarkerButton from "@/markers/components/MarkerButton";
 import RouteButton from "@/routes/components/RouteButton";
-import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
 import SheetHeader from "@/ui/SheetHeader";
-import { mapRef } from "@/map/hooks/useMapRef";
-import { usePosition } from "@/navigation/hooks/useNavigation";
-import { toDistance } from "@/hooks/usePreferredUnits";
-import useTheme from "@/hooks/useTheme";
-import { formatBearing } from "@/geo";
-import {
-  Host, HStack,
-  Image,
-  ScrollView,
-  Spacer,
-  Text,
-  VStack
-} from "@expo/ui/swift-ui";
-import {
-  background,
-  cornerRadius,
-  font,
-  foregroundStyle,
-  monospacedDigit,
-  padding
-} from "@expo/ui/swift-ui/modifiers";
+import { Form, Host, Section } from "@expo/ui/swift-ui";
 import { CoordinateFormat } from "coordinate-format";
 import { Stack } from "expo-router";
-import { getDistance, getGreatCircleBearing } from "geolib";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { showLocation } from "react-native-map-link";
 
 const coordFormat = new CoordinateFormat("minutes");
@@ -38,47 +19,22 @@ function formatCoords(lat: number, lon: number): [string, string] {
 
 export default function LocationDetail({ id }: { id: string }) {
   const [lon, lat] = id.split(",").map(Number) as [number, number];
-  const [features, setFeatures] = useState<GeoJSON.Feature[]>([]);
-  const position = usePosition();
-  const theme = useTheme();
 
-  useEffect(() => {
-    mapRef.current?.project([lon, lat]).then((point) => {
-      mapRef.current?.queryRenderedFeatures(point).then((result) => {
-        setFeatures(result ?? []);
-      });
-    });
-  }, [lon, lat]);
-
-  const [latStr, lonStr] = useMemo(
-    () => formatCoords(lat, lon),
-    [lat, lon],
-  );
-
-  const distBearing = useMemo(() => {
-    if (!position) return null;
-    const dist = getDistance(position, { latitude: lat, longitude: lon });
-    const bearing = getGreatCircleBearing(position, { latitude: lat, longitude: lon });
-    return { dist, bearing };
-  }, [lat, lon, position]);
-
-  const distFormatted = distBearing ? toDistance(distBearing.dist) : null;
-  const bearingFormatted = distBearing ? formatBearing(distBearing.bearing) : null;
+  const [latStr, lonStr] = useMemo(() => formatCoords(lat, lon), [lat, lon]);
 
   return (
     <>
-      <SheetHeader
-        title="Location"
-        subtitle={[latStr, lonStr].join(", ")}
-      />
+      <SheetHeader title="Location" subtitle={[latStr, lonStr].join(", ")} />
       <Stack.Toolbar placement="left">
         <Stack.Toolbar.Button
           icon="square.and.arrow.up"
-          onPress={() => showLocation({
-            latitude: lat,
-            longitude: lon,
-            title: `${latStr} ${lonStr}`,
-          })}
+          onPress={() =>
+            showLocation({
+              latitude: lat,
+              longitude: lon,
+              title: `${latStr} ${lonStr}`,
+            })
+          }
         >
           Open In…
         </Stack.Toolbar.Button>
@@ -88,69 +44,12 @@ export default function LocationDetail({ id }: { id: string }) {
         <RouteButton latitude={lat} longitude={lon} />
       </SheetBottomToolbar>
       <Host style={{ flex: 1 }}>
-        <ScrollView showsIndicators={false}>
-          <VStack spacing={16} modifiers={[padding({ horizontal: 20, top: 16 })]}>
-            {/* Distance & Bearing from current location */}
-            {distBearing && (
-              <HStack alignment="center" spacing={6}>
-                <Spacer />
-                <Image
-                  systemName="location.fill"
-                  size={14}
-                  color={theme.labelSecondary}
-                />
-                <Text modifiers={[
-                  font({ size: 15, weight: "medium" }),
-                  monospacedDigit(),
-                  foregroundStyle("secondary"),
-                ]}>
-                  {`${distFormatted?.value} ${distFormatted?.abbr} away at ${bearingFormatted}`}
-                </Text>
-                <Spacer />
-              </HStack>
-            )}
-
-            {/* Map Features */}
-            {features.length > 0 && (
-              <VStack alignment="leading" spacing={8}>
-                <Text modifiers={[
-                  font({ size: 12, weight: "semibold" }),
-                  foregroundStyle(theme.labelSecondary),
-                ]}>
-                  CHART FEATURES
-                </Text>
-                {features.map((feature, i) => (
-                  <VStack key={i} alignment="leading" spacing={4} modifiers={[
-                    padding({ all: 12 }),
-                    background(theme.surfaceFloating),
-                    cornerRadius(10),
-                  ]}>
-                    {Object.entries(feature.properties ?? {})
-                      .filter(([key]) => !key.startsWith("_") && key !== "id")
-                      .slice(0, 5)
-                      .map(([key, value]) => (
-                        <HStack key={key} spacing={4}>
-                          <Text modifiers={[
-                            font({ size: 14 }),
-                            foregroundStyle(theme.labelSecondary),
-                          ]}>
-                            {`${key}: `}
-                          </Text>
-                          <Text modifiers={[
-                            font({ size: 14 }),
-                            foregroundStyle(theme.label),
-                          ]}>
-                            {String(value)}
-                          </Text>
-                        </HStack>
-                      ))}
-                  </VStack>
-                ))}
-              </VStack>
-            )}
-
-          </VStack>
-        </ScrollView>
+        <Form>
+          <Section>
+            <DistanceAndBearingText latitude={lat} longitude={lon} />
+          </Section>
+          <NearbyList center={{ latitude: lat, longitude: lon }} />
+        </Form>
       </Host>
     </>
   );

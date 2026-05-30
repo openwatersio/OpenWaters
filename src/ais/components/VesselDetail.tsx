@@ -1,4 +1,5 @@
 import MarkerButton from "@/markers/components/MarkerButton";
+import NearbyList from "@/map/components/NearbyList";
 import RouteButton from "@/routes/components/RouteButton";
 import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
 import SheetHeader from "@/ui/SheetHeader";
@@ -256,6 +257,10 @@ export default function VesselDetail({ id }: { id: string }) {
               <Text modifiers={valueMods}>{sourceLabel(vesselPrimarySource(vessel))}</Text>
             </LabeledContent>
           </Section>
+
+          {position && (
+            <NearbyList center={position} exclude={{ kind: "vessel", id: mmsi }} />
+          )}
         </Form>
       </Host>
     </>

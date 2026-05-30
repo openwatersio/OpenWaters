@@ -1,4 +1,5 @@
 import MarkerButton from "@/markers/components/MarkerButton";
+import NearbyList from "@/map/components/NearbyList";
 import RouteButton from "@/routes/components/RouteButton";
 import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
 import SheetHeader from "@/ui/SheetHeader";
@@ -177,6 +178,10 @@ export default function AtoNDetail({ id }: { id: string }) {
               <Text modifiers={valueMods}>{formatTimeAgo(aton.lastSeen)}</Text>
             </LabeledContent>
           </Section>
+
+          {position && (
+            <NearbyList center={position} exclude={{ kind: "aton", id }} />
+          )}
         </Form>
       </Host>
     </>

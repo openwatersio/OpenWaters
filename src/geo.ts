@@ -426,6 +426,52 @@ export function expandBounds(
 }
 
 /**
+ * Flatten any GeoJSON geometry's nested coordinate arrays into a flat list of
+ * `[longitude, latitude]` pairs. Handles Point through MultiPolygon; returns an
+ * empty array for `GeometryCollection` or empty/absent geometry.
+ */
+export function flattenCoordinates(
+  geometry: GeoJSON.Geometry | null | undefined,
+): [number, number][] {
+  if (!geometry || geometry.type === "GeometryCollection") return [];
+  const coords: [number, number][] = [];
+  const walk = (node: unknown) => {
+    if (Array.isArray(node) && typeof node[0] === "number") {
+      coords.push([node[0], node[1] as number]);
+    } else if (Array.isArray(node)) {
+      node.forEach(walk);
+    }
+  };
+  walk(geometry.coordinates);
+  return coords;
+}
+
+/**
+ * Bounding box [west, south, east, north] enclosing all of a geometry's
+ * coordinates. Returns `null` when the geometry has no coordinates.
+ *
+ * Note: no antimeridian handling — a geometry spanning ±180° lon yields a box
+ * the wrong way around. Not a concern for the chart regions we render.
+ */
+export function geometryBounds(
+  geometry: GeoJSON.Geometry | null | undefined,
+): [number, number, number, number] | null {
+  const coords = flattenCoordinates(geometry);
+  if (coords.length === 0) return null;
+  let west = Infinity;
+  let south = Infinity;
+  let east = -Infinity;
+  let north = -Infinity;
+  for (const [lon, lat] of coords) {
+    if (lon < west) west = lon;
+    if (lon > east) east = lon;
+    if (lat < south) south = lat;
+    if (lat > north) north = lat;
+  }
+  return [west, south, east, north];
+}
+
+/**
  * Test whether a position is inside a bounding box [west, south, east, north].
  *
  * Returns `false` if either `position` lacks a fix (null lat or lng) or
