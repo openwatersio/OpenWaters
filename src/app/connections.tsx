@@ -12,6 +12,8 @@ import {
   type ConnectionStatus,
   addNMEAConnection,
   addSignalKConnection,
+  disableConnection,
+  enableConnection,
   useConnections,
 } from "@/instruments/hooks/useConnections";
 import SheetView from "@/ui/SheetView";
@@ -158,23 +160,32 @@ export default function Connections() {
           {connections.length > 0 ? (
             <Section title="Connections">
               {connections.map((conn) => (
-                <Button
-                  key={conn.id}
-                  onPress={() => router.push({ pathname: "/connection/[id]", params: { id: conn.id } })}
-                >
-                  <HStack spacing={12}>
-                    <VStack alignment="leading" spacing={2}>
-                      <Text modifiers={[foregroundStyle("primary"), font({ weight: "semibold" })]}>
-                        {typeLabel(conn.type)}
-                      </Text>
-                      <Text modifiers={[foregroundStyle("secondary"), font({ size: 12 })]}>
-                        {conn.host}:{conn.port}
-                      </Text>
-                    </VStack>
-                    <Spacer />
-                    <StatusIcon status={conn.status} hasError={!!conn.error} />
-                  </HStack>
-                </Button>
+                <HStack key={conn.id} spacing={12}>
+                  <VStack
+                    alignment="leading"
+                    spacing={2}
+                    modifiers={[
+                      onTapGesture(() =>
+                        router.push({ pathname: "/connection/[id]", params: { id: conn.id } }),
+                      ),
+                    ]}
+                  >
+                    <Text modifiers={[foregroundStyle("primary"), font({ weight: "semibold" })]}>
+                      {typeLabel(conn.type)}
+                    </Text>
+                    <Text modifiers={[foregroundStyle("secondary"), font({ size: 12 })]}>
+                      {conn.host}:{conn.port}
+                    </Text>
+                  </VStack>
+                  <Spacer />
+                  <StatusIcon status={conn.status} hasError={!!conn.error} />
+                  <Toggle
+                    isOn={!conn.disabled}
+                    onIsOnChange={(on) =>
+                      on ? enableConnection(conn.id) : disableConnection(conn.id)
+                    }
+                  />
+                </HStack>
               ))}
             </Section>
           ) : null}
