@@ -1,7 +1,6 @@
 import { groupFeatures } from "@/charts/s57/relations";
 import { describeChartFeature } from "@/charts/translators";
 import { flattenCoordinates, metersPerPixel } from "@/geo";
-import type { MapRef } from "@maplibre/maplibre-react-native";
 import type { Feature, Geometry, Position as GeoPosition } from "geojson";
 import { getDistance, getDistanceFromLine } from "geolib";
 
@@ -40,65 +39,9 @@ function lnamOf(f: Feature): string {
   return typeof f.properties?.LNAM === "string" ? f.properties.LNAM : "";
 }
 
-/**
- * If a discrete chart feature (point or line) is under — or within tolerance
- * of — the tapped screen point, return its detail-route id ("lon,lat,LNAM"),
- * grouping a structure with its equipment (a buoy with its light) so the id
- * points at the structure.
- *
- * Returns null for open water and area-only taps; those should fall back to
- * LocationDetail. Areas (the sea, depth areas, zones) are deliberately not
- * direct tap targets — they stay reachable via the nearby list — so a tap on
- * water doesn't get hijacked into a "Depth area".
- */
-export async function chartFeatureIdAtPoint(
-  map: MapRef,
-  point: [number, number],
-  tap: Position,
-): Promise<string | null> {
-  const [x, y] = point;
-  const raw = ((await map.queryRenderedFeatures([
-    [x - TAP_TOLERANCE_PX, y - TAP_TOLERANCE_PX],
-    [x + TAP_TOLERANCE_PX, y + TAP_TOLERANCE_PX],
-  ])) ?? []) as unknown as Feature[];
-
-  // Prefer points over lines, then nearest to the tap.
-  let best: { feature: Feature; rank: number; distance: number } | null = null;
-  for (const feature of raw) {
-    const type = feature.geometry?.type;
-    const isPoint = type === "Point" || type === "MultiPoint";
-    const isLine = type === "LineString" || type === "MultiLineString";
-    if (!isPoint && !isLine) continue;
-    if (!describeChartFeature(feature.properties ?? {})) continue;
-    const rep = representativePoint(feature.geometry);
-    if (!rep) continue;
-    const rank = isPoint ? 0 : 1;
-    const distance = getDistance(tap, rep);
-    if (
-      !best ||
-      rank < best.rank ||
-      (rank === best.rank && distance < best.distance)
-    ) {
-      best = { feature, rank, distance };
-    }
-  }
-  if (!best) return null;
-
-  // Collapse a structure + its equipment into the structure, and key the id off
-  // that primary so it matches the nearby list's id for the same feature.
-  const lnam = lnamOf(best.feature);
-  const group = lnam ? groupFeatures(lnam, raw) : null;
-  const primary = group?.primary ?? best.feature;
-  const rep = representativePoint(primary.geometry);
-  if (!rep) return null;
-  return chartFeatureId(rep, lnamOf(primary));
-}
-
 /** Geographic distance (m) from `target` to the nearest vertex/segment of a
- *  geometry, or null if it has no usable coordinates. Mirrors the screen-box
- *  hit test of `chartFeatureIdAtPoint` but works purely in lon/lat, so a caller
- *  with only a coordinate (no screen point) can still hit-test — lines measure
- *  to the nearest segment, not the centroid, so long contours aren't missed. */
+ *  geometry, or null if it has no usable coordinates — lines measure to the
+ *  nearest segment, not the centroid, so long contours aren't missed. */
 function distanceToGeometry(geometry: Geometry, target: Position): number | null {
   switch (geometry.type) {
     case "Point": {
@@ -152,11 +95,18 @@ function minDistanceToLine(coords: GeoPosition[], target: Position): number | nu
 }
 
 /**
- * Like `chartFeatureIdAtPoint`, but resolves from a coordinate alone (no screen
- * point) against an already-queried set of rendered features. Used by
- * `LocationDetail` so a tapped/dragged coordinate can be resolved to a chart
- * feature without projecting back to a pixel. Tolerance is the on-screen tap
- * slop (`TAP_TOLERANCE_PX`) converted to meters at the current zoom.
+ * If a discrete chart feature (point or line) sits under — or within tolerance
+ * of — `target`, return its detail-route id ("lon,lat,LNAM"), grouping a
+ * structure with its equipment (a buoy with its light) so the id points at the
+ * structure. Resolved from a coordinate alone (no screen point) against an
+ * already-queried set of rendered features, so `LocationDetail` can resolve a
+ * tapped/dragged coordinate without projecting back to a pixel.
+ *
+ * Returns null for open water and area-only taps; those fall back to the plain
+ * location info. Areas (the sea, depth areas, zones) are deliberately not direct
+ * tap targets — they stay reachable via the nearby list — so a tap on water
+ * doesn't get hijacked into a "Depth area". Tolerance is the on-screen tap slop
+ * (`TAP_TOLERANCE_PX`) converted to meters at the current zoom.
  */
 export function chartFeatureIdAtCoordinate(
   features: Feature[],

@@ -1,5 +1,6 @@
 import { type AISVessel, useAIS } from "@/ais/hooks/useAIS";
 import { type AtoN, useAtoN } from "@/aton/hooks/useAtoN";
+import { describedSubtitle } from "@/charts/s57";
 import { groupFeatures } from "@/charts/s57/relations";
 import { useChartStore } from "@/charts/store";
 import { describeChartFeature } from "@/charts/translators";
@@ -122,18 +123,11 @@ export function useNearbyFeatures(
           if (seen.has(key)) continue;
           seen.add(key);
 
-          const sub =
-            described.title === described.class.label
-              ? (described.subtitle ?? "")
-              : [described.class.label, described.subtitle]
-                  .filter(Boolean)
-                  .join(" · ");
-
           items.push({
             kind: "chart",
             id: chartFeatureId(rep, described.lnam),
             title: described.title,
-            subtitle: sub,
+            subtitle: describedSubtitle(described),
             icon: CHART_ICON,
             distance: getDistance({ latitude, longitude }, rep),
             bearing: getGreatCircleBearing({ latitude, longitude }, rep),

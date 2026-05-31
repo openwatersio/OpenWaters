@@ -1,5 +1,8 @@
 import FeatureInspector from "@/charts/components/FeatureInspector";
-import describeS57Feature, { type DescribedFeature } from "@/charts/s57";
+import describeS57Feature, {
+  type DescribedFeature,
+  describedSubtitle,
+} from "@/charts/s57";
 import { groupFeatures } from "@/charts/s57/relations";
 import DistanceAndBearingText from "@/map/components/DistanceAndBearingText";
 import NearbyList from "@/map/components/NearbyList";
@@ -86,11 +89,8 @@ export default function ChartFeatureDetail({ id }: { id: string }) {
   const primary = described[0] ?? null;
 
   const title = primary?.title ?? "Chart Feature";
-  const subtitle = primary
-    ? title === primary.class.label
-      ? primary.subtitle
-      : [primary.class.label, primary.subtitle].filter(Boolean).join(" · ")
-    : undefined;
+  // Empty → undefined so the header omits the subtitle line entirely.
+  const subtitle = primary ? describedSubtitle(primary) || undefined : undefined;
 
   const valueMods = [font({ size: 15 }), foregroundStyle("secondary")];
 

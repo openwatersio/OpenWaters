@@ -28,9 +28,9 @@ function FeatureDetail({ type, id }: { type: string; id: string }) {
       return <VesselDetail id={id} />;
     case "aton":
       return <AtoNDetail id={id} />;
-    // Chart features are reached through LocationDetail (which resolves a
-    // coordinate to a chart feature), so there is no standalone "chart" case.
-    case "chart":
+    // Chart features have no standalone type — they're reached through
+    // "location", which resolves the coordinate to a chart feature if one sits
+    // there (see LocationDetail).
     case "location":
       return <LocationDetail id={id} />;
     default:

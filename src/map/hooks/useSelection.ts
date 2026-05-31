@@ -7,8 +7,7 @@ export type FeatureType =
   | "track"
   | "vessel"
   | "aton"
-  | "location"
-  | "chart";
+  | "location";
 
 export type Selection = {
   type: FeatureType;

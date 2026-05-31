@@ -48,3 +48,14 @@ export default function describeS57Feature(
     attributes: attributeRows(props),
   };
 }
+
+/**
+ * One-line subtitle for a described feature. When the title is just the class
+ * label (an unnamed feature), show its own subtitle; when the title is a real
+ * name, prefix the class label so the kind isn't lost ("Buoy · Fl R 4s").
+ */
+export function describedSubtitle(feature: DescribedFeature): string {
+  return feature.title === feature.class.label
+    ? (feature.subtitle ?? "")
+    : [feature.class.label, feature.subtitle].filter(Boolean).join(" · ");
+}
