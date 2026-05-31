@@ -1,0 +1,195 @@
+// Dynamic Expo config with build variants so dev / preview / production
+// builds can be installed side-by-side on the same device.
+//
+// Variant is selected via the APP_VARIANT env var (set per-profile in
+// eas.json, and via the npm scripts for local builds). Each variant gets a
+// distinct bundleIdentifier, name, and scheme; production keeps the original
+// identifiers so App Store builds are unchanged.
+
+const VARIANT = process.env.APP_VARIANT || "production";
+
+const VARIANTS = {
+  development: {
+    bundleIdentifier: "io.openwaters.mobile.dev",
+    scheme: "openwaters-dev",
+    icon: "./assets/images/icon-dev.png",
+  },
+  production: {
+    bundleIdentifier: "io.openwaters.mobile",
+    scheme: "openwaters",
+    icon: "./assets/images/icon.png",
+  },
+};
+
+const variant = VARIANTS[VARIANT] || VARIANTS.production;
+
+export default {
+  expo: {
+    name: "Open Waters",
+    slug: "openwaters",
+    version: "0.1.0",
+    orientation: "portrait",
+    icon: variant.icon,
+    scheme: variant.scheme,
+    userInterfaceStyle: "automatic",
+    ios: {
+      supportsTablet: false,
+      appleTeamId: "Z59BQLF5VQ",
+      infoPlist: {
+        NSLocalNetworkUsageDescription:
+          "Open Waters discovers marine instruments on your local network to display navigation data.",
+        NSBonjourServices: [
+          "_signalk-http._tcp",
+          "_signalk-ws._tcp",
+          "_nmea-0183._tcp",
+        ],
+        UIBackgroundModes: ["location", "processing"],
+        CFBundleDocumentTypes: [
+          {
+            CFBundleTypeName: "MBTiles Chart Archive",
+            CFBundleTypeRole: "Viewer",
+            LSHandlerRank: "Alternate",
+            LSItemContentTypes: ["io.openwaters.mbtiles"],
+          },
+          {
+            CFBundleTypeName: "GPX Route",
+            CFBundleTypeRole: "Viewer",
+            LSHandlerRank: "Alternate",
+            LSItemContentTypes: ["com.topografix.gpx"],
+          },
+          {
+            CFBundleTypeName: "ZIP Archive",
+            CFBundleTypeRole: "Viewer",
+            LSHandlerRank: "Alternate",
+            LSItemContentTypes: ["public.zip-archive"],
+          },
+        ],
+        UTImportedTypeDeclarations: [
+          {
+            UTTypeIdentifier: "io.openwaters.mbtiles",
+            UTTypeDescription: "MBTiles Chart Archive",
+            UTTypeConformsTo: ["public.database", "public.data"],
+            UTTypeTagSpecification: {
+              "public.filename-extension": ["mbtiles"],
+            },
+          },
+          {
+            UTTypeIdentifier: "com.topografix.gpx",
+            UTTypeDescription: "GPX Route",
+            UTTypeConformsTo: ["public.xml", "public.text"],
+            UTTypeTagSpecification: {
+              "public.filename-extension": ["gpx"],
+              "public.mime-type": ["application/gpx+xml"],
+            },
+          },
+        ],
+        ITSAppUsesNonExemptEncryption: false,
+      },
+      privacyManifests: {
+        NSPrivacyTracking: false,
+        NSPrivacyTrackingDomains: [],
+        NSPrivacyCollectedDataTypes: [
+          {
+            NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypeCrashData",
+            NSPrivacyCollectedDataTypeLinked: false,
+            NSPrivacyCollectedDataTypeTracking: false,
+            NSPrivacyCollectedDataTypePurposes: [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality",
+            ],
+          },
+        ],
+        NSPrivacyAccessedAPITypes: [
+          {
+            NSPrivacyAccessedAPIType:
+              "NSPrivacyAccessedAPICategoryUserDefaults",
+            NSPrivacyAccessedAPITypeReasons: ["CA92.1"],
+          },
+          {
+            NSPrivacyAccessedAPIType:
+              "NSPrivacyAccessedAPICategoryFileTimestamp",
+            NSPrivacyAccessedAPITypeReasons: ["0A2A.1", "3B52.1", "C617.1"],
+          },
+          {
+            NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryDiskSpace",
+            NSPrivacyAccessedAPITypeReasons: ["E174.1", "85F4.1"],
+          },
+          {
+            NSPrivacyAccessedAPIType:
+              "NSPrivacyAccessedAPICategorySystemBootTime",
+            NSPrivacyAccessedAPITypeReasons: ["35F9.1"],
+          },
+        ],
+      },
+      bundleIdentifier: variant.bundleIdentifier,
+    },
+    plugins: [
+      "expo-router",
+      "@maplibre/maplibre-react-native",
+      "react-native-map-link",
+      "expo-background-task",
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/images/splash-icon.png",
+          imageWidth: 150,
+          resizeMode: "contain",
+          backgroundColor: "#1f7a72",
+        },
+      ],
+      [
+        "expo-dev-client",
+        {
+          launchMode: "most-recent",
+        },
+      ],
+      [
+        "expo-location",
+        {
+          locationWhenInUsePermission:
+            "Open Waters uses your location to show your vessel on the chart, to navigate routes, and to record tracks.",
+          locationAlwaysAndWhenInUsePermission:
+            "Open Waters can record your track in the background so voyages are captured even when the screen is off or another app is in the foreground.",
+          isIosBackgroundLocationEnabled: true,
+        },
+      ],
+      "expo-web-browser",
+      "expo-font",
+      "expo-image",
+      "expo-sqlite",
+      "expo-sharing",
+      [
+        "expo-file-system",
+        {
+          enableFileSharing: true,
+          supportsOpeningDocumentsInPlace: true,
+        },
+      ],
+      [
+        "expo-build-properties",
+        {
+          ios: {
+            deploymentTarget: "18.0",
+          },
+        },
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          url: "https://sentry.io/",
+          project: "openwatersapp",
+          organization: "open-waters",
+        },
+      ],
+    ],
+    experiments: {
+      typedRoutes: true,
+    },
+    extra: {
+      router: {},
+      eas: {
+        projectId: "fce58c39-edee-40b0-a1a6-c9e1713cd3f7",
+      },
+    },
+    owner: "openwatersio",
+  },
+};
