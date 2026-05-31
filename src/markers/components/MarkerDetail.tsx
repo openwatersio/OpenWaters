@@ -1,9 +1,8 @@
 import DistanceAndBearingText from "@/map/components/DistanceAndBearingText";
 import NearbyList from "@/map/components/NearbyList";
-import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
+import SheetMenu from "@/map/components/SheetMenu";
 import { deleteMarker, useMarker } from "@/markers/hooks/useMarkers";
 import { ensureVisible } from "@/navigation/components/NavigationCamera";
-import RouteButton from "@/routes/components/RouteButton";
 import { exportMarkerAsGPX } from "@/tracks/export";
 import SheetHeader from "@/ui/SheetHeader";
 import {
@@ -16,7 +15,6 @@ import { CoordinateFormat } from "coordinate-format";
 import { router, Stack, useFocusEffect } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { Alert } from "react-native";
-import { showLocation } from "react-native-map-link";
 
 const coordFormat = new CoordinateFormat("minutes");
 
@@ -73,42 +71,27 @@ export default function MarkerDetail({ id }: { id: string }) {
         title={marker?.name ?? "Marker"}
         subtitle={[latStr, lonStr,].join(", ")}
       />
-      <Stack.Toolbar placement="left">
-        <Stack.Toolbar.Menu icon="square.and.arrow.up" title="Share">
-          <Stack.Toolbar.MenuAction
-            icon="square.and.arrow.up"
-            onPress={handleShare}
-          >
+      {marker && (
+        <SheetMenu
+          coordinate={marker}
+          title={`${latStr} ${lonStr}`}
+          showMarker={false}
+        >
+          <Stack.Toolbar.MenuAction icon="square.and.arrow.up" onPress={handleShare}>
             Export GPX…
           </Stack.Toolbar.MenuAction>
-          <Stack.Toolbar.MenuAction
-            icon="map"
-            onPress={() => showLocation({
-              latitude: marker?.latitude,
-              longitude: marker?.longitude,
-              title: `${latStr} ${lonStr}`,
-            })}
-          >
-            Open in…
-          </Stack.Toolbar.MenuAction>
-        </Stack.Toolbar.Menu>
-      </Stack.Toolbar>
-      {marker && (
-        <SheetBottomToolbar>
-          <Stack.Toolbar.Button
-            accessibilityLabel="Delete"
-            icon="trash"
-            onPress={confirmDelete}
-          />
-          <Stack.Toolbar.Button
-            icon="square.and.pencil"
-            accessibilityLabel="Edit"
-            onPress={() => router.push({ pathname: "/marker/edit", params: { id: markerId } })}
-          />
-          <Stack.Toolbar.Spacer />
-
-          <RouteButton latitude={marker.latitude} longitude={marker.longitude} />
-        </SheetBottomToolbar>
+          <Stack.Toolbar.Menu inline>
+            <Stack.Toolbar.MenuAction
+              icon="square.and.pencil"
+              onPress={() => router.push({ pathname: "/marker/edit", params: { id: markerId } })}
+            >
+              Edit
+            </Stack.Toolbar.MenuAction>
+            <Stack.Toolbar.MenuAction icon="trash" destructive onPress={confirmDelete}>
+              Delete
+            </Stack.Toolbar.MenuAction>
+          </Stack.Toolbar.Menu>
+        </SheetMenu>
       )}
       <Host style={{ flex: 1 }}>
         <Form>

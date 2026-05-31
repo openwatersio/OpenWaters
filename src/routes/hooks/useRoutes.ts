@@ -16,6 +16,7 @@ import { setFollowUserLocation } from "@/map/hooks/useCameraState";
 import { getPosition } from "@/navigation/hooks/useNavigation";
 import { persistProxy } from "@/persistProxy";
 import { startTrackRecording } from "@/tracks/hooks/useTrackRecording";
+import { router } from "expo-router";
 import { getDistance } from "geolib";
 import { useCallback, useEffect } from "react";
 import { proxy, useSnapshot } from "valtio";
@@ -240,6 +241,40 @@ export function addRouteWaypoint(
       key: nextWaypointKey++,
     });
   });
+}
+
+/** SF Symbol for the "Add to Route" / "Add Waypoint" menu action. */
+export const ADD_TO_ROUTE_ICON =
+  "point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath.fill";
+
+/**
+ * Label + onPress for the "Add to Route" menu action. When a route is active
+ * the action appends a waypoint ("Add Waypoint"); otherwise it starts a new
+ * route to the coordinate.
+ *
+ * Reads `activeRouteState` directly rather than through `useActiveRoute()`: the
+ * handler is imperative (so it sees the current state at press time), and the
+ * label is intentionally non-reactive — both branches navigate away from the
+ * sheet immediately, so it can never visibly change while on screen.
+ */
+export function addToRouteAction(point: {
+  latitude: number;
+  longitude: number;
+}) {
+  return {
+    label: activeRouteState.isActive ? "Add Waypoint" : "Add to Route",
+    onPress: () => {
+      if (activeRouteState.isActive) {
+        addRouteWaypoint(point);
+        router.back();
+      } else {
+        router.replace({
+          pathname: "/route/new",
+          params: { to: `${point.longitude},${point.latitude}` },
+        });
+      }
+    },
+  };
 }
 
 export function updateRouteWaypoint(

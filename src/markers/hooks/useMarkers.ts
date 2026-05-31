@@ -11,6 +11,7 @@ import {
 } from "@/database";
 import { useDbQuery } from "@/hooks/useDbQuery";
 import { getPosition } from "@/navigation/hooks/useNavigation";
+import { router } from "expo-router";
 import { useCallback } from "react";
 
 type UseMarkersOptions = {
@@ -53,6 +54,16 @@ export function useMarker(id: number | null): Marker | null {
 
 export async function addMarker(fields: MarkerFields) {
   return insertMarker(fields);
+}
+
+/** SF Symbol for the "Add Marker" menu action. */
+export const ADD_MARKER_ICON = "mappin.and.ellipse";
+
+/** onPress for the "Add Marker" menu action: drops a marker at the coordinate
+ *  and opens its editor. */
+export async function addMarkerAt(point: { latitude: number; longitude: number }) {
+  const marker = await addMarker(point);
+  router.replace({ pathname: "/marker/edit", params: { id: marker.id } });
 }
 
 export async function updateMarker(

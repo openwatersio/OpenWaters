@@ -6,18 +6,15 @@ import describeS57Feature, {
 import { groupFeatures } from "@/charts/s57/relations";
 import DistanceAndBearingText from "@/map/components/DistanceAndBearingText";
 import NearbyList from "@/map/components/NearbyList";
-import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
+import SheetMenu from "@/map/components/SheetMenu";
 import { mapRef } from "@/map/hooks/useMapRef";
 import { clearSelectedFeature, setSelectedFeature } from "@/map/hooks/useSelectedFeature";
-import MarkerButton from "@/markers/components/MarkerButton";
 import { flyTo } from "@/navigation/components/NavigationCamera";
-import RouteButton from "@/routes/components/RouteButton";
 import SheetHeader from "@/ui/SheetHeader";
 import { Form, Host, LabeledContent, Section, Text } from "@expo/ui/swift-ui";
 import { font, foregroundStyle } from "@expo/ui/swift-ui/modifiers";
 import { Stack, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { showLocation } from "react-native-map-link";
 
 /** Chart-feature id is "lon,lat,LNAM" (LNAM is hex, no commas). */
 function parseId(id: string): { latitude: number; longitude: number; lnam: string } {
@@ -102,21 +99,15 @@ export default function ChartFeatureDetail({ id }: { id: string }) {
   return (
     <>
       <SheetHeader title={title} subtitle={subtitle} />
-      <Stack.Toolbar placement="left">
-        <Stack.Toolbar.Button
-          icon="square.and.arrow.up"
-          onPress={() => showLocation({ latitude, longitude, title })}
-        >
-          Open In…
-        </Stack.Toolbar.Button>
-      </Stack.Toolbar>
-      <SheetBottomToolbar>
-        <MarkerButton latitude={latitude} longitude={longitude} />
-        <RouteButton latitude={latitude} longitude={longitude} />
+      <SheetMenu coordinate={{ latitude, longitude }} title={title}>
         {__DEV__ && features && features.length > 0 && (
-          <Stack.Toolbar.Button icon="curlybraces" onPress={() => setInspecting(true)} />
+          <Stack.Toolbar.Menu inline>
+            <Stack.Toolbar.MenuAction icon="curlybraces" onPress={() => setInspecting(true)}>
+              Inspect
+            </Stack.Toolbar.MenuAction>
+          </Stack.Toolbar.Menu>
         )}
-      </SheetBottomToolbar>
+      </SheetMenu>
       <Host style={{ flex: 1 }}>
         <Form>
           <Section>
