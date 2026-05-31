@@ -6,6 +6,7 @@
   "homepage": "https://www.openseamap.org/",
   "license": "ODbL",
   "keywords": ["nautical", "overlay", "seamarks", "osm"],
+  "featured": true,
   "sources": [
     {
       "id": "osm-base",

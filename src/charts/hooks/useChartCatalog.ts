@@ -1,36 +1,15 @@
 import type { CatalogEntry } from "@/charts/catalog/types";
 import loadCatalog from "@/charts/catalog";
 import { useChartStore } from "@/charts/store";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 export type CatalogEntryWithStatus = CatalogEntry & {
   installed: boolean;
 };
 
-export function useChartCatalog(): {
-  entries: CatalogEntryWithStatus[];
-  loading: boolean;
-} {
-  const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+export function useChartCatalog(): { entries: CatalogEntryWithStatus[] } {
+  const catalog = useMemo(() => loadCatalog(), []);
   const { charts } = useChartStore();
-
-  useEffect(() => {
-    let cancelled = false;
-    loadCatalog()
-      .then((entries) => {
-        if (!cancelled) {
-          setCatalog(entries);
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const entries = useMemo(
     () =>
@@ -41,5 +20,5 @@ export function useChartCatalog(): {
     [catalog, charts],
   );
 
-  return { entries, loading };
+  return { entries };
 }

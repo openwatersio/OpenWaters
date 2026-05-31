@@ -1,9 +1,12 @@
+import log from "@/logger";
+import { featuredCharts } from "@/charts/catalog";
 import type { CatalogEntry, CatalogSource } from "@/charts/catalog/types";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { deletePacksForChart } from "@/charts/offline";
 import { filterSources, type SourceFilters } from "@/charts/sources";
 import {
   chartDirectory,
+  chartStoreState,
   getChart,
   removeChart,
   setChart,
@@ -11,6 +14,8 @@ import {
   writeStyle,
   type InstalledChart,
 } from "@/charts/store";
+
+const logger = log.extend("charts");
 
 // ---------------------------------------------------------------------------
 // Style generation
@@ -158,18 +163,27 @@ export async function installCatalogEntry(entry: CatalogEntry): Promise<Installe
   const existing = getChart(entry.id);
   if (existing) return existing;
 
+  // Resolve any install-time sources (e.g. NOAA's per-region MBTiles list),
+  // then drop the (non-serializable) resolve hook before persisting.
+  const extra = entry.resolve ? await entry.resolve() : [];
+  const resolved: CatalogEntry = {
+    ...entry,
+    sources: extra.length ? [...entry.sources, ...extra] : entry.sources,
+  };
+  delete resolved.resolve;
+
   // Write catalog.json
-  writeCatalog(entry.id, entry);
+  writeCatalog(resolved.id, resolved);
 
   // Generate and write style.json from online-renderable sources
-  const style = await generateStyle(entry.sources);
-  const styleUri = writeStyle(entry.id, style);
+  const style = await generateStyle(resolved.sources);
+  const styleUri = writeStyle(resolved.id, style);
 
   const chart: InstalledChart = {
-    id: entry.id,
-    name: entry.title,
+    id: resolved.id,
+    name: resolved.title,
     styleUri,
-    catalogEntry: entry,
+    catalogEntry: resolved,
   };
 
   setChart(chart);
@@ -242,4 +256,34 @@ export function uninstallChart(chartId: string): void {
 
   // Update the store
   removeChart(chartId);
+}
+
+// ---------------------------------------------------------------------------
+// First-run defaults
+// ---------------------------------------------------------------------------
+
+/**
+ * Install the default (`featured`) charts when the app has no charts at all —
+ * i.e. a fresh install. Once any chart exists we never re-seed, so a default
+ * the user uninstalls won't come back (and uninstalling everything re-seeds).
+ *
+ * Also sets the selection to the first featured chart that installed, so the
+ * user opens to the primary nautical chart rather than whichever sorts first.
+ */
+export async function seedDefaultCharts(): Promise<void> {
+  if (Object.keys(chartStoreState.charts).length > 0) return;
+
+  const featured = featuredCharts();
+  for (const entry of featured) {
+    try {
+      await installCatalogEntry(entry);
+    } catch (err) {
+      logger.warn(`Failed to seed default chart "${entry.id}":`, err);
+    }
+  }
+
+  if (!chartStoreState.selectedChartId) {
+    const firstInstalled = featured.find((entry) => getChart(entry.id));
+    if (firstInstalled) chartStoreState.selectedChartId = firstInstalled.id;
+  }
 }

@@ -63,4 +63,11 @@ export type CatalogEntry = {
   thumbnail?: string;
   featured?: boolean;
   sources: CatalogSource[];
+  /**
+   * Optional hook evaluated at install time to fetch additional sources that
+   * can't be known statically (e.g. NOAA's per-region MBTiles list). The
+   * returned sources are appended to `sources` and persisted to catalog.json.
+   * Not serializable — dropped before the entry is written to disk.
+   */
+  resolve?: () => Promise<CatalogSource[]>;
 };

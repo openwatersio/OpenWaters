@@ -1,4 +1,5 @@
 import type { CatalogEntry } from "@/charts/catalog/types";
+import { seedDefaultCharts } from "@/charts/install";
 import { persistProxy } from "@/persistProxy";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { Directory, File, Paths } from "expo-file-system";
@@ -116,13 +117,14 @@ export const chartStoreState = proxy<ChartStoreState>({
 
 persistProxy<ChartStoreState, { selectedChartId?: string }>(chartStoreState, {
   name: "chart-store",
-  // Only persist the selectedChartId — `charts` is rebuilt from disk on launch.
+  // `charts` is rebuilt from disk on launch, so only persist the selection.
   partialize: (state) => ({ selectedChartId: state.selectedChartId }),
   hydrate: (state, persisted) => {
     if (persisted?.selectedChartId) {
       state.selectedChartId = persisted.selectedChartId;
     }
     initializeCharts();
+    void seedDefaultCharts();
   },
 });
 

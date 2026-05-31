@@ -1,16 +1,22 @@
 /**
- * Builds the NOAA Raster Charts catalog entry at runtime by fetching
- * NCDS MBTiles metadata from NOAA's ArcGIS feature service.
+ * NOAA Raster Charts catalog entry.
+ *
+ * The static parts (title, summary, streaming WMS + OSM base) are known
+ * up-front so the entry can be listed and installed without a network round
+ * trip. The downloadable per-region MBTiles list is fetched lazily via
+ * `resolve()` at install time from NOAA's ArcGIS feature service.
  *
  * Data source: NOAA's ArcGIS MapServer at gis.charttools.noaa.gov,
  * which provides the region name, download URL, file size, date, and
  * polygonal coverage geometry for each NCDS MBTiles region.
  */
 
+import type { CatalogEntry, CatalogSource } from "./types";
+
 const NOAA_FEATURE_SERVICE =
   "https://gis.charttools.noaa.gov/arcgis/rest/services/MarineChart_Services/ncds_tilecache_metadata/MapServer/0/query";
 
-const OSM_BASE = {
+const OSM_BASE: CatalogSource = {
   id: "osm-base",
   title: "OpenStreetMap Base",
   type: "raster",
@@ -20,15 +26,15 @@ const OSM_BASE = {
   attribution: "© OpenStreetMap contributors",
 };
 
-const WMS_SOURCE = {
+const WMS_SOURCE: CatalogSource = {
   id: "noaa-wms",
   title: "NOAA ENC Online (WMS, paper chart symbology)",
-  type: "raster" as const,
+  type: "raster",
   tiles: [
     "https://gis.charttools.noaa.gov/arcgis/rest/services/MCS/NOAAChartDisplay/MapServer/exts/MaritimeChartService/WMSServer?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&BBOX={bbox-epsg-3857}&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&LAYERS=0,1,2,3,4,5,6,7,8,9,10,11,12&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE",
   ],
   tileSize: 256,
-  bounds: [-180, 13, -64, 72] as number[],
+  bounds: [-180, 13, -64, 72],
   attribution: "NOAA",
 };
 
@@ -65,7 +71,11 @@ function formatTitle(name: string): string {
     );
 }
 
-export default async function fetchNoaaRasterEntry() {
+/**
+ * Fetch the downloadable NCDS MBTiles regions from NOAA. Evaluated at install
+ * time; the results are appended to the entry's static sources.
+ */
+async function resolveRegions(): Promise<CatalogSource[]> {
   const params = new URLSearchParams({
     where: "1=1",
     outFields: "name,baseline,date_creat,size",
@@ -82,7 +92,7 @@ export default async function fetchNoaaRasterEntry() {
 
   const data = (await response.json()) as { features: Feature[] };
 
-  const mbtilesSources = data.features.map((f) => {
+  return data.features.map((f) => {
     const { name, baseline, date_creat, size } = f.attributes;
     const source: Record<string, unknown> = {
       id: name,
@@ -107,19 +117,22 @@ export default async function fetchNoaaRasterEntry() {
       }
     }
 
-    return source;
+    return source as unknown as CatalogSource;
   });
-
-  return {
-    id: "noaa-raster",
-    title: "NOAA Raster Charts",
-    summary:
-      "Official US raster nautical charts from NOAA, with streaming WMS and downloadable regional MBTiles.",
-    description:
-      "Official US raster nautical charts from NOAA Office of Coast Survey. Covers US coastal waters, the Great Lakes, Puerto Rico, USVI, Hawaii, American Samoa, Guam, the Northern Marianas, and inland waterways.\n\nIncludes a streaming WMS source (paper chart symbology) for immediate online use, plus regional MBTiles packs available for offline download. MBTiles are updated weekly by NOAA.",
-    homepage: "https://distribution.charts.noaa.gov/ncds/",
-    license: "public-domain",
-    keywords: ["nautical", "raster", "usa", "official"],
-    sources: [OSM_BASE, WMS_SOURCE, ...mbtilesSources],
-  };
 }
+
+const entry: CatalogEntry = {
+  id: "noaa-raster",
+  title: "NOAA Raster Charts",
+  summary:
+    "Official US raster nautical charts from NOAA, with streaming WMS and downloadable regional MBTiles.",
+  description:
+    "Official US raster nautical charts from NOAA Office of Coast Survey. Covers US coastal waters, the Great Lakes, Puerto Rico, USVI, Hawaii, American Samoa, Guam, the Northern Marianas, and inland waterways.\n\nIncludes a streaming WMS source (paper chart symbology) for immediate online use, plus regional MBTiles packs available for offline download. MBTiles are updated weekly by NOAA.",
+  homepage: "https://distribution.charts.noaa.gov/ncds/",
+  license: "public-domain",
+  keywords: ["nautical", "raster", "usa", "official"],
+  sources: [OSM_BASE, WMS_SOURCE],
+  resolve: resolveRegions,
+};
+
+export default entry;

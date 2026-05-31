@@ -6,6 +6,7 @@
   "homepage": "https://openenc.com",
   "license": "custom",
   "keywords": ["nautical", "vector"],
+  "featured": true,
   "sources": [
     {
       "id": "njord-feet-day",

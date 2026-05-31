@@ -30,13 +30,13 @@ import {
   labelStyle,
   lineLimit,
   onTapGesture,
-  padding
+  padding,
 } from "@expo/ui/swift-ui/modifiers";
 import { router } from "expo-router";
 import { View } from "react-native";
 
 export default function ChartCatalog() {
-  const { entries, loading } = useChartCatalog();
+  const { entries } = useChartCatalog();
   const theme = useTheme();
   const filters = useSourceFilters();
 
@@ -47,106 +47,103 @@ export default function ChartCatalog() {
       <Host style={{ flex: 1 }}>
         <VStack alignment="leading">
           <List>
-            {loading ? (
-              <Section>
-                <Text>Loading catalog…</Text>
-              </Section>
-            ) : (
-              <Section>
-                {entries.map((entry) => {
-                  const previewStyle = buildPreviewStyle(entry.sources, filters);
-                  const previewBounds = computeBounds(entry.sources);
-
-                  return (
-                    <HStack
-                      key={entry.id}
-                      alignment="center"
-                      spacing={12}
-                      modifiers={[
-                        onTapGesture(() =>
-                          router.push({
-                            pathname: "/charts/catalog/[id]",
-                            params: { id: entry.id },
-                          }),
-                        ),
-                        padding({ vertical: 4 }),
-                        animation(Animation.default, entry.installed),
-                      ]}
-                    >
-                      <RNHostView matchContents>
-                        <View
-                          style={{
-                            width: 56,
-                            height: 56,
-                            borderRadius: 8,
-                            overflow: "hidden",
-                          }}
-                        >
-                          {previewStyle ? (
-                            <ChartPreview
-                              mapStyle={previewStyle}
-                              bounds={previewBounds}
-                            />
-                          ) : (
-                            <View
-                              style={{
-                                width: 56,
-                                height: 56,
-                                backgroundColor: theme.surface,
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            />
-                          )}
-                        </View>
-                      </RNHostView>
-                      <VStack alignment="leading" spacing={2}>
-                        <Text
-                          modifiers={[
-                            font({ size: 16, weight: "semibold" }),
-                            lineLimit(1),
-                          ]}
-                        >
-                          {entry.title}
-                        </Text>
-                        <Text
-                          modifiers={[
-                            font({ size: 13 }),
-                            foregroundStyle(theme.labelSecondary),
-                            lineLimit(2),
-                          ]}
-                        >
-                          {entry.summary}
-                        </Text>
-                      </VStack>
-                      <Spacer />
-                      {entry.installed ? (
-                        <Image
-                          systemName="checkmark"
-                          size={15}
-                          color={theme.success}
-                          modifiers={[frame({ width: 32, height: 32 })]}
-                        />
-                      ) : (
-                        <Button
-                          systemImage="plus"
-                          label="Install"
-                          modifiers={[
-                            labelStyle("iconOnly"),
-                            buttonStyle("borderedProminent"),
-                            clipShape("circle"),
-                            frame({ width: 32, height: 32 })
-                          ]}
-                          onPress={() => installCatalogEntry(entry)}
-                        />
-                      )}
-                    </HStack>
-                  );
-                })}
-              </Section>
-            )}
             <Section>
-              <NavigationLink label="Manually Add Chart…" destination="/charts/add" />
+              {entries.map((entry) => {
+                const previewStyle = buildPreviewStyle(entry.sources, filters);
+                const previewBounds = computeBounds(entry.sources);
+
+                return (
+                  <HStack
+                    key={entry.id}
+                    alignment="center"
+                    spacing={12}
+                    modifiers={[
+                      onTapGesture(() =>
+                        router.push({
+                          pathname: "/charts/catalog/[id]",
+                          params: { id: entry.id },
+                        }),
+                      ),
+                      padding({ vertical: 4 }),
+                      animation(Animation.default, entry.installed),
+                    ]}
+                  >
+                    <RNHostView matchContents>
+                      <View
+                        style={{
+                          width: 56,
+                          height: 56,
+                          borderRadius: 8,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {previewStyle ? (
+                          <ChartPreview
+                            mapStyle={previewStyle}
+                            bounds={previewBounds}
+                          />
+                        ) : (
+                          <View
+                            style={{
+                              width: 56,
+                              height: 56,
+                              backgroundColor: theme.surface,
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          />
+                        )}
+                      </View>
+                    </RNHostView>
+                    <VStack alignment="leading" spacing={2}>
+                      <Text
+                        modifiers={[
+                          font({ size: 16, weight: "semibold" }),
+                          lineLimit(1),
+                        ]}
+                      >
+                        {entry.title}
+                      </Text>
+                      <Text
+                        modifiers={[
+                          font({ size: 13 }),
+                          foregroundStyle(theme.labelSecondary),
+                          lineLimit(2),
+                        ]}
+                      >
+                        {entry.summary}
+                      </Text>
+                    </VStack>
+                    <Spacer />
+                    {entry.installed ? (
+                      <Image
+                        systemName="checkmark"
+                        size={15}
+                        color={theme.success}
+                        modifiers={[frame({ width: 32, height: 32 })]}
+                      />
+                    ) : (
+                      <Button
+                        systemImage="plus"
+                        label="Install"
+                        modifiers={[
+                          labelStyle("iconOnly"),
+                          buttonStyle("borderedProminent"),
+                          clipShape("circle"),
+                          frame({ width: 32, height: 32 }),
+                        ]}
+                        onPress={() => installCatalogEntry(entry)}
+                      />
+                    )}
+                  </HStack>
+                );
+              })}
+            </Section>
+            <Section>
+              <NavigationLink
+                label="Manually Add Chart…"
+                destination="/charts/add"
+              />
             </Section>
           </List>
         </VStack>
