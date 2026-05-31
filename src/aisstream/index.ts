@@ -4,6 +4,7 @@ import {
   boundsToSubscription,
   padBounds,
 } from "@/aisstream/client";
+import { isAISVisibleAtZoom } from "@/ais/visibility";
 import {
   aisStreamState,
   setAISStreamStatus,
@@ -71,7 +72,13 @@ function disconnect() {
 }
 
 function reconcile() {
-  const wantConnection = aisStreamState.enabled && appStateActive;
+  // Pause the worldwide firehose when zoomed too far out to render targets —
+  // the subscription bounds would otherwise cover a huge area and flood the
+  // store with vessels we never draw. Reconnects on zoom-in within ~1s.
+  const wantConnection =
+    aisStreamState.enabled &&
+    appStateActive &&
+    isAISVisibleAtZoom(cameraViewState.zoom);
   if (wantConnection) {
     connect();
   } else {
@@ -108,6 +115,20 @@ export function activate() {
     subscribeKey(cameraViewState, "bounds", () => {
       if (!client) return;
       client.updateSubscription(currentSubscription());
+    }),
+  );
+
+  // Zoom gate — connect/disconnect only when crossing MIN_AIS_ZOOM, not on
+  // every zoom tick. reconcile() is idempotent, so we just need it to run once
+  // per crossing.
+  let zoomAllowed = isAISVisibleAtZoom(cameraViewState.zoom);
+  unsubscribers.push(
+    subscribeKey(cameraViewState, "zoom", (zoom) => {
+      const allowed = isAISVisibleAtZoom(zoom);
+      if (allowed !== zoomAllowed) {
+        zoomAllowed = allowed;
+        reconcile();
+      }
     }),
   );
 

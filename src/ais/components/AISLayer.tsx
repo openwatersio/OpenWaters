@@ -1,12 +1,15 @@
 import { type AISVessel, useAIS } from "@/ais/hooks/useAIS";
+import { MIN_AIS_ZOOM, isAISVisibleAtZoom } from "@/ais/visibility";
 import { projectPosition } from "@/geo";
 import useTheme from "@/hooks/useTheme";
+import { cameraViewState } from "@/map/hooks/useCameraView";
 import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
 import { clampHalo, vesselMppFactor, vesselScaleAt, vesselScaleDamped } from "@/map/iconSize";
 import type { ExpressionSpecification } from "@maplibre/maplibre-gl-style-spec";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { NativeSyntheticEvent } from "react-native";
+import { subscribeKey } from "valtio/utils";
 
 type Position = { latitude: number; longitude: number };
 
@@ -107,6 +110,22 @@ export default function AISLayer() {
   const vessels = useAIS();
   const theme = useTheme();
 
+  // Below MIN_AIS_ZOOM the viewport is too wide to draw individual vessels.
+  // Subscribe to a derived boolean so we only re-render when crossing the
+  // threshold, not on every zoom tick during a pinch. The `minzoom` on the
+  // layers below is the authoritative native gate; this just lets us skip
+  // building the (potentially huge) feature collections while hidden.
+  const [visible, setVisible] = useState(() =>
+    isAISVisibleAtZoom(cameraViewState.zoom),
+  );
+  useEffect(
+    () =>
+      subscribeKey(cameraViewState, "zoom", (zoom) => {
+        setVisible(isAISVisibleAtZoom(zoom));
+      }),
+    [],
+  );
+
   // Tick every 30s to re-evaluate staleness even when vessel data hasn't changed
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -116,6 +135,7 @@ export default function AISLayer() {
 
   const cogLines = useMemo((): GeoJSON.FeatureCollection => {
     void tick;
+    if (!visible) return { type: "FeatureCollection", features: [] };
     const features: GeoJSON.Feature[] = Object.values(vessels)
       .map((vessel): GeoJSON.Feature | null => {
         if (vesselState(vessel) !== "underway") return null;
@@ -136,10 +156,11 @@ export default function AISLayer() {
       })
       .filter((f): f is GeoJSON.Feature => f !== null);
     return { type: "FeatureCollection", features };
-  }, [vessels, tick]);
+  }, [vessels, tick, visible]);
 
   const geojson = useMemo((): GeoJSON.FeatureCollection => {
     void tick;
+    if (!visible) return { type: "FeatureCollection", features: [] };
     const features: GeoJSON.Feature[] = Object.values(vessels)
       .map((vessel): GeoJSON.Feature | null => {
         const state = vesselState(vessel);
@@ -169,7 +190,7 @@ export default function AISLayer() {
       .filter((f): f is GeoJSON.Feature => f !== null);
 
     return { type: "FeatureCollection", features };
-  }, [vessels, tick]);
+  }, [vessels, tick, visible]);
 
   const selection = useSelection();
   const navigate = useSelectionHandler();
@@ -203,6 +224,7 @@ export default function AISLayer() {
         <Layer
           id="ais-cog-lines-layer"
           type="line"
+          minzoom={MIN_AIS_ZOOM}
           paint={{
             "line-color": theme.ais,
             "line-width": 1.5,
@@ -222,6 +244,7 @@ export default function AISLayer() {
         <Layer
           id="ais-vessels-symbol"
           type="symbol"
+          minzoom={MIN_AIS_ZOOM}
           layout={{
             "icon-image": ["get", "icon"],
             "icon-size": fillIconSize,
