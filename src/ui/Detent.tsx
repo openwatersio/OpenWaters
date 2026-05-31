@@ -1,6 +1,5 @@
-import { useHeaderHeight } from "@react-navigation/elements";
-import { useNavigation } from "@react-navigation/native";
-import { createContext, useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
+import { useHeaderHeight, useNavigation } from "expo-router/react-navigation";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useWindowDimensions, View, type LayoutChangeEvent, type ViewProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -142,16 +141,15 @@ export function Detent({ children, style, ...props }: ViewProps) {
     throw new Error("<Detent> must be used inside a <DetentProvider>");
   }
 
-  const indexRef = useRef<number | null>(null);
-  if (indexRef.current === null) {
-    indexRef.current = ctx.register();
-  }
+  // Register once and keep the assigned index as state so it can be read
+  // during render (a ref read here trips react-hooks/refs).
+  const [index] = useState(() => ctx.register());
 
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
-      ctx.reportHeight(indexRef.current!, e.nativeEvent.layout.height);
+      ctx.reportHeight(index, e.nativeEvent.layout.height);
     },
-    [ctx],
+    [ctx, index],
   );
 
   return (
@@ -160,7 +158,7 @@ export function Detent({ children, style, ...props }: ViewProps) {
       style={[
         { flexGrow: 0, flexShrink: 0 },
         style,
-        indexRef.current > 0 ? { marginTop: ctx.gap } : undefined
+        index > 0 ? { marginTop: ctx.gap } : undefined
       ]}
       onLayout={onLayout}
     >

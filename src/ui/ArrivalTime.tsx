@@ -17,6 +17,9 @@ const timeFormat = new Intl.DateTimeFormat(undefined, {
 export function ArrivalTime({ fromNow }: { fromNow: number | null | undefined }) {
   if (fromNow == null) return <Text modifiers={valueModifiers}>—</Text>;
 
+  // Reads the current clock to render an absolute arrival time from a relative
+  // offset; re-renders whenever `fromNow` updates, so the freshness is correct.
+  // eslint-disable-next-line react-hooks/purity
   const arrival = new Date(Date.now() + fromNow * 1000);
   const parts = timeFormat.formatToParts(arrival);
   const periodPart = parts.find((p) => p.type === "dayPeriod");

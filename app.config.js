@@ -180,9 +180,11 @@ export default {
           organization: "open-waters",
         },
       ],
+      "expo-status-bar",
     ],
     experiments: {
       typedRoutes: true,
+      reactCompiler: true,
     },
     extra: {
       router: {},

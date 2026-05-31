@@ -220,6 +220,9 @@ export default function FeatureThumbnail({
   const key = request?.key;
   useEffect(() => {
     if (!request) {
+      // Reset when there's nothing to render; the snapshot fetch below must
+      // stay synchronous. RC healthcheck compiles this cleanly.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUri(null);
       return;
     }

@@ -1,5 +1,5 @@
 import { getTopSheetHeight } from "@/map/hooks/useSheetPosition";
-import { useHeaderHeight } from "@react-navigation/elements";
+import { useHeaderHeight } from "expo-router/react-navigation";
 import { Stack, useNavigation } from "expo-router";
 import { ReactNode, useEffect, useState } from "react";
 

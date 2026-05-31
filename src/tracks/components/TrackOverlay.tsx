@@ -48,13 +48,16 @@ function SelectedTrackOverlay() {
 
   // Load track points when selection changes
   useEffect(() => {
-    if (!selectedId) {
-      setCoords([]);
-      return;
-    }
-    getTrackPoints(selectedId).then((points) => {
-      setCoords(points.map((p) => [p.longitude, p.latitude]));
-    });
+    let cancelled = false;
+    (async () => {
+      const points = selectedId ? await getTrackPoints(selectedId) : [];
+      if (!cancelled) {
+        setCoords(points.map((p) => [p.longitude, p.latitude]));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedId]);
 
   // Fit camera to track bounds once coords are loaded

@@ -13,6 +13,9 @@ export function useElapsedMs(since: number | string | null): number {
 
   useEffect(() => {
     if (since == null) return;
+    // Resync immediately when the timer (re)starts; the interval below only
+    // backfills after the first second.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);

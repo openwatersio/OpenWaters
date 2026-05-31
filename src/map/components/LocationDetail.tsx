@@ -46,13 +46,13 @@ export default function LocationDetail({ id }: { id: string }) {
   const [chartId, setChartId] = useState<string | null>(lnam ? id : null);
 
   useEffect(() => {
-    if (lnam) {
-      setChartId(id);
-      return;
-    }
     let cancelled = false;
-    setChartId(null);
     (async () => {
+      if (lnam) {
+        if (!cancelled) setChartId(id);
+        return;
+      }
+      setChartId(null);
       const map = mapRef.current;
       if (!map) return;
       let resolved: string | null = null;
