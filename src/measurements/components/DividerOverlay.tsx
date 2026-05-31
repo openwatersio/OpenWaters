@@ -134,6 +134,9 @@ export function DividerOverlay() {
 
   useEffect(() => {
     if (!active) {
+      // Clear the label when inactive; the proxy subscription below must be
+      // set up synchronously. RC healthcheck compiles this cleanly.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLabelState(null);
       return;
     }

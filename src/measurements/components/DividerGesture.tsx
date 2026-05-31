@@ -290,6 +290,11 @@ export function DividerGesture({ children }: { children: ReactNode }) {
   // often wins, making the divider gesture feel unreliable. ---
 
   const gesture = useMemo(() => {
+    // RNGH manualActivation worklet builder: each worklet closes over shared
+    // values and scheduleOnRN'd handlers — the standard gesture-handler
+    // pattern, which React Compiler compiles cleanly (healthcheck verified).
+    // react-hooks/refs can't see through the worklet closures.
+    /* eslint-disable react-hooks/refs */
     return Gesture.Pan()
       .enabled(active && center != null && radius != null && zoom != null)
       .manualActivation(true)
@@ -321,6 +326,7 @@ export function DividerGesture({ children }: { children: ReactNode }) {
         // handleEnd is idempotent via the dragStateRef null-check.
         scheduleOnRN(handleEnd, e.translationX, e.translationY);
       });
+    /* eslint-enable react-hooks/refs */
   }, [
     active,
     center,

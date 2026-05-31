@@ -95,6 +95,9 @@ export function useTrackRecordingPoints(): [number, number][] {
 
   useEffect(() => {
     if (trackId == null) {
+      // Reset when no recording is active; the load + subscription below must
+      // stay synchronous. RC healthcheck compiles this cleanly.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPoints([]);
       return;
     }

@@ -14,7 +14,7 @@ import { connectAll, disconnectAll } from "@/instruments/hooks/useConnections";
 import "@/navigation/hooks/useNavigation"; // Register LocationManager listener at module scope
 import "@/tracks/hooks/useTrackRecording"; // Register background task at module scope
 import { LocationManager } from "@maplibre/maplibre-react-native";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
 import * as Sentry from '@sentry/react-native';
 import * as Linking from "expo-linking";
 import { setOverrideUserInterfaceStyle } from "expo-platform-colors";

@@ -47,7 +47,9 @@ export default function Connections() {
   const [addType, setAddType] = useState<"signalk" | "nmea">("signalk");
   const [signalKUrl, setSignalKUrl] = useState("");
   const [nmeaHost, setNmeaHost] = useState("");
-  const [nmeaPort, setNmeaPort] = useState("10110");
+  // Port field starts empty; the "10110" placeholder and the `|| 10110`
+  // fallback in handleAddNMEA supply the default when left blank.
+  const [nmeaPort, setNmeaPort] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
@@ -115,7 +117,7 @@ export default function Connections() {
     const port = parseInt(nmeaPort, 10) || 10110;
     addNMEAConnection(host, port);
     setNmeaHost("");
-    setNmeaPort("10110");
+    setNmeaPort("");
   }
 
   return (
@@ -236,8 +238,7 @@ export default function Connections() {
               <>
                 <TextField
                   placeholder="http://raspberrypi.local:3000"
-                  defaultValue={signalKUrl}
-                  onValueChange={setSignalKUrl}
+                  onTextChange={setSignalKUrl}
                   modifiers={[
                     keyboardType("url"),
                     textInputAutocapitalization("never"),
@@ -254,8 +255,7 @@ export default function Connections() {
               <>
                 <TextField
                   placeholder="192.168.1.1"
-                  defaultValue={nmeaHost}
-                  onValueChange={setNmeaHost}
+                  onTextChange={setNmeaHost}
                   modifiers={[
                     keyboardType("url"),
                     textInputAutocapitalization("never"),
@@ -264,8 +264,7 @@ export default function Connections() {
                 />
                 <TextField
                   placeholder="10110"
-                  defaultValue={nmeaPort}
-                  onValueChange={setNmeaPort}
+                  onTextChange={setNmeaPort}
                   modifiers={[
                     keyboardType("numeric"),
                     autocorrectionDisabled(),

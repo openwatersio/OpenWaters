@@ -17,6 +17,7 @@ import {
   Text,
   TextField,
   type TextFieldRef,
+  useNativeState,
   VStack,
 } from "@expo/ui/swift-ui";
 import {
@@ -225,11 +226,13 @@ export default function AddChart() {
             >
               <TextField
                 placeholder="https://..."
-                onValueChange={setUrlInput}
+                onTextChange={setUrlInput}
                 modifiers={[
                   keyboardType("url"),
                   textInputAutocapitalization("never"),
                   autocorrectionDisabled(),
+                  // @expo/ui modifier DSL; handleUrlSubmit is a useCallback, not a ref.
+                  // eslint-disable-next-line react-hooks/refs
                   onSubmit(handleUrlSubmit),
                 ]}
               />
@@ -268,8 +271,7 @@ export default function AddChart() {
                 <TextField
                   ref={nameFieldRef}
                   placeholder="Chart Name"
-                  defaultValue={name}
-                  onValueChange={setName}
+                  onTextChange={setName}
                 />
               </Section>
 
@@ -303,7 +305,7 @@ export default function AddChart() {
               >
                 <TextField
                   placeholder="https://..."
-                  onValueChange={setAddUrlInput}
+                  onTextChange={setAddUrlInput}
                   modifiers={[
                     keyboardType("url"),
                     textInputAutocapitalization("never"),
@@ -339,6 +341,8 @@ function SourceCard({
   onRemove: () => void;
 }) {
   const theme = useTheme();
+  const titleState = useNativeState(source.title);
+  const attributionState = useNativeState(source.attribution ?? "");
 
   const typeLabel =
     source.type === "style"
@@ -355,8 +359,8 @@ function SourceCard({
     >
       <TextField
         placeholder="Source Title"
-        defaultValue={source.title}
-        onValueChange={(title: string) => onUpdate({ ...source, title })}
+        text={titleState}
+        onTextChange={(title: string) => onUpdate({ ...source, title })}
       />
 
       {"url" in source && source.url ? (
@@ -406,8 +410,8 @@ function SourceCard({
           {source.attribution != null ? (
             <TextField
               placeholder="Attribution"
-              defaultValue={source.attribution}
-              onValueChange={(attribution: string) =>
+              text={attributionState}
+              onTextChange={(attribution: string) =>
                 onUpdate({ ...source, attribution } as CatalogSource)
               }
             />

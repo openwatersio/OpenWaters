@@ -65,11 +65,13 @@ export function useBounds({
   buffer = 0,
   hysteresis = 0,
 }: { buffer?: number; hysteresis?: number } = {}): LngLatBounds | undefined {
-  const baselineRef = useRef<LngLatBounds | undefined>(undefined);
+  // Seed the baseline from the initial bounds at ref-init time rather than
+  // writing baselineRef.current inside the useState initializer (a ref write
+  // during render trips react-hooks/refs).
+  const baselineRef = useRef<LngLatBounds | undefined>(cameraViewState.bounds);
   const [committed, setCommitted] = useState<LngLatBounds | undefined>(() => {
     const b = cameraViewState.bounds;
     if (!b) return undefined;
-    baselineRef.current = b;
     return buffer > 0 ? expandBounds(b, buffer) : b;
   });
 

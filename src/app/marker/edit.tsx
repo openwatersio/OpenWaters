@@ -11,7 +11,8 @@ import {
   RNHostView,
   Section,
   Text,
-  TextField
+  TextField,
+  useNativeState
 } from "@expo/ui/swift-ui";
 import { font, foregroundStyle } from "@expo/ui/swift-ui/modifiers";
 import { CoordinateFormat } from "coordinate-format";
@@ -30,6 +31,8 @@ export default function EditMarkerScreen() {
 
   const [color, setColor] = useState<string>(marker?.color ?? theme.accent);
   const [icon, setIcon] = useState<AnnotationIconName>((marker?.icon as AnnotationIconName) ?? "pin");
+  const nameState = useNativeState(marker?.name ?? "");
+  const notesState = useNativeState(marker?.notes ?? "");
 
   const subtitle = marker
     ? coordFormat.format(marker.longitude, marker.latitude).join("  ")
@@ -70,14 +73,14 @@ export default function EditMarkerScreen() {
           <Section>
             <TextField
               placeholder="Name (optional)"
-              defaultValue={marker.name ?? ""}
-              onValueChange={(v: string) => updateMarker(markerId, { name: v.trim() || null })}
+              text={nameState}
+              onTextChange={(v: string) => updateMarker(markerId, { name: v.trim() || null })}
             />
             <TextField
               placeholder="Notes"
-              defaultValue={marker.notes ?? ""}
+              text={notesState}
               axis="vertical"
-              onValueChange={(v: string) => updateMarker(markerId, { notes: v.trim() || null })}
+              onTextChange={(v: string) => updateMarker(markerId, { notes: v.trim() || null })}
             />
           </Section>
 

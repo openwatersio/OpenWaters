@@ -106,14 +106,14 @@ export function useMapStyle(): StyleSpecification | string {
   const [style, setStyle] = useState<StyleSpecification | null>(null);
 
   useEffect(() => {
-    if (!chart) {
-      setStyle(null);
-      return;
-    }
-
     let cancelled = false;
 
     (async () => {
+      if (!chart) {
+        if (!cancelled) setStyle(null);
+        return;
+      }
+
       const catalog = readCatalog(chart.id);
       if (!catalog) return;
 

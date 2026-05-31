@@ -194,7 +194,9 @@ function FilesSummary({ files }: { files: readonly ImportFile[] }) {
 
 async function onPickFile() {
   try {
-    startFileImport(await File.pickFileAsync());
+    const { result, canceled } = await File.pickFileAsync();
+    if (canceled || !result) return;
+    startFileImport(result);
   } catch (e) {
     logger.warn("pick file failed", e);
   }
