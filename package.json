@@ -77,7 +77,7 @@
     "react-native-worklets": "0.8.3",
     "react-native-zeroconf": "^0.14.0",
     "suncalc": "^1.9.0",
-    "valtio": "^2.3.1"
+    "valtio": "^2.3.2"
   },
   "devDependencies": {
     "@babel/core": "^7.28.4",
