@@ -12,7 +12,7 @@ export default function FeatureScreen() {
   if (!type || !id) return null;
 
   return (
-    <SheetView id="feature" style={{ flex: 1 }} headerDetent additionalDetents={[0.3, 0.5, 1]}>
+    <SheetView id="feature" style={{ flex: 1 }} headerDetent additionalDetents={[0.3, 0.5]}>
       <FeatureDetail type={type} id={id} />
     </SheetView>
   );
@@ -28,6 +28,9 @@ function FeatureDetail({ type, id }: { type: string; id: string }) {
       return <VesselDetail id={id} />;
     case "aton":
       return <AtoNDetail id={id} />;
+    // Chart features have no standalone type — they're reached through
+    // "location", which resolves the coordinate to a chart feature if one sits
+    // there (see LocationDetail).
     case "location":
       return <LocationDetail id={id} />;
     default:

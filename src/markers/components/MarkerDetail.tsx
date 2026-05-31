@@ -1,4 +1,5 @@
 import DistanceAndBearingText from "@/map/components/DistanceAndBearingText";
+import NearbyList from "@/map/components/NearbyList";
 import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
 import { deleteMarker, useMarker } from "@/markers/hooks/useMarkers";
 import { ensureVisible } from "@/navigation/components/NavigationCamera";
@@ -125,6 +126,13 @@ export default function MarkerDetail({ id }: { id: string }) {
               </Text>
             )}
           </Section>
+
+          {marker && (
+            <NearbyList
+              center={{ latitude: marker.latitude, longitude: marker.longitude }}
+              exclude={{ kind: "marker", id: String(markerId) }}
+            />
+          )}
         </Form>
       </Host>
     </>

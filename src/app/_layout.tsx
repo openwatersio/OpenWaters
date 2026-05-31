@@ -177,7 +177,7 @@ function RootLayout() {
             <Stack.Screen name="feature/[type]/[id]" options={{
               presentation: "formSheet",
               sheetLargestUndimmedDetentIndex: "last",
-              sheetAllowedDetents: [0, 0.3, 0.5, 1],
+              sheetAllowedDetents: [0, 0.3],
               sheetInitialDetentIndex: 1,
               sheetGrabberVisible: true,
             }} />

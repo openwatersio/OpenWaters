@@ -5,8 +5,9 @@
   "scripts": {
     "start": "APP_VARIANT=development expo start",
     "ios": "APP_VARIANT=development expo run:ios",
-    "lint": "expo lint",
+    "lint": "tsc --noEmit && expo lint",
     "test": "jest",
+    "gen:s57": "node scripts/generate-s57.mjs",
     "postinstall": "patch-package"
   },
   "jest": {

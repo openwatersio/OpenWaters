@@ -25,6 +25,7 @@ import { useCallback } from "react";
 import { LogBox, NativeSyntheticEvent } from "react-native";
 import { MARKER_IMAGES } from "./AnnotationIcon";
 import MapOverlay from "./MapOverlay";
+import SelectedChartHighlight from "./SelectedChartHighlight";
 import SelectedLocationAnnotation from "./SelectedLocationAnnotation";
 
 // Downgrade expected MapLibre network errors from red overlay to warnings.
@@ -42,9 +43,13 @@ export default function ChartView() {
     const active = getActiveRoute();
     if (active?.mode === RouteMode.Editing && active?.activeIndex != null) {
       setActiveIndex(null);
-    } else {
-      navigate("location", lngLat.join(','));
+      return;
     }
+
+    // A tap just selects a coordinate. LocationDetail resolves whether a chart
+    // feature sits there and swaps to ChartFeatureDetail if so — the lookup no
+    // longer lives here.
+    navigate("location", lngLat.join(","));
   }, [navigate]);
 
   const handleLongPress = useCallback((e: NativeSyntheticEvent<PressEvent>) => {
@@ -108,6 +113,7 @@ export default function ChartView() {
         <MarkerOverlay />
         <AISLayer />
         <AtoNLayer />
+        <SelectedChartHighlight />
         <SelectedLocationAnnotation />
         <NavigationPuck />
       </Map>
