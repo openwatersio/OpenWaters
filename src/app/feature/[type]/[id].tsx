@@ -1,6 +1,5 @@
 import VesselDetail from "@/ais/components/VesselDetail";
 import AtoNDetail from "@/aton/components/AtoNDetail";
-import ChartFeatureDetail from "@/charts/components/ChartFeatureDetail";
 import LocationDetail from "@/map/components/LocationDetail";
 import MarkerDetail from "@/markers/components/MarkerDetail";
 import TrackDetail from "@/tracks/components/TrackDetail";
@@ -13,7 +12,7 @@ export default function FeatureScreen() {
   if (!type || !id) return null;
 
   return (
-    <SheetView id="feature" style={{ flex: 1 }} headerDetent additionalDetents={[0.3, 0.5, 1]}>
+    <SheetView id="feature" style={{ flex: 1 }} headerDetent additionalDetents={[0.3, 0.5]}>
       <FeatureDetail type={type} id={id} />
     </SheetView>
   );
@@ -29,8 +28,9 @@ function FeatureDetail({ type, id }: { type: string; id: string }) {
       return <VesselDetail id={id} />;
     case "aton":
       return <AtoNDetail id={id} />;
+    // Chart features are reached through LocationDetail (which resolves a
+    // coordinate to a chart feature), so there is no standalone "chart" case.
     case "chart":
-      return <ChartFeatureDetail id={id} />;
     case "location":
       return <LocationDetail id={id} />;
     default:

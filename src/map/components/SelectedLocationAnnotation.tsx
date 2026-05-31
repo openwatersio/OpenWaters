@@ -9,10 +9,14 @@ export default function SelectedLocationAnnotation() {
   const selection = useSelection();
   const theme = useTheme();
 
+  // id is "lon,lat" for a bare location, or "lon,lat,LNAM" once a chart feature
+  // has been identified — take only the coordinate.
   const selectedCoords = selection?.type === "location"
-    ? selection.id.split(",").map(Number) as [number, number]
+    ? (selection.id.split(",").slice(0, 2).map(Number) as [number, number])
     : null;
 
+  // Dropping the pin re-selects the bare coordinate (dropping any LNAM hint), so
+  // LocationDetail re-runs the lookup at the new spot.
   const handleDragEnd = useCallback<NonNullable<ViewAnnotationProps["onDragEnd"]>>(
     (e) =>
       router.setParams({ id: e.nativeEvent.lngLat.join(',') }),

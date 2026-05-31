@@ -7,7 +7,12 @@ import { type NearbyItem, type NearbyKind, useNearbyFeatures } from "@/map/hooks
 import { useSelectionHandler } from "@/map/hooks/useSelection";
 import { Button, HStack, Image, RNHostView, Section, Spacer, Text, VStack } from "@expo/ui/swift-ui";
 import { font, foregroundStyle, lineLimit } from "@expo/ui/swift-ui/modifiers";
+import { SymbolView } from "expo-symbols";
 import { View } from "react-native";
+
+/** Fixed size of every row's leading icon/thumbnail box, so the title column
+ *  starts at the same x regardless of which kind of leading content draws. */
+const LEADING_SIZE = 36;
 
 type Props = {
   center: { latitude: number; longitude: number };
@@ -48,29 +53,51 @@ export default function NearbyList({ center, exclude }: Props) {
           .filter(Boolean)
           .join("  ·  ");
 
-        // For chart features, render a preview drawing the whole group together.
-        let thumbnail = null;
-        if (item.kind === "chart" && item.features && item.features.length > 0) {
-          thumbnail = (
-            <RNHostView matchContents>
-              <View style={{ width: 36, height: 36, borderRadius: 4, overflow: "hidden" }}>
+        // Every row's leading slot is the same fixed-size RN-hosted box, so the
+        // title column lines up whether the row draws a chart thumbnail or an
+        // SF Symbol. Chart features render a preview of the whole group; the
+        // rest (and chart features that can't render) fall back to a symbol.
+        const leading = (
+          <RNHostView matchContents>
+            <View
+              style={{
+                width: LEADING_SIZE,
+                height: LEADING_SIZE,
+                borderRadius: 4,
+                overflow: "hidden",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {item.kind === "chart" && item.features && item.features.length > 0 ? (
                 <FeatureThumbnail
                   style={chartStyle}
                   styleKey={chartId}
                   features={item.features}
-                  size={36}
+                  size={LEADING_SIZE}
                 />
-              </View>
-            </RNHostView>
-          );
-        }
+              ) : (
+                <SymbolView
+                  name={item.icon}
+                  size={22}
+                  tintColor={iconColor(item, theme)}
+                  style={{ width: LEADING_SIZE, height: LEADING_SIZE }}
+                />
+              )}
+            </View>
+          </RNHostView>
+        );
 
         return (
-          <Button key={`${item.kind}:${item.id}`} onPress={() => navigate(item.kind, item.id)}>
+          <Button
+            key={`${item.kind}:${item.id}`}
+            // Chart features select as a location (id carries the LNAM hint) so
+            // the one draggable selection pin shows and LocationDetail renders
+            // their ChartFeatureDetail. Other kinds keep their own detail type.
+            onPress={() => navigate(item.kind === "chart" ? "location" : item.kind, item.id)}
+          >
             <HStack spacing={12}>
-              {thumbnail || (
-                <Image systemName={item.icon} size={20} color={iconColor(item, theme)} />
-              )}
+              {leading}
               <VStack alignment="leading" spacing={2}>
                 <Text modifiers={[foregroundStyle(theme.label), lineLimit(1)]}>
                   {item.title}

@@ -2,10 +2,12 @@ import FeatureInspector from "@/charts/components/FeatureInspector";
 import describeS57Feature, { type DescribedFeature } from "@/charts/s57";
 import { groupFeatures } from "@/charts/s57/relations";
 import DistanceAndBearingText from "@/map/components/DistanceAndBearingText";
+import NearbyList from "@/map/components/NearbyList";
 import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
 import { mapRef } from "@/map/hooks/useMapRef";
+import { clearSelectedFeature, setSelectedFeature } from "@/map/hooks/useSelectedFeature";
 import MarkerButton from "@/markers/components/MarkerButton";
-import { ensureVisible } from "@/navigation/components/NavigationCamera";
+import { flyTo } from "@/navigation/components/NavigationCamera";
 import RouteButton from "@/routes/components/RouteButton";
 import SheetHeader from "@/ui/SheetHeader";
 import { Form, Host, LabeledContent, Section, Text } from "@expo/ui/swift-ui";
@@ -28,10 +30,10 @@ export default function ChartFeatureDetail({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [inspecting, setInspecting] = useState(false);
 
-  // Bring the feature into view if it isn't already (deep-link or panned away).
   useFocusEffect(
     useCallback(() => {
-      ensureVisible({ latitude, longitude });
+      // Center the map on the selected feature.
+      flyTo({ center: [longitude, latitude], duration: 600 });
     }, [latitude, longitude]),
   );
 
@@ -52,7 +54,9 @@ export default function ChartFeatureDetail({ id }: { id: string }) {
       if (cancelled) return;
       const group = groupFeatures(lnam, rendered);
       if (group) {
-        setFeatures([group.primary, ...group.related]);
+        const members = [group.primary, ...group.related];
+        setFeatures(members);
+        setSelectedFeature({ lnam, features: members });
         setLoading(false);
       } else if (attempt < 2) {
         timer = setTimeout(() => run(attempt + 1), 600);
@@ -65,6 +69,8 @@ export default function ChartFeatureDetail({ id }: { id: string }) {
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
+      // Drop the map highlight when this feature is deselected/swapped.
+      clearSelectedFeature(lnam);
     };
   }, [lnam]);
 
@@ -137,6 +143,11 @@ export default function ChartFeatureDetail({ id }: { id: string }) {
               <Text>Feature not found</Text>
             </Section>
           )}
+
+          <NearbyList
+            center={{ latitude, longitude }}
+            exclude={{ kind: "chart", id }}
+          />
         </Form>
       </Host>
       <FeatureInspector

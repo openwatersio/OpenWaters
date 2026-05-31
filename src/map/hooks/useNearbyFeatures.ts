@@ -3,7 +3,7 @@ import { type AtoN, useAtoN } from "@/aton/hooks/useAtoN";
 import { groupFeatures } from "@/charts/s57/relations";
 import { useChartStore } from "@/charts/store";
 import { describeChartFeature } from "@/charts/translators";
-import { flattenCoordinates } from "@/geo";
+import { chartFeatureId, representativePoint } from "@/map/featureAtPoint";
 import { mapRef } from "@/map/hooks/useMapRef";
 import { useMarkers } from "@/markers/hooks/useMarkers";
 import type { Feature } from "geojson";
@@ -131,7 +131,7 @@ export function useNearbyFeatures(
 
           items.push({
             kind: "chart",
-            id: `${rep.longitude},${rep.latitude},${described.lnam}`,
+            id: chartFeatureId(rep, described.lnam),
             title: described.title,
             subtitle: sub,
             icon: CHART_ICON,
@@ -153,11 +153,16 @@ export function useNearbyFeatures(
   return useMemo(() => {
     const here: Position = { latitude, longitude };
     const radius = radiusM || FALLBACK_RADIUS_M;
-    const items: NearbyItem[] = [...chartItems];
 
     const within = (pos: Position) => getDistance(here, pos) <= radius;
     const excluded = (kind: NearbyKind, id: string) =>
       excludeKind === kind && excludeId === id;
+
+    // Chart items are gathered in the effect above; drop the subject feature so
+    // a chart detail's own Nearby list doesn't list itself.
+    const items: NearbyItem[] = chartItems.filter(
+      (c) => !excluded("chart", c.id),
+    );
 
     for (const vessel of Object.values(vessels)) {
       const pos = vesselPosition(vessel);
@@ -264,25 +269,3 @@ function atonName(aton: AtoN): string | undefined {
   return typeof name === "string" ? name : undefined;
 }
 
-/** Centroid for areas/lines, the point itself for points. */
-function representativePoint(
-  geometry: GeoJSON.Geometry | null | undefined,
-): Position | null {
-  if (!geometry || geometry.type === "GeometryCollection") return null;
-  if (geometry.type === "Point") {
-    const [lon, lat] = geometry.coordinates;
-    return { latitude: lat, longitude: lon };
-  }
-  const coords = flattenCoordinates(geometry);
-  if (coords.length === 0) return null;
-  let sumLon = 0;
-  let sumLat = 0;
-  for (const [lon, lat] of coords) {
-    sumLon += lon;
-    sumLat += lat;
-  }
-  return {
-    latitude: sumLat / coords.length,
-    longitude: sumLon / coords.length,
-  };
-}
