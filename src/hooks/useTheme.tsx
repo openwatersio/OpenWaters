@@ -32,6 +32,10 @@ const tokens = {
   // "contrast": foreground on any saturated fill (accent or map overlay)
   // or on the nautical chart.
   contrast: { custom: "#FFFFFF" },
+  // Drop-shadow / depth color cast beneath map symbols to lift them off the
+  // chart. Semi-transparent black in both schemes (the nautical chart stays
+  // light even in dark mode); slightly stronger in dark for the same read.
+  shadow: { custom: { light: "rgba(0, 0, 0, 0.45)", dark: "rgba(0, 0, 0, 0.6)" } },
 
   // ── Accents ───────────────────────────────────────────────
   // Saturated role colors for UI fills.

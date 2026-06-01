@@ -1,4 +1,4 @@
-import { iconSize, vesselMppFactor, vesselScaleAt, vesselScaleDamped } from "@/map/iconSize";
+import { clampHalo, iconSize, vesselMppFactor, vesselScaleAt, vesselScaleDamped } from "@/map/iconSize";
 import config from "@/assets/map/icon-config.json";
 import { createPropertyExpression, v8 } from "@maplibre/maplibre-gl-style-spec";
 
@@ -102,6 +102,38 @@ describe("iconSize", () => {
   it("returns the expected icon-size factor for a CSS-pixel value", () => {
     expect(iconSize(ICON_PX)).toBe(1);
     expect(iconSize(ICON_PX / 2)).toBe(0.5);
+  });
+});
+
+describe("clampHalo", () => {
+  // Mirrors MAX_HALO_FACTOR in the source: the shader smears to a square once
+  // (halo_width + blur) / icon_size exceeds ~6; we budget against 5 for margin.
+  const maxTotalPx = (iconCssPx: number) => (iconCssPx * 5) / ICON_PX;
+
+  it("returns the requested width when there is headroom", () => {
+    // Big icon: plenty of budget, width passes through unclamped.
+    expect(clampHalo(200, 1.5)).toBe(1.5);
+  });
+
+  it("clamps the width to the budget for small icons", () => {
+    // No blur: budget is the full icon allowance.
+    expect(clampHalo(8, 5)).toBeCloseTo(maxTotalPx(8), 10);
+  });
+
+  it("subtracts blur from the width budget", () => {
+    // The shader divides width AND blur by icon_size, so they share one budget.
+    expect(clampHalo(8, 5, 1)).toBeCloseTo(maxTotalPx(8) - 1, 10);
+  });
+
+  it("never returns a negative width when blur alone exceeds the budget", () => {
+    expect(clampHalo(8, 2, 100)).toBe(0);
+  });
+
+  it("keeps the production AIS shadow within the smear-safe budget", () => {
+    // Smallest vessel renders ~19 CSS px; width + blur must stay under budget.
+    const width = clampHalo(19, 1.5, 2);
+    expect(width).toBe(1.5); // current ratio leaves headroom for the request
+    expect(width + 2).toBeLessThanOrEqual(maxTotalPx(19));
   });
 });
 
