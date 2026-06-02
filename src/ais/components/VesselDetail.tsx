@@ -1,7 +1,5 @@
-import MarkerButton from "@/markers/components/MarkerButton";
 import NearbyList from "@/map/components/NearbyList";
-import RouteButton from "@/routes/components/RouteButton";
-import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
+import SheetMenu from "@/map/components/SheetMenu";
 import SheetHeader from "@/ui/SheetHeader";
 import { type SourceFamily, useAISVessel, vesselPrimarySource } from "@/ais/hooks/useAIS";
 import { useNavigation, usePosition } from "@/navigation/hooks/useNavigation";
@@ -181,12 +179,7 @@ export default function VesselDetail({ id }: { id: string }) {
           distance && bearing && `${toDistance(distance).value} ${toDistance(distance).abbr} @ ${formatBearing(bearing)}`,
         ].filter(Boolean).join(" · ")}
       />
-      {position && (
-        <SheetBottomToolbar>
-          <MarkerButton latitude={position.latitude} longitude={position.longitude} />
-          <RouteButton latitude={position.latitude} longitude={position.longitude} />
-        </SheetBottomToolbar>
-      )}
+      {position && <SheetMenu coordinate={position} title={name ?? mmsi} />}
       <Host style={{ flex: 1 }}>
         <Form>
           <Section

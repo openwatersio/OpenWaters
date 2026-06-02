@@ -1,18 +1,15 @@
 import ChartFeatureDetail from "@/charts/components/ChartFeatureDetail";
 import DistanceAndBearingText from "@/map/components/DistanceAndBearingText";
 import NearbyList from "@/map/components/NearbyList";
-import SheetBottomToolbar from "@/map/components/SheetBottomToolbar";
+import SheetMenu from "@/map/components/SheetMenu";
 import { chartFeatureIdAtCoordinate } from "@/map/featureAtPoint";
 import { cameraPositionState } from "@/map/hooks/useCameraPosition";
 import { mapRef } from "@/map/hooks/useMapRef";
-import MarkerButton from "@/markers/components/MarkerButton";
-import RouteButton from "@/routes/components/RouteButton";
 import SheetHeader from "@/ui/SheetHeader";
 import { Form, Host, Section } from "@expo/ui/swift-ui";
 import { CoordinateFormat } from "coordinate-format";
-import { router, Stack } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { showLocation } from "react-native-map-link";
 
 const coordFormat = new CoordinateFormat("minutes");
 
@@ -83,24 +80,10 @@ export default function LocationDetail({ id }: { id: string }) {
   return (
     <>
       <SheetHeader title="Location" subtitle={[latStr, lonStr].join(", ")} />
-      <Stack.Toolbar placement="left">
-        <Stack.Toolbar.Button
-          icon="square.and.arrow.up"
-          onPress={() =>
-            showLocation({
-              latitude: latitude,
-              longitude: longitude,
-              title: `${latStr} ${lonStr}`,
-            })
-          }
-        >
-          Open In…
-        </Stack.Toolbar.Button>
-      </Stack.Toolbar>
-      <SheetBottomToolbar>
-        <MarkerButton latitude={latitude} longitude={longitude} />
-        <RouteButton latitude={latitude} longitude={longitude} />
-      </SheetBottomToolbar>
+      <SheetMenu
+        coordinate={{ latitude, longitude }}
+        title={`${latStr} ${lonStr}`}
+      />
       <Host style={{ flex: 1 }}>
         <Form>
           <Section>
