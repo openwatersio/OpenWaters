@@ -1,12 +1,13 @@
-// Dynamic Expo config with build variants so dev / preview / production
-// builds can be installed side-by-side on the same device.
+// Dynamic Expo config with build variants so a local dev build and the
+// TestFlight/App Store build can be installed side-by-side on one device.
 //
-// Variant is selected via the APP_VARIANT env var (set per-profile in
-// eas.json, and via the npm scripts for local builds). Each variant gets a
-// distinct bundleIdentifier, name, and scheme; production keeps the original
-// identifiers so App Store builds are unchanged.
+// Variant is selected via the APP_VARIANT env var. It DEFAULTS to
+// "development" so every local build (npm run ios, or a bare expo prebuild)
+// gets the .dev bundle id and can never clobber the installed TestFlight app.
+// The production variant is pinned explicitly in eas.json's production
+// profile, which the nightly TestFlight workflow builds with.
 
-const VARIANT = process.env.APP_VARIANT || "production";
+const VARIANT = process.env.APP_VARIANT || "development";
 
 const VARIANTS = {
   development: {
