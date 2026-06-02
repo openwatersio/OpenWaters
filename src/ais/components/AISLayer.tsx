@@ -3,8 +3,15 @@ import { MIN_AIS_ZOOM, isAISVisibleAtZoom } from "@/ais/visibility";
 import { projectPosition } from "@/geo";
 import useTheme from "@/hooks/useTheme";
 import { cameraViewState } from "@/map/hooks/useCameraView";
-import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
-import { vesselMppFactor, vesselScaleAt, vesselScaleDamped } from "@/map/iconSize";
+import { useSelectionHandler } from "@/map/hooks/useSelection";
+import {
+  clampHalo,
+  vesselMinCssPx,
+  vesselMppFactor,
+  vesselScaleAt,
+  vesselScaleDamped,
+  vesselTrueCssPx,
+} from "@/map/iconSize";
 import type { ExpressionSpecification } from "@maplibre/maplibre-gl-style-spec";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -203,7 +210,6 @@ export default function AISLayer() {
     return { type: "FeatureCollection", features };
   }, [vessels, tick, visible]);
 
-  const selection = useSelection();
   const navigate = useSelectionHandler();
 
   const handlePress = useCallback((e: NativeSyntheticEvent<{ features: GeoJSON.Feature[] }>) => {
@@ -213,8 +219,6 @@ export default function AISLayer() {
       navigate("vessel", mmsi);
     }
   }, [navigate]);
-
-  const selectedMmsi = selection?.type === "vessel" ? selection.id : "";
 
   // Top-level zoom interpolate so MapLibre's `["zoom"]` constraint is met
   // (zoom may only appear as the input of a top-level step/interpolate).
@@ -229,17 +233,27 @@ export default function AISLayer() {
     22, vesselScaleAt(22),
   ] as ExpressionSpecification, []);
 
-  // Halo-width scaled with zoom. At low zoom (z10), small vessels need
-  // conservative halos to stay within SDF budget. At high zoom (z18+), larger
-  // vessels support wider halos for better visibility. Shadow uses
-  // SHADOW_HALO_BLUR, symbol uses SYMBOL_HALO_BLUR — both share this width.
-  const haloWidth = useMemo<ExpressionSpecification>(() => [
-    "interpolate", ["exponential", 2], ["zoom"],
-    10, 1.5,
-    14, 2,
-    18, 5,
-    22, 7,
-  ] as ExpressionSpecification, []);
+  // Halo-width scaled with zoom, shared by the shadow and symbol layers. The
+  // SDF shader smears the halo into a square once `(halo_width + halo_blur)`
+  // exceeds the per-icon budget (~5 × cssPx / ICON_PX). That budget is tightest
+  // on the *smallest* vessel at each zoom, so every stop is clamped against the
+  // worst-case rendered size of a DEFAULT_LOA_M-length vessel — damped sizing
+  // below z18, true-scale at z18+. The shadow's SHADOW_HALO_BLUR is folded into
+  // the budget here; the symbol layer carries no blur, so it has extra headroom
+  // and reuses the same (conservatively clamped) width safely.
+  const haloWidth = useMemo<ExpressionSpecification>(() => {
+    const minPxZ10 = vesselMinCssPx(DEFAULT_LOA_M, COMPRESSED_REF_LOA_M, REF_PX_AT_Z10, COMPRESSION_POWER);
+    const minPxZ14 = vesselMinCssPx(DEFAULT_LOA_M, COMPRESSED_REF_LOA_M, REF_PX_AT_Z14, COMPRESSION_POWER);
+    const minPxZ18 = vesselTrueCssPx(DEFAULT_LOA_M, 18);
+    const minPxZ22 = vesselTrueCssPx(DEFAULT_LOA_M, 22);
+    return [
+      "interpolate", ["exponential", 2], ["zoom"],
+      10, clampHalo(minPxZ10, 1.5, SHADOW_HALO_BLUR),
+      14, clampHalo(minPxZ14, 2, SHADOW_HALO_BLUR),
+      18, clampHalo(minPxZ18, 5, SHADOW_HALO_BLUR),
+      22, clampHalo(minPxZ22, 7, SHADOW_HALO_BLUR),
+    ] as ExpressionSpecification;
+  }, []);
 
   return (
     <>

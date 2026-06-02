@@ -1,4 +1,4 @@
-import { clampHalo, iconSize, vesselMppFactor, vesselScaleAt, vesselScaleDamped } from "@/map/iconSize";
+import { clampHalo, iconSize, vesselMppFactor, vesselScaleAt, vesselScaleDamped, vesselTrueCssPx } from "@/map/iconSize";
 import config from "@/assets/map/icon-config.json";
 import { createPropertyExpression, v8 } from "@maplibre/maplibre-gl-style-spec";
 
@@ -129,11 +129,44 @@ describe("clampHalo", () => {
     expect(clampHalo(8, 2, 100)).toBe(0);
   });
 
-  it("keeps the production AIS shadow within the smear-safe budget", () => {
-    // Smallest vessel renders ~19 CSS px; width + blur must stay under budget.
-    const width = clampHalo(19, 1.5, 2);
-    expect(width).toBe(1.5); // current ratio leaves headroom for the request
-    expect(width + 2).toBeLessThanOrEqual(maxTotalPx(19));
+  it("clamps width to the smear-safe budget across sizes and blurs", () => {
+    // Generic invariant (no production constants baked in). clampHalo only
+    // shrinks the *width* — it can't reduce the caller's blur — so its contract
+    // is width ≤ max(0, budget − blur). Whenever the blur itself fits, the full
+    // width + blur then stays within the square-smear budget.
+    for (const iconPx of [8, 14.5, 19, 40, 200]) {
+      for (const blur of [0, 1, 2.5]) {
+        const width = clampHalo(iconPx, 5, blur);
+        expect(width).toBeLessThanOrEqual(Math.max(0, maxTotalPx(iconPx) - blur) + 1e-9);
+        if (blur <= maxTotalPx(iconPx)) {
+          expect(width + blur).toBeLessThanOrEqual(maxTotalPx(iconPx) + 1e-9);
+        }
+      }
+    }
+  });
+});
+
+describe("vesselTrueCssPx", () => {
+  it("matches the closed-form on-chart size at the equator", () => {
+    // screenPx = LOA * 2^z / METERS_PER_PIXEL_Z0 (at the equator)
+    const expected = (12 * 2 ** 18) / METERS_PER_PIXEL_Z0;
+    expect(vesselTrueCssPx(12, 18)).toBeCloseTo(expected, 5);
+  });
+
+  it("doubles per zoom level", () => {
+    expect(vesselTrueCssPx(12, 18) * 2).toBeCloseTo(vesselTrueCssPx(12, 19), 5);
+  });
+
+  it("stretches with latitude per Web Mercator", () => {
+    expect(vesselTrueCssPx(12, 18, 60)).toBeCloseTo(vesselTrueCssPx(12, 18) * 2, 5); // cos(60) = 0.5
+  });
+
+  it("agrees with the icon-size that vesselScaleAt would produce", () => {
+    // vesselScaleAt returns a multiplier; multiplied by ICON_PX it is CSS px.
+    const expr = vesselScaleAt(18) as ["*", unknown, number];
+    const k = expr[2];
+    const cssPx = vesselMppFactor(12, 0) * k * ICON_PX;
+    expect(vesselTrueCssPx(12, 18)).toBeCloseTo(cssPx, 5);
   });
 });
 

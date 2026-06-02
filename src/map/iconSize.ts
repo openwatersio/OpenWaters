@@ -143,3 +143,20 @@ export function vesselMinCssPx(
 ): number {
   return referenceCssPx * (minLengthMeters / referenceLengthMeters) ** power;
 }
+
+/**
+ * Returns the rendered size in CSS pixels of a vessel drawn at true broadcast-
+ * LOA scale (the `vesselScaleAt()` regime) for the given zoom. This is the
+ * high-zoom analog of `vesselMinCssPx()`: pass the smallest expected LOA to get
+ * the worst-case size at a true-scale stop, then feed it to `clampHalo()` so the
+ * shared halo width never smears on the tiniest vessel. Smaller vessels at the
+ * equator are the binding case (latitude only stretches the size larger), so
+ * the default `latitudeDegrees = 0` is the conservative floor.
+ */
+export function vesselTrueCssPx(
+  lengthMeters: number,
+  zoom: number,
+  latitudeDegrees: number = 0,
+): number {
+  return (vesselMppFactor(lengthMeters, latitudeDegrees) * 2 ** zoom) / METERS_PER_PIXEL_Z0;
+}

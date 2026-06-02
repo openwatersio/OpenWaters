@@ -28,8 +28,9 @@ mkdir -p "$PNG_DIR"
 SCALE=3
 # Build params shared with the rendering side via icon-config.json so layer
 # `icon-size` values stay in sync (via src/map/iconSize.ts) when these change.
-#   - icon:   rendered-icon size in source pixels (the SVG renders to this;
-#             matches the SVG viewBox dimensions: 48 × 48)
+#   - icon:   rendered-icon size in source pixels (the SVG is scaled to this
+#             when rasterized; it need not equal the SVG's viewBox — the shapes
+#             use a 48-unit viewBox but render down to `icon` source texels)
 #   - canvas: total canvas size in source pixels (icon is centered, with
 #             transparent margin around it)
 # `icon` (the shape's source-texel size) sets MapLibre's halo headroom: a
