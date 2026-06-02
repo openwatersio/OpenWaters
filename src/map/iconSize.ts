@@ -45,6 +45,12 @@ const MAX_HALO_FACTOR = 5 / ICON_PX;
  * `iconCssPx`. Clamps `requestedHaloPx` to the maximum width that won't trip
  * MapLibre's SDF halo shader constraint and render as a dark square box.
  *
+ * The shader constraint is on halo-width AND halo-blur *combined* — both are
+ * divided by the icon-size multiplier inside the shader, so a blurred shadow
+ * on a small icon overflows the SDF gradient just as a wide halo does. Pass
+ * the layer's `icon-halo-blur` as `blurPx` so the width budget accounts for
+ * it; the width is clamped to whatever headroom the blur leaves.
+ *
  * Use at every interpolation stop where halo-width is specified, e.g.:
  * ```
  * "icon-halo-width": ["interpolate", ["linear"], ["zoom"],
@@ -53,13 +59,19 @@ const MAX_HALO_FACTOR = 5 / ICON_PX;
  * ]
  * ```
  *
- * Rule of thumb (with current ICON_PX = 48): halo-width can be up to ~10%
- * of the icon's CSS-pixel size. To draw a 1-px halo cleanly, the icon must
- * be ≥ 10 CSS px; for a 2-px halo, ≥ 20 CSS px. Below those sizes the helper
- * clamps the halo down so it still renders cleanly (just thinner).
+ * Rule of thumb (with current ICON_PX = 24): halo-width + blur can be up to
+ * ~20% of the icon's CSS-pixel size. To draw a 1-px halo cleanly the icon
+ * must be ≥ 5 CSS px; for a soft `width 1.5 + blur 2` shadow, ≥ ~18 CSS px.
+ * Below those sizes the helper clamps the width down (possibly to 0) so the
+ * halo still renders cleanly instead of smearing to a square.
  */
-export function clampHalo(iconCssPx: number, requestedHaloPx: number): number {
-  return Math.min(requestedHaloPx, iconCssPx * MAX_HALO_FACTOR);
+export function clampHalo(
+  iconCssPx: number,
+  requestedHaloPx: number,
+  blurPx: number = 0,
+): number {
+  const budget = iconCssPx * MAX_HALO_FACTOR - blurPx;
+  return Math.max(0, Math.min(requestedHaloPx, budget));
 }
 
 /**
@@ -68,7 +80,10 @@ export function clampHalo(iconCssPx: number, requestedHaloPx: number): number {
  * `length / cos(latitude)` (in meters); the cosine term folds in Web Mercator
  * latitude stretching so the rendered length is correct at any latitude.
  */
-export function vesselMppFactor(lengthMeters: number, latitudeDegrees: number): number {
+export function vesselMppFactor(
+  lengthMeters: number,
+  latitudeDegrees: number,
+): number {
   const cosLat = Math.cos((latitudeDegrees * Math.PI) / 180);
   // Guard against cos→0 at the poles (won't occur for AIS but keeps the math defined).
   return lengthMeters / Math.max(cosLat, 1e-6);
@@ -109,4 +124,39 @@ export function vesselScaleDamped(
 ): ExpressionSpecification {
   const multiplier = iconSize(referenceCssPx) / referenceLengthMeters ** power;
   return ["*", multiplier, ["^", ["get", "mppFactor"], power]];
+}
+
+/**
+ * Returns the worst-case minimum vessel size in CSS pixels: the smallest
+ * vessel (minLengthMeters) rendered at the lowest zoom stop's reference size.
+ * Use this to compute a safe `clampHalo()` floor that never smears even on the
+ * tiniest vessels at the lowest visible zoom.
+ *
+ * Example: a 12 m boat with a 50 m reference rendering at 12 CSS px at z10
+ * using power=0.25 gives `12 × (12/50)^0.25 ≈ 8.6 CSS px` as the floor.
+ */
+export function vesselMinCssPx(
+  minLengthMeters: number,
+  referenceLengthMeters: number,
+  referenceCssPx: number,
+  power: number = 1 / 3,
+): number {
+  return referenceCssPx * (minLengthMeters / referenceLengthMeters) ** power;
+}
+
+/**
+ * Returns the rendered size in CSS pixels of a vessel drawn at true broadcast-
+ * LOA scale (the `vesselScaleAt()` regime) for the given zoom. This is the
+ * high-zoom analog of `vesselMinCssPx()`: pass the smallest expected LOA to get
+ * the worst-case size at a true-scale stop, then feed it to `clampHalo()` so the
+ * shared halo width never smears on the tiniest vessel. Smaller vessels at the
+ * equator are the binding case (latitude only stretches the size larger), so
+ * the default `latitudeDegrees = 0` is the conservative floor.
+ */
+export function vesselTrueCssPx(
+  lengthMeters: number,
+  zoom: number,
+  latitudeDegrees: number = 0,
+): number {
+  return (vesselMppFactor(lengthMeters, latitudeDegrees) * 2 ** zoom) / METERS_PER_PIXEL_Z0;
 }

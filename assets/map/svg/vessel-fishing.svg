@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="48px" height="48px" viewBox="0 0 48 48" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <title>vessel-fishing</title>
-    <g id="vessel-fishing" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <path d="M26.1213203,3.12132034 L35.0710678,12.0710678 C36.9464316,13.9464316 38,16.4899707 38,19.1421356 L38,35 C38,40.5228475 33.5228475,45 28,45 L20,45 C14.4771525,45 10,40.5228475 10,35 L10,19.1421356 C10,16.4899707 11.0535684,13.9464316 12.9289322,12.0710678 L21.8786797,3.12132034 C23.0502525,1.94974747 24.9497475,1.94974747 26.1213203,3.12132034 Z" id="Path" fill="#FFFFFF" fill-rule="nonzero"></path>
-    </g>
-</svg>

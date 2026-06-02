@@ -25,21 +25,25 @@ trap "rm -rf $TMP_DIR" EXIT
 
 mkdir -p "$PNG_DIR"
 
-SCALE=2
+SCALE=3
 # Build params shared with the rendering side via icon-config.json so layer
 # `icon-size` values stay in sync (via src/map/iconSize.ts) when these change.
-#   - icon:   rendered-icon size in source pixels (the SVG renders to this;
-#             matches the SVG viewBox dimensions: 48 × 48)
+#   - icon:   rendered-icon size in source pixels (the SVG is scaled to this
+#             when rasterized; it need not equal the SVG's viewBox — the shapes
+#             use a 48-unit viewBox but render down to `icon` source texels)
 #   - canvas: total canvas size in source pixels (icon is centered, with
 #             transparent margin around it)
-# The icon-to-canvas ratio determines MapLibre's `icon-halo-width` headroom:
-# the smaller the icon relative to the canvas, the larger the icon-size
-# multiplier needed to render the icon at any given CSS size, which lifts
-# the shader's `halo_width < 6 × icon_size` constraint proportionally. With
-# icon=48 and canvas=96 the ratio gives ~10% halo headroom (~1 CSS px halo
-# on icons rendered as small as 10 CSS px). The transparent margin must also
-# hold bitmap-sdf's outside gradient (~6 source texels past the shape edge
-# with radius=8, cutoff=0.25 defaults).
+# `icon` (the shape's source-texel size) sets MapLibre's halo headroom: a
+# smaller ICON_PX means a larger icon-size multiplier is needed to render the
+# shape at any given CSS size, and the shader's `(halo_width + halo_blur) <
+# 6 × icon_size` constraint scales with that multiplier — so a smaller icon
+# lifts the absolute halo+blur budget proportionally. With icon=24 the budget
+# is ~5 × cssPx / 24 ≈ 4 CSS px (width + blur combined) on the smallest vessel
+# (~19 CSS px), enough for a soft blurred drop shadow. SCALE keeps the source
+# raster crisp (icon × SCALE = 72px here) independent of this ratio.
+# `canvas` just adds transparent margin to hold bitmap-sdf's outside gradient
+# (~6 source texels past the shape edge with radius=8, cutoff=0.25 defaults)
+# plus the blur spread; it does NOT affect the halo budget.
 CONFIG="$PROJECT_DIR/assets/map/icon-config.json"
 ICON_BASE=$(node -p "require('$CONFIG').icon")
 CANVAS_BASE=$(node -p "require('$CONFIG').canvas")
@@ -52,6 +56,15 @@ if [ "$SVG_COUNT" = "0" ]; then
   echo "No SVGs found in $SVG_DIR"
   exit 0
 fi
+
+# Drop any prior density variants of the generated icons. Changing SCALE
+# switches the @Nx suffix; without this, stale variants (built at a different
+# icon/canvas ratio) linger and Metro serves them on matching-density devices.
+# Hand-made PNGs without a source SVG (e.g. aton-buoy) are never touched.
+for svg in "$SVG_DIR"/*.svg; do
+  name=$(basename "$svg" .svg)
+  rm -f "$PNG_DIR/${name}.png" "$PNG_DIR/${name}"@*x.png
+done
 
 echo "Rasterizing $SVG_COUNT SVGs at ${SCALE}x (${ICON_SIZE}px icon centered in ${CANVAS_SIZE}px canvas)..."
 for svg in "$SVG_DIR"/*.svg; do
