@@ -67,10 +67,6 @@ export async function loadPacks(): Promise<void> {
   offlinePacksState.loading = false;
 }
 
-// Throttle: pause every THROTTLE_BATCH tiles for THROTTLE_DELAY_MS to avoid 429s.
-const THROTTLE_BATCH = 50;
-const THROTTLE_DELAY_MS = 1000;
-
 /** Start downloading tiles for the visible area of a chart */
 export async function downloadVisibleArea(
   chartId: string,
@@ -79,30 +75,18 @@ export async function downloadVisibleArea(
   minZoom: number,
   maxZoom: number,
 ): Promise<void> {
-  let lastThrottleTile = 0;
-
   const pack = await createTilePack(
     chartId,
     styleUri,
     bounds,
     minZoom,
     maxZoom,
-    async (_pack: OfflinePack, status: OfflinePackStatus) => {
+    (_pack: OfflinePack, status: OfflinePackStatus) => {
       const existing = offlinePacksState.packs[_pack.id];
       offlinePacksState.packs[_pack.id] = {
         ...existing,
         status,
       } as TilePackState;
-
-      // Throttle: pause briefly every N tiles to avoid overwhelming tile servers
-      if (
-        status.state === "active" &&
-        status.completedTileCount - lastThrottleTile >= THROTTLE_BATCH
-      ) {
-        lastThrottleTile = status.completedTileCount;
-        await _pack.pause();
-        setTimeout(() => _pack.resume(), THROTTLE_DELAY_MS);
-      }
     },
     (_pack: OfflinePack, error) => {
       logger.warn(`Tile pack error for ${chartId}:`, error.message);
