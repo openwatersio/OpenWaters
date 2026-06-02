@@ -1,10 +1,8 @@
 import { groupFeatures } from "@/charts/s57/relations";
 import { describeChartFeature } from "@/charts/translators";
-import { flattenCoordinates, metersPerPixel } from "@/geo";
+import { Coordinates, flattenCoordinates, metersPerPixel } from "@/geo";
 import type { Feature, Geometry, Position as GeoPosition } from "geojson";
 import { getDistance, getDistanceFromLine } from "geolib";
-
-export type Position = { latitude: number; longitude: number };
 
 /** Half-size (px) of the box queried around a tap to count as "on" a feature. */
 const TAP_TOLERANCE_PX = 22;
@@ -12,7 +10,7 @@ const TAP_TOLERANCE_PX = 22;
 /** Centroid for areas/lines, the point itself for points; null if no coords. */
 export function representativePoint(
   geometry: Geometry | null | undefined,
-): Position | null {
+): Coordinates | null {
   if (!geometry || geometry.type === "GeometryCollection") return null;
   if (geometry.type === "Point") {
     const [lon, lat] = geometry.coordinates;
@@ -31,7 +29,7 @@ export function representativePoint(
 
 /** Chart-feature detail-route id: "lon,lat,LNAM". Shared so ids built from a
  *  map tap match those the nearby list builds (and thus `exclude` works). */
-export function chartFeatureId(rep: Position, lnam: string): string {
+export function chartFeatureId(rep: Coordinates, lnam: string): string {
   return `${rep.longitude},${rep.latitude},${lnam}`;
 }
 
@@ -42,7 +40,7 @@ function lnamOf(f: Feature): string {
 /** Geographic distance (m) from `target` to the nearest vertex/segment of a
  *  geometry, or null if it has no usable coordinates — lines measure to the
  *  nearest segment, not the centroid, so long contours aren't missed. */
-function distanceToGeometry(geometry: Geometry, target: Position): number | null {
+function distanceToGeometry(geometry: Geometry, target: Coordinates): number | null {
   switch (geometry.type) {
     case "Point": {
       const [lon, lat] = geometry.coordinates;
@@ -70,7 +68,7 @@ function distanceToGeometry(geometry: Geometry, target: Position): number | null
   }
 }
 
-function minDistanceToLine(coords: GeoPosition[], target: Position): number | null {
+function minDistanceToLine(coords: GeoPosition[], target: Coordinates): number | null {
   if (coords.length === 0) return null;
   if (coords.length === 1) {
     const [lon, lat] = coords[0];
@@ -110,7 +108,7 @@ function minDistanceToLine(coords: GeoPosition[], target: Position): number | nu
  */
 export function chartFeatureIdAtCoordinate(
   features: Feature[],
-  target: Position,
+  target: Coordinates,
   zoom: number,
 ): string | null {
   const tolerance = metersPerPixel(zoom, target.latitude) * TAP_TOLERANCE_PX;

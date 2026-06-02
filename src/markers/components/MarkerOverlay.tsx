@@ -1,3 +1,4 @@
+import { toPoint } from "@/geo";
 import useTheme from "@/hooks/useTheme";
 import { Annotation } from "@/map/components/Annotation";
 import { ICON_NAMES } from "@/map/components/AnnotationIcon";
@@ -121,7 +122,7 @@ export default function MarkerOverlay() {
       {showSelectedAnnotation && (
         <Annotation
           id="selected-marker"
-          lngLat={[selectedMarker.longitude, selectedMarker.latitude]}
+          lngLat={toPoint(selectedMarker)}
           icon={selectedMarker.icon ?? "pin"}
           color={selectedMarker.color ? theme.adapt(selectedMarker.color) : theme.markers}
           selected

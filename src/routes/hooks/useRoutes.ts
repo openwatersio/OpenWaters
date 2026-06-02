@@ -10,7 +10,7 @@ import {
   type Route,
   type RoutesOrder,
 } from "@/database";
-import { findNearestLegIndex } from "@/geo";
+import { Coordinates, findNearestLegIndex } from "@/geo";
 import { useDbQuery } from "@/hooks/useDbQuery";
 import { setFollowUserLocation } from "@/map/hooks/useCameraState";
 import { getPosition } from "@/navigation/hooks/useNavigation";
@@ -23,11 +23,9 @@ import { proxy, useSnapshot } from "valtio";
 
 let nextWaypointKey = 0;
 
-export type ActiveWaypoint = {
+export type ActiveWaypoint = Coordinates & {
   /** Stable identity for SwiftUI List.ForEach reorder/delete. */
   key: number;
-  latitude: number;
-  longitude: number;
 };
 
 /**
@@ -232,7 +230,7 @@ export function setRouteName(name: string | null) {
 }
 
 export function addRouteWaypoint(
-  point: { latitude: number; longitude: number },
+  point: Coordinates,
   insertAt: number = activeRouteState.points.length,
 ) {
   editActiveRoute(({ points }) => {
@@ -257,10 +255,7 @@ export const ADD_TO_ROUTE_ICON =
  * label is intentionally non-reactive — both branches navigate away from the
  * sheet immediately, so it can never visibly change while on screen.
  */
-export function addToRouteAction(point: {
-  latitude: number;
-  longitude: number;
-}) {
+export function addToRouteAction(point: Coordinates) {
   return {
     label: activeRouteState.isActive ? "Add Waypoint" : "Add to Route",
     onPress: () => {
@@ -399,7 +394,7 @@ export type StartNavigationOptions = {
   startIndex?: number;
   /** Current vessel position. When provided, snaps the active waypoint to
    *  the end of the nearest leg regardless of cross-track distance. */
-  from?: { latitude: number; longitude: number };
+  from?: Coordinates;
 };
 
 export async function startNavigation(

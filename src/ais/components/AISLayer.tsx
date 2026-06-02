@@ -1,6 +1,6 @@
 import { type AISVessel, useAIS } from "@/ais/hooks/useAIS";
 import { MIN_AIS_ZOOM, isAISVisibleAtZoom } from "@/ais/visibility";
-import { projectPosition } from "@/geo";
+import { Coordinates, projectPosition } from "@/geo";
 import useTheme from "@/hooks/useTheme";
 import { cameraViewState } from "@/map/hooks/useCameraView";
 import { useSelectionHandler } from "@/map/hooks/useSelection";
@@ -17,8 +17,6 @@ import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { NativeSyntheticEvent } from "react-native";
 import { subscribeKey } from "valtio/utils";
-
-type Position = { latitude: number; longitude: number };
 
 const STALE_AGE = 6 * 60 * 1000;   // 6 minutes
 const EXPIRED_AGE = 9 * 60 * 1000;  // 9 minutes
@@ -76,10 +74,10 @@ function vesselState(vessel: AISVessel): string {
   return sog > SOG_THRESHOLD ? "underway" : "moored";
 }
 
-function vesselPosition(vessel: AISVessel): Position | null {
+function vesselPosition(vessel: AISVessel): Coordinates | null {
   const pos = vessel.data["navigation.position"]?.value;
   if (pos && typeof pos === "object" && "latitude" in pos) {
-    return pos as Position;
+    return pos as Coordinates;
   }
   return null;
 }

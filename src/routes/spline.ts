@@ -1,22 +1,22 @@
+import type { Point } from "@/geo";
+
 /**
  * Catmull-Rom spline interpolation for smoothing coordinate paths.
  * Generates intermediate points between GPS fixes to create smooth curves
  * instead of hard turns at each waypoint.
  */
 
-type Coord = [number, number]; // [lon, lat]
-
 /**
  * Interpolate a Catmull-Rom spline segment between p1 and p2,
  * using p0 and p3 as control points.
  */
 function catmullRom(
-  p0: Coord,
-  p1: Coord,
-  p2: Coord,
-  p3: Coord,
+  p0: Point,
+  p1: Point,
+  p2: Point,
+  p3: Point,
   t: number,
-): Coord {
+): Point {
   const t2 = t * t;
   const t3 = t2 * t;
 
@@ -41,12 +41,12 @@ function catmullRom(
  * @returns Smoothed coordinate array (always includes original endpoints)
  */
 export function smoothCoordinates(
-  coords: Coord[],
+  coords: Point[],
   segments = 4,
-): Coord[] {
+): Point[] {
   if (coords.length < 3) return coords;
 
-  const result: Coord[] = [coords[0]];
+  const result: Point[] = [coords[0]];
 
   for (let i = 0; i < coords.length - 1; i++) {
     const p0 = coords[Math.max(i - 1, 0)];

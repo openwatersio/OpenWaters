@@ -1,4 +1,5 @@
 import type { TrackPoint } from "@/database";
+import type { Coordinates } from "@/geo";
 import { getDistance } from "geolib";
 
 /** Reject segments faster than this — physically impossible for a sailing vessel. */
@@ -15,8 +16,6 @@ export const NOISE_FLOOR_FACTOR = 1.0;
 
 /** Default assumed accuracy when a fix's accuracy is null. */
 const DEFAULT_ACCURACY_M = 10;
-
-type Coordinates = { latitude: number; longitude: number };
 
 interface SegmentInputs {
   previous: TrackPoint;

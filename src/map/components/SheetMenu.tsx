@@ -1,10 +1,9 @@
+import { Coordinates } from "@/geo";
 import { ADD_MARKER_ICON, addMarkerAt } from "@/markers/hooks/useMarkers";
 import { ADD_TO_ROUTE_ICON, addToRouteAction } from "@/routes/hooks/useRoutes";
 import { Stack } from "expo-router";
 import { ReactNode } from "react";
 import { showLocation } from "react-native-map-link";
-
-type Coordinate = { latitude: number; longitude: number };
 
 /**
  * The actions menu for a bottom-sheet detail view. Renders a single
@@ -32,7 +31,7 @@ export default function SheetMenu({
   showRoute = true,
   children,
 }: {
-  coordinate?: Coordinate;
+  coordinate?: Coordinates;
   /** Title used when opening the coordinate in an external maps app. */
   title?: string;
   /** Include the "Add Marker" action (default true). */

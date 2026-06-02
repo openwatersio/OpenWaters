@@ -1,3 +1,4 @@
+import { Coordinates } from "@/geo";
 import { checkWaypointArrival } from "@/routes/waypointArrival";
 
 // Waypoint B at a known location (off the coast of Rhode Island).
@@ -5,11 +6,7 @@ const B = { latitude: 41.5, longitude: -71.3 };
 
 // Helper: approximate lat/lon offset from a point (local flat-earth, OK for
 // a few hundred meters). +north / +east in meters.
-function offset(
-  point: { latitude: number; longitude: number },
-  northMeters: number,
-  eastMeters: number,
-) {
+function offset(point: Coordinates, northMeters: number, eastMeters: number) {
   const latRad = (point.latitude * Math.PI) / 180;
   return {
     latitude: point.latitude + northMeters / 110540,

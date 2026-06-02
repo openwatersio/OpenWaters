@@ -1,16 +1,15 @@
 import { type AtoN, useAtoN } from "@/aton/hooks/useAtoN";
+import { Coordinates } from "@/geo";
 import { useSelection, useSelectionHandler } from "@/map/hooks/useSelection";
 import { clampHalo, iconSize } from "@/map/iconSize";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 import { useCallback, useMemo } from "react";
 import type { NativeSyntheticEvent } from "react-native";
 
-type Position = { latitude: number; longitude: number };
-
-function atonPosition(aton: AtoN): Position | null {
+function atonPosition(aton: AtoN): Coordinates | null {
   const pos = aton.data["navigation.position"]?.value;
   if (pos && typeof pos === "object" && "latitude" in pos) {
-    return pos as Position;
+    return pos as Coordinates;
   }
   return null;
 }

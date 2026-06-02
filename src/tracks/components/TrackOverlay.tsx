@@ -1,4 +1,5 @@
 import { getTrackPoints } from "@/database";
+import type { Point } from "@/geo";
 import useTheme from "@/hooks/useTheme";
 import { useSelection } from "@/map/hooks/useSelection";
 import { useSheets } from "@/map/hooks/useSheetPosition";
@@ -12,8 +13,6 @@ import { getBounds } from "geolib";
 import { useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import TrackLine from "./TrackLine";
-
-type Coordinate = [longitude: number, latitude: number];
 
 export default function TrackOverlay() {
   const { track } = useTrackRecording();
@@ -32,7 +31,7 @@ function ActiveTrackOverlay() {
   return <TrackLine id="active-track" coordinates={coordinates} color={theme.tracks} />;
 }
 
-function computeBounds(coords: Coordinate[]): LngLatBounds | null {
+function computeBounds(coords: Point[]): LngLatBounds | null {
   if (coords.length === 0) return null;
   const { minLng, minLat, maxLng, maxLat } = getBounds(coords);
   return [minLng, minLat, maxLng, maxLat];
@@ -43,7 +42,7 @@ function SelectedTrackOverlay() {
   const selection = useSelection();
   const selectedId = selection?.type === "track" ? Number(selection.id) : null;
   const sheetHeight = useSheets()["track"]?.height ?? 0;
-  const [coords, setCoords] = useState<Coordinate[]>([]);
+  const [coords, setCoords] = useState<Point[]>([]);
   const insets = useSafeAreaInsets();
 
   // Load track points when selection changes

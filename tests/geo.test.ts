@@ -4,15 +4,19 @@ import {
   calculateRouteLegs,
   calculateVMG,
   calculateWaypointProgress,
+  Coordinates,
   formatBearing,
   headingDelta,
   isInsideBounds,
   legProgress,
+  toCoordinates,
+  toPoint,
 } from "@/geo";
+import { getDistance } from "geolib";
 
 // Local flat-earth offset helper used by legProgress tests.
 function offsetPoint(
-  point: { latitude: number; longitude: number },
+  point: Coordinates,
   northMeters: number,
   eastMeters: number,
 ) {
@@ -45,10 +49,12 @@ describe("calculateCPA", () => {
   const DEG = Math.PI / 180;
 
   it("returns null when both vessels are stationary", () => {
-    expect(calculateCPA(
-      { latitude: 47.6, longitude: -122.3, sog: 0, cog: 0 },
-      { latitude: 47.61, longitude: -122.3, sog: 0, cog: 0 },
-    )).toBeNull();
+    expect(
+      calculateCPA(
+        { latitude: 47.6, longitude: -122.3, sog: 0, cog: 0 },
+        { latitude: 47.61, longitude: -122.3, sog: 0, cog: 0 },
+      ),
+    ).toBeNull();
   });
 
   it("returns null when CPA is in the past (vessels diverging)", () => {
@@ -129,7 +135,10 @@ describe("calculateVMG", () => {
 
   it("handles bearings that wrap across 0/360", () => {
     // COG 350, target 10 — 20° off, VMG = 5 * cos(20°)
-    expect(calculateVMG(5, 350, 10)).toBeCloseTo(5 * Math.cos((20 * Math.PI) / 180), 5);
+    expect(calculateVMG(5, 350, 10)).toBeCloseTo(
+      5 * Math.cos((20 * Math.PI) / 180),
+      5,
+    );
   });
 
   it("scales with SOG at a given off-course angle", () => {
@@ -197,14 +206,31 @@ describe("calculateWaypointProgress", () => {
     });
 
     it("legVmg equals SOG when heading along the leg", () => {
-      const result = calculateWaypointProgress(position, 5, 0, waypointNorth, previous);
+      const result = calculateWaypointProgress(
+        position,
+        5,
+        0,
+        waypointNorth,
+        previous,
+      );
       expect(result.legVmg).not.toBeNull();
       expect(result.legVmg!).toBeCloseTo(5, 1);
     });
 
     it("direct approach: leg-aligned ETA matches bearing-to-mark ETA", () => {
-      const withLeg = calculateWaypointProgress(position, 5, 0, waypointNorth, previous);
-      const withoutLeg = calculateWaypointProgress(position, 5, 0, waypointNorth);
+      const withLeg = calculateWaypointProgress(
+        position,
+        5,
+        0,
+        waypointNorth,
+        previous,
+      );
+      const withoutLeg = calculateWaypointProgress(
+        position,
+        5,
+        0,
+        waypointNorth,
+      );
       expect(withLeg.eta).not.toBeNull();
       expect(withoutLeg.eta).not.toBeNull();
       expect(withLeg.eta!).toBeCloseTo(withoutLeg.eta!, 0);
@@ -216,11 +242,23 @@ describe("calculateWaypointProgress", () => {
       // northwest, so bearing-to-mark VMG underestimates progress — ETA too
       // high. Leg-aligned VMG is SOG · cos(0°) = SOG — honest.
       const offsetLat = 47.6;
-      const offsetLon = -122.3 + 200 / (111320 * Math.cos((offsetLat * Math.PI) / 180));
+      const offsetLon =
+        -122.3 + 200 / (111320 * Math.cos((offsetLat * Math.PI) / 180));
       const laylinePos = { latitude: offsetLat, longitude: offsetLon };
 
-      const legAligned = calculateWaypointProgress(laylinePos, 5, 0, waypointNorth, previous);
-      const markAligned = calculateWaypointProgress(laylinePos, 5, 0, waypointNorth);
+      const legAligned = calculateWaypointProgress(
+        laylinePos,
+        5,
+        0,
+        waypointNorth,
+        previous,
+      );
+      const markAligned = calculateWaypointProgress(
+        laylinePos,
+        5,
+        0,
+        waypointNorth,
+      );
 
       expect(legAligned.eta).not.toBeNull();
       expect(markAligned.eta).not.toBeNull();
@@ -231,14 +269,26 @@ describe("calculateWaypointProgress", () => {
 
     it("unfavored tack: legVmg near zero → ETA is null", () => {
       // COG 90° (east) against a due-north leg: legVmg = 5 · cos(90°) = 0.
-      const result = calculateWaypointProgress(position, 5, 90, waypointNorth, previous);
+      const result = calculateWaypointProgress(
+        position,
+        5,
+        90,
+        waypointNorth,
+        previous,
+      );
       expect(Math.abs(result.legVmg!)).toBeLessThan(0.5);
       expect(result.eta).toBeNull();
     });
 
     it("favored tack: legVmg ≈ SOG · cos(45°), ETA ≈ distance / legVmg", () => {
       // COG 45° to a due-north leg → legVmg = 5 · cos(45°) ≈ 3.535
-      const result = calculateWaypointProgress(position, 5, 45, waypointNorth, previous);
+      const result = calculateWaypointProgress(
+        position,
+        5,
+        45,
+        waypointNorth,
+        previous,
+      );
       expect(result.legVmg).not.toBeNull();
       expect(result.legVmg!).toBeCloseTo(5 * Math.cos(Math.PI / 4), 2);
       expect(result.eta).not.toBeNull();
@@ -247,7 +297,13 @@ describe("calculateWaypointProgress", () => {
 
     it("first leg (previous = null) still uses bearing-to-mark VMG", () => {
       // Sanity: no regression for the first-leg code path.
-      const result = calculateWaypointProgress(position, 5, 0, waypointNorth, null);
+      const result = calculateWaypointProgress(
+        position,
+        5,
+        0,
+        waypointNorth,
+        null,
+      );
       expect(result.legVmg).toBeNull();
       expect(result.eta).not.toBeNull();
       expect(result.eta!).toBeCloseTo(result.distance / 5, 2);
@@ -256,8 +312,8 @@ describe("calculateWaypointProgress", () => {
 });
 
 describe("calculateRouteLegs", () => {
-  const a = { latitude: 47.60, longitude: -122.30 };
-  const b = { latitude: 47.61, longitude: -122.30 };
+  const a = { latitude: 47.6, longitude: -122.3 };
+  const b = { latitude: 47.61, longitude: -122.3 };
   const c = { latitude: 47.61, longitude: -122.29 };
 
   it("returns empty for zero points", () => {
@@ -283,11 +339,11 @@ describe("calculateRouteLegs", () => {
 });
 
 describe("calculateDestinationProgress", () => {
-  const pos = { latitude: 47.60, longitude: -122.30 };
+  const pos = { latitude: 47.6, longitude: -122.3 };
   // Route: pos → wp1 (~1km N) → wp2 (~2km N total) → wp3 (~3km N total)
-  const wp1 = { latitude: 47.609, longitude: -122.30 };
-  const wp2 = { latitude: 47.618, longitude: -122.30 };
-  const wp3 = { latitude: 47.627, longitude: -122.30 };
+  const wp1 = { latitude: 47.609, longitude: -122.3 };
+  const wp2 = { latitude: 47.618, longitude: -122.3 };
+  const wp3 = { latitude: 47.627, longitude: -122.3 };
   const points = [wp1, wp2, wp3];
 
   it("equals next-waypoint progress when active is the last point", () => {
@@ -430,6 +486,107 @@ describe("legProgress", () => {
   });
 });
 
+describe("toCoordinates", () => {
+  it("normalizes an object to itself", () => {
+    expect(toCoordinates({ latitude: 47.6, longitude: -122.3 })).toEqual({
+      latitude: 47.6,
+      longitude: -122.3,
+    });
+  });
+
+  it("normalizes a [longitude, latitude] tuple to an object", () => {
+    expect(toCoordinates([-122.3, 47.6])).toEqual({
+      latitude: 47.6,
+      longitude: -122.3,
+    });
+  });
+
+  it("accepts extra object properties (e.g. a DB entity)", () => {
+    const marker = { id: 1, name: "x", latitude: 47.6, longitude: -122.3 };
+    expect(toCoordinates(marker)).toEqual({
+      latitude: 47.6,
+      longitude: -122.3,
+    });
+  });
+
+  it("round-trips Null Island (0, 0) without treating zero as missing", () => {
+    expect(toCoordinates([0, 0])).toEqual({ latitude: 0, longitude: 0 });
+    expect(toCoordinates({ latitude: 0, longitude: 0 })).toEqual({
+      latitude: 0,
+      longitude: 0,
+    });
+  });
+
+  it("returns null for null / undefined", () => {
+    expect(toCoordinates(null)).toBeNull();
+    expect(toCoordinates(undefined)).toBeNull();
+  });
+
+  it("returns null when a component is null", () => {
+    expect(toCoordinates({ latitude: null, longitude: -122.3 })).toBeNull();
+    expect(toCoordinates({ latitude: 47.6, longitude: null })).toBeNull();
+    expect(toCoordinates([null, 47.6])).toBeNull();
+    expect(toCoordinates([-122.3, null])).toBeNull();
+  });
+
+  it("typed: a non-null Position input yields a non-null result", () => {
+    // Compile-time guard: the non-null overload must win for a known-good input,
+    // so `.latitude` is reachable without a null check. A regression that
+    // collapses both overloads to `| null` would make this line a type error.
+    const coords = toCoordinates({ latitude: 47.6, longitude: -122.3 });
+    expect(coords.latitude).toBe(47.6);
+  });
+});
+
+describe("toPoint", () => {
+  it("normalizes an object to a [longitude, latitude] tuple", () => {
+    expect(toPoint({ latitude: 47.6, longitude: -122.3 })).toEqual([
+      -122.3, 47.6,
+    ]);
+  });
+
+  it("normalizes a tuple to itself", () => {
+    expect(toPoint([-122.3, 47.6])).toEqual([-122.3, 47.6]);
+  });
+
+  it("round-trips Null Island (0, 0) without treating zero as missing", () => {
+    expect(toPoint({ latitude: 0, longitude: 0 })).toEqual([0, 0]);
+    expect(toPoint([0, 0])).toEqual([0, 0]);
+  });
+
+  it("returns null for null / undefined", () => {
+    expect(toPoint(null)).toBeNull();
+    expect(toPoint(undefined)).toBeNull();
+  });
+
+  it("returns null when a component is null", () => {
+    expect(toPoint({ latitude: null, longitude: -122.3 })).toBeNull();
+    expect(toPoint([-122.3, null])).toBeNull();
+  });
+
+  it("typed: a non-null Position input yields a non-null result", () => {
+    const point = toPoint({ latitude: 47.6, longitude: -122.3 });
+    expect(point[0]).toBe(-122.3);
+  });
+
+  it("is a faithful inverse of toCoordinates", () => {
+    const coords = { latitude: 47.6, longitude: -122.3 };
+    expect(toCoordinates(toPoint(coords))).toEqual(coords);
+  });
+});
+
+describe("coordinate form equivalence (geolib dual-form lock)", () => {
+  // The math layer feeds geolib, which accepts both the object and tuple forms.
+  // This pins that assumption: object input and the equivalent `toPoint` tuple
+  // must yield an identical distance, so a future geolib change can't silently
+  // break the boundary conversions the helpers introduce.
+  it("getDistance is identical for object vs equivalent tuple inputs", () => {
+    const a = { latitude: 47.6, longitude: -122.3 };
+    const b = { latitude: 47.61, longitude: -122.29 };
+    expect(getDistance(toPoint(a), toPoint(b))).toBe(getDistance(a, b));
+  });
+});
+
 describe("isInsideBounds", () => {
   const bounds: [number, number, number, number] = [-77, 36, -70, 42];
 
@@ -443,8 +600,12 @@ describe("isInsideBounds", () => {
   });
 
   it("returns false for a point outside the bounds", () => {
-    expect(isInsideBounds({ latitude: 35, longitude: -74 }, bounds)).toBe(false);
-    expect(isInsideBounds({ latitude: 39, longitude: -68 }, bounds)).toBe(false);
+    expect(isInsideBounds({ latitude: 35, longitude: -74 }, bounds)).toBe(
+      false,
+    );
+    expect(isInsideBounds({ latitude: 39, longitude: -68 }, bounds)).toBe(
+      false,
+    );
   });
 
   it("handles latitude 0 and longitude 0", () => {

@@ -1,11 +1,10 @@
+import type { Point } from "@/geo";
 import useTheme from "@/hooks/useTheme";
 import { GeoJSONSource, Layer } from "@maplibre/maplibre-react-native";
 
-type Coord = [number, number];
-
 type TrackLineProps = {
   id: string;
-  coordinates: Coord[];
+  coordinates: Point[];
   color: string;
 };
 

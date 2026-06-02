@@ -1,10 +1,10 @@
+import { useAtoNById } from "@/aton/hooks/useAtoN";
+import { Coordinates, formatBearing } from "@/geo";
+import { toDistance } from "@/hooks/usePreferredUnits";
 import NearbyList from "@/map/components/NearbyList";
 import SheetMenu from "@/map/components/SheetMenu";
-import SheetHeader from "@/ui/SheetHeader";
-import { useAtoNById } from "@/aton/hooks/useAtoN";
 import { usePosition } from "@/navigation/hooks/useNavigation";
-import { toDistance } from "@/hooks/usePreferredUnits";
-import { formatBearing } from "@/geo";
+import SheetHeader from "@/ui/SheetHeader";
 import {
   Form,
   Host,
@@ -19,8 +19,6 @@ import {
 } from "@expo/ui/swift-ui/modifiers";
 import { getDistance, getGreatCircleBearing } from "geolib";
 import { useMemo } from "react";
-
-type Position = { latitude: number; longitude: number };
 
 /** IALA AtoN type code → human-readable name */
 function atonTypeName(code: number | undefined): string {
@@ -74,9 +72,9 @@ function getBoolean(value: unknown): boolean | undefined {
   return undefined;
 }
 
-function getPosition(value: unknown): Position | null {
+function getPosition(value: unknown): Coordinates | null {
   if (value && typeof value === "object" && "latitude" in value && "longitude" in value) {
-    return value as Position;
+    return value as Coordinates;
   }
   return null;
 }
@@ -134,7 +132,7 @@ export default function AtoNDetail({ id }: { id: string }) {
         subtitle={[
           atonTypeName(atonType),
           distance !== undefined && bearing !== undefined &&
-            `${toDistance(distance).value} ${toDistance(distance).abbr} @ ${formatBearing(bearing)}`,
+          `${toDistance(distance).value} ${toDistance(distance).abbr} @ ${formatBearing(bearing)}`,
         ].filter(Boolean).join(" · ")}
       />
       {position && <SheetMenu coordinate={position} title={name ?? id} />}

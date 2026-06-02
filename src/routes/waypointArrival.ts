@@ -1,4 +1,4 @@
-import { legProgress, type LegProgress } from "@/geo";
+import { Coordinates, legProgress, type LegProgress } from "@/geo";
 import { getDistance, getGreatCircleBearing } from "geolib";
 
 /** Default arrival circle radius in meters. */
@@ -19,16 +19,14 @@ const MAX_TURN_ANGLE_DEG = 170;
 /** Below this turn angle (degrees), treat the route as straight and use the simple perpendicular. */
 const MIN_TURN_ANGLE_DEG = 2;
 
-export type LatLon = { latitude: number; longitude: number };
-
 export type ArrivalInputs = {
-  position: LatLon;
+  position: Coordinates;
   /** Previous waypoint (A). Null on the first leg (no incoming leg). */
-  previousWaypoint: LatLon | null;
+  previousWaypoint: Coordinates | null;
   /** Active waypoint (B). Required. */
-  activeWaypoint: LatLon;
+  activeWaypoint: Coordinates;
   /** Next waypoint (C). Null on the last leg. Used to compute the bisector. */
-  nextWaypoint: LatLon | null;
+  nextWaypoint: Coordinates | null;
   /** When true, only the arrival circle triggers — no perpendicular/bisector. */
   arriveOnCircleOnly?: boolean;
   /** User-configured arrival circle radius, meters. Default 50. */
@@ -169,8 +167,8 @@ export function checkWaypointArrival(inputs: ArrivalInputs): ArrivalResult {
  * direction; negative = opposite.
  */
 function projectOntoBearing(
-  origin: LatLon,
-  point: LatLon,
+  origin: Coordinates,
+  point: Coordinates,
   bearingDeg: number,
 ): number {
   const latRad = (origin.latitude * Math.PI) / 180;

@@ -1,3 +1,4 @@
+import type { Point } from "@/geo";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
 import useTheme from "@/hooks/useTheme";
 import { Annotation, AnnotationProps } from "@/map/components/Annotation";
@@ -21,8 +22,6 @@ import * as Haptics from "expo-haptics";
 import { router, usePathname } from "expo-router";
 import { useEffect, useMemo } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
-
-type Coord = [longitude: number, latitude: number];
 
 /**
  * Renders the active route on the map. Reads from `useActiveRoute()` and
@@ -75,12 +74,10 @@ function EditingOverlay() {
   const theme = useTheme();
   const { points, activeIndex } = useActiveRoute();
 
-  const coords: Coord[] = useMemo(
+  const coords: Point[] = useMemo(
     () => points.map((p) => [p.longitude, p.latitude]),
     [points],
   );
-
-
 
   const lineData = useMemo(() => {
     if (coords.length < 2) return null;
@@ -140,7 +137,7 @@ function NavigatingOverlay() {
 
   useWaypointArrival(points as ActiveWaypoint[], activePointIndex);
 
-  const coords: Coord[] = useMemo(
+  const coords: Point[] = useMemo(
     () => points.map((p) => [p.longitude, p.latitude]),
     [points],
   );

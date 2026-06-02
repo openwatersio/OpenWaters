@@ -4,7 +4,7 @@ import SheetHeader from "@/ui/SheetHeader";
 import { type SourceFamily, useAISVessel, vesselPrimarySource } from "@/ais/hooks/useAIS";
 import { useNavigation, usePosition } from "@/navigation/hooks/useNavigation";
 import { toDepth, toDistance, toSpeed } from "@/hooks/usePreferredUnits";
-import { calculateCPA, formatBearing } from "@/geo";
+import { Coordinates, calculateCPA, formatBearing } from "@/geo";
 import {
   Form,
   Host,
@@ -21,8 +21,6 @@ import {
 } from "@expo/ui/swift-ui/modifiers";
 import { getDistance, getGreatCircleBearing } from "geolib";
 import { useEffect, useMemo, useState } from "react";
-
-type Position = { latitude: number; longitude: number };
 
 /** AIS ship type code → human-readable name */
 function shipTypeName(code: number | undefined): string {
@@ -80,9 +78,9 @@ function getString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-function getPosition(value: unknown): Position | null {
+function getPosition(value: unknown): Coordinates | null {
   if (value && typeof value === "object" && "latitude" in value && "longitude" in value) {
-    return value as Position;
+    return value as Coordinates;
   }
   return null;
 }
@@ -127,7 +125,6 @@ export default function VesselDetail({ id }: { id: string }) {
     const id = setInterval(() => setTick((t) => t + 1), 10_000);
     return () => clearInterval(id);
   }, []);
-
 
   const { distance, bearing } = useMemo(() => {
     void tick;

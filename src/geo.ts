@@ -1,12 +1,73 @@
 import { getDistance, getGreatCircleBearing } from "geolib";
 
+/** Canonical object form of a coordinate (geolib / expo-location / app-native). */
+export type Coordinates = { latitude: number; longitude: number };
+
+/**
+ * Tuple form of a coordinate in GeoJSON / MapLibre axis order: `[x, y]` where
+ * `x` is longitude and `y` is latitude. Mutable so values stay assignable to
+ * MapLibre and geolib sinks that expect a plain `number[]`/tuple.
+ */
+export type Point = [longitude: number, latitude: number];
+
+/** Either coordinate form. Use only as a helper/boundary input — never for storage. */
+export type Position = Coordinates | Point;
+
+/** Object form whose components may each be absent (e.g. an unfixed GPS position). */
+type NullableCoordinates = { latitude: number | null; longitude: number | null };
+/** Tuple input, accepted readonly so `as const` / readonly tuples flow in. */
+type PointInput = readonly [number, number];
+type NullablePointInput = readonly [number | null, number | null];
+/** Any coordinate-ish input the normalizers accept. */
+type MaybePosition =
+  | Coordinates
+  | PointInput
+  | NullableCoordinates
+  | NullablePointInput
+  | null
+  | undefined;
+
+/**
+ * Normalize any coordinate input to a `[longitude, latitude]` tuple, accepting either
+ * a tuple or a `{ latitude, longitude }` object. Returns `null` when the input is
+ * null/undefined or either component is null.
+ *
+ * `Array.isArray` does not narrow a `readonly` tuple out of the object branch, so the
+ * object case is asserted.
+ */
+export function toPoint(input: Coordinates | PointInput): Point;
+export function toPoint(input: MaybePosition): Point | null;
+export function toPoint(input: MaybePosition): Point | null {
+  if (input == null) return null;
+  const longitude = Array.isArray(input)
+    ? input[0]
+    : (input as NullableCoordinates).longitude;
+  const latitude = Array.isArray(input)
+    ? input[1]
+    : (input as NullableCoordinates).latitude;
+  if (longitude == null || latitude == null) return null;
+  return [longitude, latitude];
+}
+
+/**
+ * Normalize any coordinate input to the canonical `{ latitude, longitude }` object,
+ * accepting either a `[longitude, latitude]` tuple or an object. Returns `null` when
+ * the input is null/undefined or either component is null.
+ */
+export function toCoordinates(input: Coordinates | PointInput): Coordinates;
+export function toCoordinates(input: MaybePosition): Coordinates | null;
+export function toCoordinates(input: MaybePosition): Coordinates | null {
+  const point = toPoint(input);
+  return point && { latitude: point[1], longitude: point[0] };
+}
+
 /** Project a position forward along a bearing by a distance in meters (flat-earth approximation) */
 export function projectPosition(
   latitude: number,
   longitude: number,
   bearingRad: number,
   distanceMeters: number,
-): [longitude: number, latitude: number] {
+): Point {
   const dLat = (distanceMeters * Math.cos(bearingRad)) / 110540;
   const dLon =
     (distanceMeters * Math.sin(bearingRad)) /
@@ -27,9 +88,7 @@ export type CPA = {
   time: number;
 };
 
-export type Vessel = {
-  latitude: number;
-  longitude: number;
+export type Vessel = Coordinates & {
   /** Speed over ground in m/s */
   sog: number;
   /** Course over ground in radians, true north */
@@ -95,7 +154,7 @@ export function metersPerPixel(zoom: number, latitude: number): number {
 export function findNearestLegIndex(
   latitude: number,
   longitude: number,
-  points: { latitude: number; longitude: number }[],
+  points: Coordinates[],
   thresholdMeters: number = Infinity,
 ): number | null {
   if (points.length < 2) return null;
@@ -195,11 +254,11 @@ export type WaypointProgress = {
  * @param previous Previous waypoint (A). When provided, ETA uses leg-aligned VMG.
  */
 export function calculateWaypointProgress(
-  position: { latitude: number; longitude: number },
+  position: Coordinates,
   sog: number,
   cog: number,
-  waypoint: { latitude: number; longitude: number },
-  previous?: { latitude: number; longitude: number } | null,
+  waypoint: Coordinates,
+  previous?: Coordinates | null,
 ): WaypointProgress {
   const distance = getDistance(position, waypoint);
   const bearing = getGreatCircleBearing(position, waypoint);
@@ -253,9 +312,9 @@ export type LegProgress = {
  * miss distance and is used to gate that trigger against wide passes.
  */
 export function legProgress(
-  A: { latitude: number; longitude: number },
-  B: { latitude: number; longitude: number },
-  P: { latitude: number; longitude: number },
+  A: Coordinates,
+  B: Coordinates,
+  P: Coordinates,
 ): LegProgress {
   const legLength = getDistance(A, B);
   const legBearing = getGreatCircleBearing(A, B);
@@ -316,8 +375,8 @@ export function legProgress(
 }
 
 export type RouteLeg = {
-  from: { latitude: number; longitude: number };
-  to: { latitude: number; longitude: number };
+  from: Coordinates;
+  to: Coordinates;
   /** Leg distance in meters */
   distance: number;
   /** Initial bearing along the leg in degrees true */
@@ -329,7 +388,7 @@ export type RouteLeg = {
  * Returns an empty array for routes with fewer than 2 points.
  */
 export function calculateRouteLegs(
-  points: readonly { latitude: number; longitude: number }[],
+  points: readonly Coordinates[],
 ): RouteLeg[] {
   if (points.length < 2) return [];
   return points.slice(1).map((point, i) => {
@@ -368,7 +427,7 @@ export type DestinationProgress = {
  */
 export function calculateDestinationProgress(
   nextWaypointProgress: WaypointProgress,
-  points: readonly { latitude: number; longitude: number }[],
+  points: readonly Coordinates[],
   activeIndex: number,
   sog: number,
 ): DestinationProgress {
@@ -432,9 +491,9 @@ export function expandBounds(
  */
 export function flattenCoordinates(
   geometry: GeoJSON.Geometry | null | undefined,
-): [number, number][] {
+): Point[] {
   if (!geometry || geometry.type === "GeometryCollection") return [];
-  const coords: [number, number][] = [];
+  const coords: Point[] = [];
   const walk = (node: unknown) => {
     if (Array.isArray(node) && typeof node[0] === "number") {
       coords.push([node[0], node[1] as number]);

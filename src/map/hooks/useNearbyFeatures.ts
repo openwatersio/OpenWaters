@@ -4,6 +4,7 @@ import { describedSubtitle } from "@/charts/s57";
 import { groupFeatures } from "@/charts/s57/relations";
 import { useChartStore } from "@/charts/store";
 import { describeChartFeature } from "@/charts/translators";
+import { Coordinates } from "@/geo";
 import { chartFeatureId, representativePoint } from "@/map/featureAtPoint";
 import { mapRef } from "@/map/hooks/useMapRef";
 import { useMarkers } from "@/markers/hooks/useMarkers";
@@ -29,8 +30,6 @@ export type NearbyItem = {
   features?: Feature[];
 };
 
-type Position = { latitude: number; longitude: number };
-
 /** Half-size of the chart query box, in pixels. Also sets the real-world radius
  *  used for the state-based providers (via unproject), so "nearby" tracks zoom. */
 const NEARBY_RADIUS_PX = 80;
@@ -45,7 +44,7 @@ const CHART_ICON: SFSymbol = "mappin";
 type ChartState = { chartItems: NearbyItem[]; radiusM: number };
 
 export function useNearbyFeatures(
-  center: Position,
+  center: Coordinates,
   options?: { exclude?: { kind: NearbyKind; id: string } },
 ): NearbyItem[] {
   const { selectedChartId } = useChartStore();
@@ -145,10 +144,10 @@ export function useNearbyFeatures(
   }, [latitude, longitude, selectedChartId]);
 
   return useMemo(() => {
-    const here: Position = { latitude, longitude };
+    const here: Coordinates = { latitude, longitude };
     const radius = radiusM || FALLBACK_RADIUS_M;
 
-    const within = (pos: Position) => getDistance(here, pos) <= radius;
+    const within = (pos: Coordinates) => getDistance(here, pos) <= radius;
     const excluded = (kind: NearbyKind, id: string) =>
       excludeKind === kind && excludeId === id;
 
@@ -216,7 +215,7 @@ export function useNearbyFeatures(
 
 // --- helpers ---
 
-function isPosition(value: unknown): value is Position {
+function isPosition(value: unknown): value is Coordinates {
   return (
     !!value &&
     typeof value === "object" &&
@@ -225,7 +224,7 @@ function isPosition(value: unknown): value is Position {
   );
 }
 
-function vesselPosition(vessel: AISVessel): Position | null {
+function vesselPosition(vessel: AISVessel): Coordinates | null {
   const pos = vessel.data["navigation.position"]?.value;
   return isPosition(pos) ? pos : null;
 }
@@ -253,7 +252,7 @@ function vesselTypeLabel(code: number | undefined): string {
   return "Vessel";
 }
 
-function atonPosition(aton: AtoN): Position | null {
+function atonPosition(aton: AtoN): Coordinates | null {
   const pos = aton.data["navigation.position"]?.value;
   return isPosition(pos) ? pos : null;
 }

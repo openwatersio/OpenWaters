@@ -1,14 +1,14 @@
-import { isInsideBounds, metersPerPixel, projectPosition } from "@/geo";
+import {
+  Coordinates,
+  isInsideBounds,
+  metersPerPixel,
+  projectPosition,
+} from "@/geo";
 import { cameraPositionState } from "@/map/hooks/useCameraPosition";
 import { cameraViewState } from "@/map/hooks/useCameraView";
 import type { SnapRef } from "@/measurements/snapTargets";
 import { navigationState } from "@/navigation/hooks/useNavigation";
 import { proxy, useSnapshot } from "valtio";
-
-interface Point {
-  latitude: number;
-  longitude: number;
-}
 
 interface Endpoint {
   latitude: number;
@@ -44,7 +44,7 @@ export function useDivider() {
  */
 interface DragLiveState {
   kind: "center" | "radius" | null;
-  point: Point | null;
+  point: Coordinates | null;
   snapTo: SnapRef | null;
 }
 
@@ -57,7 +57,7 @@ export const dragLiveState = proxy<DragLiveState>({
 export function setDragLive(
   value: {
     kind: "center" | "radius";
-    point: Point;
+    point: Coordinates;
     snapTo?: SnapRef | null;
   } | null,
 ) {
@@ -90,7 +90,7 @@ export function toggleDivider(): boolean {
  *  passed; pass `null` to break a snap. */
 export function setDividerEndpoint(
   kind: "center" | "radius",
-  point: Point,
+  point: Coordinates,
   snapTo?: SnapRef | null,
 ) {
   const prev = dividerState[kind];
@@ -103,9 +103,9 @@ export function setDividerEndpoint(
 
 // Thin wrappers — keep the call-site readability. New code can call
 // `setDividerEndpoint` directly.
-export const setDividerCenter = (point: Point, snapTo?: SnapRef | null) =>
+export const setDividerCenter = (point: Coordinates, snapTo?: SnapRef | null) =>
   setDividerEndpoint("center", point, snapTo);
-export const setDividerRadius = (point: Point, snapTo?: SnapRef | null) =>
+export const setDividerRadius = (point: Coordinates, snapTo?: SnapRef | null) =>
   setDividerEndpoint("radius", point, snapTo);
 
 /** Swap the center and radius endpoints in place. The user's tap-to-swap

@@ -1,3 +1,4 @@
+import type { Coordinates } from "@/geo";
 import log from "@/logger";
 import { mapRef } from "@/map/hooks/useMapRef";
 
@@ -17,11 +18,6 @@ const dlog = log.extend("snap");
 export interface SnapRef {
   /** The feature's prefixed top-level GeoJSON id (e.g. `marker-42`). */
   id: string;
-}
-
-export interface Point {
-  latitude: number;
-  longitude: number;
 }
 
 const SNAP_FILTER: ["has", string] = ["has", "snappable"];
@@ -47,7 +43,7 @@ async function queryViewport(filter: unknown): Promise<GeoJSON.Feature[]> {
 export async function findSnap(
   screenPoint: [number, number],
   radiusPx: number,
-): Promise<{ ref: SnapRef; point: Point } | null> {
+): Promise<{ ref: SnapRef; point: Coordinates } | null> {
   const map = mapRef.current;
   if (!map) return null;
 
@@ -68,7 +64,7 @@ export async function findSnap(
 
   // Pick the candidate closest to the screen point.
   const r2 = radiusPx * radiusPx;
-  let best: { ref: SnapRef; point: Point; distSq: number } | null = null;
+  let best: { ref: SnapRef; point: Coordinates; distSq: number } | null = null;
   for (const feature of features) {
     if (feature.id == null) continue;
     if (feature.geometry.type !== "Point") continue;
@@ -108,8 +104,8 @@ export async function findSnap(
  */
 export async function resolveSnapRefs(
   ids: string[],
-): Promise<Record<string, Point | null>> {
-  const result: Record<string, Point | null> = {};
+): Promise<Record<string, Coordinates | null>> {
+  const result: Record<string, Coordinates | null> = {};
   for (const id of ids) result[id] = null;
   if (ids.length === 0) return result;
 
