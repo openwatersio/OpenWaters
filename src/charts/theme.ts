@@ -1,4 +1,5 @@
 import type { Theme } from "@/charts/catalog/types";
+import { Coordinates } from "@/geo";
 import { persistProxy } from "@/persistProxy";
 import SunCalc from "suncalc";
 import { proxy, useSnapshot } from "valtio";
@@ -42,14 +43,13 @@ export function setThemePreference(preference: ThemePreference): void {
  */
 export function resolveTheme(
   preference: ThemePreference,
-  options: { latitude?: number; longitude?: number; now?: Date } = {},
+  position?: Coordinates | null,
 ): Theme {
   if (preference !== "auto") return preference;
+  if (!position) return "day";
 
-  const { latitude, longitude, now = new Date() } = options;
-  if (latitude == null || longitude == null) return "day";
-
-  const times = SunCalc.getTimes(now, latitude, longitude);
+  const now = new Date();
+  const times = SunCalc.getTimes(now, position.latitude, position.longitude);
   const t = now.getTime();
   const dawn = times.dawn.getTime();
   const sunriseEnd = times.sunriseEnd.getTime();
@@ -59,7 +59,11 @@ export function resolveTheme(
   // Polar regions: any of these may be NaN if the sun doesn't cross the
   // relevant threshold on this day. Fall back by sun altitude.
   if (Number.isNaN(dawn) || Number.isNaN(dusk)) {
-    const { altitude } = SunCalc.getPosition(now, latitude, longitude);
+    const { altitude } = SunCalc.getPosition(
+      now,
+      position.latitude,
+      position.longitude,
+    );
     if (altitude > 0.1) return "day";
     if (altitude > -0.1) return "dusk";
     return "night";

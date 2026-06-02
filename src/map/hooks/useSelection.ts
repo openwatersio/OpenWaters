@@ -1,6 +1,6 @@
 import { router, useGlobalSearchParams, usePathname } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 export type FeatureType =
   | "marker"
@@ -22,10 +22,13 @@ export function useSelection(): Selection {
   const pathname = usePathname();
   const params = useGlobalSearchParams<{ type?: string; id?: string }>();
 
-  if (!pathname.startsWith("/feature/") || !params.type || !params.id) {
-    return null;
-  }
-  return { type: params.type as FeatureType, id: params.id };
+  // Memoize to avoid returning new object reference when values haven't changed
+  return useMemo(() => {
+    if (!pathname.startsWith("/feature/") || !params.type || !params.id) {
+      return null;
+    }
+    return { type: params.type as FeatureType, id: params.id };
+  }, [pathname, params.type, params.id]);
 }
 
 /**

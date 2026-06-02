@@ -98,12 +98,25 @@ describe("useNavigation", () => {
       expect(s.course).toBeCloseTo(Math.PI, 5);
     });
 
-    it("sets Underway when speed exceeds threshold", () => {
+    it("sets Underway after consecutive fixes exceed threshold", () => {
+      updateFromDevice(deviceLocation({ speed: 1.0 }));
+      // A single fast fix is not enough — it could be GPS noise.
+      expect(navigationState.state).toBe(NavigationState.Moored);
+
+      updateFromDevice(deviceLocation({ speed: 1.0 }));
       updateFromDevice(deviceLocation({ speed: 1.0 }));
       expect(navigationState.state).toBe(NavigationState.Underway);
     });
 
-    it("sets Moored when speed is below threshold", () => {
+    it("ignores an isolated speed spike", () => {
+      // Noise spikes one fix above the threshold, then settles back down.
+      updateFromDevice(deviceLocation({ speed: 1.0 }));
+      updateFromDevice(deviceLocation({ speed: 0.0 }));
+      updateFromDevice(deviceLocation({ speed: 1.0 }));
+      expect(navigationState.state).toBe(NavigationState.Moored);
+    });
+
+    it("stays Moored when speed is below threshold", () => {
       updateFromDevice(deviceLocation({ speed: 0.1 }));
       expect(navigationState.state).toBe(NavigationState.Moored);
     });
@@ -175,9 +188,11 @@ describe("useNavigation", () => {
 
   describe("moored/underway from resolved speed", () => {
     it("goes underway from Signal K speed", () => {
-      signalkPosition(48.0, -123.0, { sog: 2.0 });
-      updateFromSignalK();
-      flushNavigation();
+      for (let i = 0; i < 3; i++) {
+        signalkPosition(48.0, -123.0, { sog: 2.0 });
+        updateFromSignalK();
+        flushNavigation();
+      }
 
       expect(navigationState.state).toBe(NavigationState.Underway);
     });

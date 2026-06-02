@@ -1,5 +1,5 @@
-import log from "@/logger";
 import { getInstrumentData } from "@/instruments/hooks/useInstruments";
+import log from "@/logger";
 import {
   Accuracy,
   getForegroundPermissionsAsync,
@@ -48,6 +48,8 @@ export const navigationState = proxy<State>({ ...INITIAL_STATE });
 /** Reset to defaults. Exposed for tests. */
 export function resetNavigation() {
   Object.assign(navigationState, INITIAL_STATE);
+  pendingState = null;
+  pendingCount = 0;
 }
 
 export function useNavigation() {
@@ -99,10 +101,8 @@ function resolve() {
 
   const speed = pick("speed");
 
-  const resolvedState =
-    ((speed as number | null) ?? 0) > SPEED_THRESHOLD
-      ? NavigationState.Underway
-      : NavigationState.Moored;
+  const sog = (speed as number | null) ?? 0;
+  const resolvedState = settleState(sog);
 
   scheduleMoored(resolvedState);
 
@@ -121,8 +121,62 @@ function resolve() {
 
 // --- Moored/underway timeout ---
 
-const SPEED_THRESHOLD = 0.25; // m/s ≈ 0.5 knots
+const UNDERWAY_SPEED = 0.4; // m/s ≈ 0.8 kn — rise above to become Underway
+const MOORED_SPEED = 0.25; // m/s ≈ 0.5 kn — fall below to become Moored
 const MOORED_TIMEOUT = 5_000;
+
+// Consecutive crossing fixes required before committing a state change. The
+// schmitt band alone isn't enough: a single noisy GPS fix can spike SOG well
+// past UNDERWAY_SPEED, so we also require the crossing to persist across this
+// many fixes (~3 s at the 1 Hz watcher rate) before flipping. That kills the
+// false transitions that churn the puck, COG line, and camera lookahead.
+const STATE_CONFIRMATIONS = 3;
+
+// The state the most recent crossing fixes are voting toward, and how many in
+// a row have agreed. Reset whenever a fix votes for the current state.
+let pendingState: NavigationState | null = null;
+let pendingCount = 0;
+
+/**
+ * Schmitt trigger + consecutive-fix debounce. Rise above UNDERWAY_SPEED to vote
+ * Underway, fall below MOORED_SPEED to vote Moored; the band between holds the
+ * current state. A crossing vote only commits once STATE_CONFIRMATIONS fixes in
+ * a row agree — any in-band or reversing fix abandons the in-progress
+ * transition.
+ */
+function settleState(sog: number): NavigationState {
+  const current = navigationState.state;
+  // In-band fixes vote for the current state (no crossing).
+  const vote =
+    sog > UNDERWAY_SPEED
+      ? NavigationState.Underway
+      : sog < MOORED_SPEED
+        ? NavigationState.Moored
+        : current;
+
+  if (vote === current) {
+    // No crossing — abandon any pending transition.
+    pendingState = null;
+    pendingCount = 0;
+    return current;
+  }
+
+  // Crossing out of the current state; require STATE_CONFIRMATIONS consecutive
+  // fixes voting the same direction. A vote toward a different target restarts
+  // the count.
+  if (vote !== pendingState) {
+    pendingState = vote;
+    pendingCount = 0;
+  }
+  pendingCount += 1;
+
+  if (pendingCount >= STATE_CONFIRMATIONS) {
+    pendingState = null;
+    pendingCount = 0;
+    return vote;
+  }
+  return current;
+}
 
 let mooredTimeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -144,7 +198,8 @@ export function updateFromDevice(location: LocationObject) {
   const { coords } = location;
   // iOS CoreLocation returns -1 for speed/heading when invalid (e.g. when the
   // device is stationary and direction can't be determined). Treat as unknown.
-  const speed = coords.speed !== null && coords.speed >= 0 ? coords.speed : null;
+  const speed =
+    coords.speed !== null && coords.speed >= 0 ? coords.speed : null;
   const heading =
     coords.heading !== null && coords.heading >= 0 ? coords.heading : null;
   _device = {

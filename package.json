@@ -5,7 +5,7 @@
   "scripts": {
     "start": "expo start",
     "ios": "expo run:ios",
-    "lint": "tsc --noEmit && expo lint",
+    "lint": "tsc --noEmit && expo lint --max-warnings 0",
     "test": "jest",
     "gen:s57": "node scripts/generate-s57.mjs",
     "postinstall": "patch-package"

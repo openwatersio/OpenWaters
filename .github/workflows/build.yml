@@ -28,11 +28,10 @@ jobs:
         run: npm ci
 
       - name: 🧹 Lint
-        run: npm run lint -- --max-warnings 0
+        run: npm run lint
 
       - name: 🔍 Typecheck
         run: npx tsc --noEmit
 
       - name: 🧪 Test
         run: npm test
-

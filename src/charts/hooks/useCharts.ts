@@ -1,5 +1,4 @@
-import log from "@/logger";
-import type { CatalogSource } from "@/charts/catalog/types";
+import type { CatalogSource, Theme } from "@/charts/catalog/types";
 import { generateStyle } from "@/charts/install";
 import {
   readCatalog,
@@ -8,9 +7,11 @@ import {
 } from "@/charts/store";
 import { readLocalPaths } from "@/charts/style";
 import { resolveTheme, useThemePreference } from "@/charts/theme";
+import { toCoordinates } from "@/geo";
 import { usePreferredUnits } from "@/hooks/usePreferredUnits";
-import { useCameraPosition } from "@/map/hooks/useCameraPosition";
-import { usePosition } from "@/navigation/hooks/useNavigation";
+import log from "@/logger";
+import { cameraPositionState } from "@/map/hooks/useCameraPosition";
+import { getPosition } from "@/navigation/hooks/useNavigation";
 import type { StyleSpecification } from "@maplibre/maplibre-react-native";
 import { useEffect, useMemo, useState } from "react";
 
@@ -37,36 +38,40 @@ export function useChart(chartId: string): InstalledChart | undefined {
 
 /**
  * How often to re-evaluate the active theme when in "auto" mode (ms).
- * 5 minutes is fine-grained enough to catch the dusk/day/night transitions
- * without burning cycles.
  */
-const AUTO_THEME_TICK_MS = 5 * 60_000;
+const AUTO_THEME_TICK_MS = 1 * 60_000;
 
 /**
  * Resolve the active theme from the user's preference, using the device
  * position when in "auto" mode, falling back to the camera center until
  * GPS acquires a lock.
+ *
+ * Position is read imperatively (not via `usePosition()`): subscribing
+ * reactively would re-render every theme consumer — and the whole map tree —
+ * on every 1 Hz GPS fix. Instead the theme re-resolves on a coarse timer
+ * (`AUTO_THEME_TICK_MS`), reading the current position each tick. The sun calc
+ * only needs coarse position + time, both of which change far slower than the
+ * tick, so the timer alone suffices — no position subscription needed.
  */
 export function useActiveTheme() {
   const { preference } = useThemePreference();
-  const position = usePosition();
-  const { center } = useCameraPosition();
-  const [tick, setTick] = useState(0);
-
-  const latitude = position?.latitude ?? center?.[1];
-  const longitude = position?.longitude ?? center?.[0];
+  const [theme, setTheme] = useState<Theme>("day");
 
   useEffect(() => {
-    if (preference !== "auto") return;
-    const id = setInterval(() => setTick((t) => t + 1), AUTO_THEME_TICK_MS);
+    const update = () =>
+      setTheme(
+        resolveTheme(
+          preference,
+          getPosition() || toCoordinates(cameraPositionState.center),
+        ),
+      );
+    update(); // re-resolve immediately on a preference change
+    if (preference !== "auto") return; // a fixed theme never changes on a timer
+    const id = setInterval(update, AUTO_THEME_TICK_MS);
     return () => clearInterval(id);
   }, [preference]);
 
-  return useMemo(() => {
-    return resolveTheme(preference, { latitude, longitude });
-    // `tick` forces re-resolution on auto-mode timer
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preference, latitude, longitude, tick]);
+  return theme;
 }
 
 /** Get the active source filters (theme + preferred depth units). */

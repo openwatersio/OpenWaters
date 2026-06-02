@@ -1,18 +1,29 @@
 import { projectPosition } from "@/geo";
 import useTheme from "@/hooks/useTheme";
 import { iconSize } from "@/map/iconSize";
-import { useNavigation } from "@/navigation/hooks/useNavigation";
+import { NavigationState, navigationState } from "@/navigation/hooks/useNavigation";
 import { Layer, Animated as MLAnimated } from "@maplibre/maplibre-react-native";
-import { memo, useEffect, useMemo, useRef } from "react";
+import { getDistance } from "geolib";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Easing, Animated as RNAnimated } from "react-native";
+import { subscribe } from "valtio";
 
-const COG_PROJECTION_SECONDS = 15 * 60; // 5 minutes
-const MIN_SOG_FOR_COG_LINE = 0.25; // m/s (~0.5 knots)
+const COG_PROJECTION_SECONDS = 15 * 60; // 15 minutes
 const EXTENDED_DISTANCE_METERS = 400 * 1852; // 400 nm
 // Slightly longer than the GPS update interval (~1s) so animations overlap
 // rather than completing and pausing before the next update.
 const ANIMATION_DURATION = 1500;
 const EASING = Easing.linear;
+
+// Idle-gating thresholds. When the vessel isn't making way, 1 Hz GPS still
+// arrives with sub-meter jitter; re-running the 1.5s animation on that jitter
+// never lets the pipeline settle, keeping the entire map rendering at ~60fps
+// for no visible benefit. Below these thresholds we skip re-animating so the
+// in-flight animation finishes and the map idles. Gating only applies while
+// moored (state !== Underway), so motion stays perfectly smooth whenever the
+// vessel is actually underway.
+const IDLE_POSITION_EPSILON_M = 3;
+const IDLE_HEADING_EPSILON_DEG = 1.5;
 
 /** Choose the shortest-path target for a heading animation (handles 359°→0° wrap). */
 function shortestRotation(from: number, to: number): number {
@@ -26,17 +37,23 @@ function shortestRotation(from: number, to: number): number {
  * All per-frame work happens inside maplibre-react-native's Animated pipeline:
  * persistent `AnimatedPoint` / `AnimatedCoordinatesArray` / `Animated.Value`
  * instances are embedded in `AnimatedGeoJSON` trees, which feed into
- * `Animated.GeoJSONSource`. Each GPS update kicks off a parallel `timing`
- * animation against these stable animated nodes; the React tree here renders
- * only once per GPS fix.
+ * `Animated.GeoJSONSource`. GPS updates are read via an imperative `subscribe`
+ * (not `useNavigation`) and kick off a parallel `timing` animation against
+ * these stable animated nodes — so this component renders once, never per fix.
  *
  * Heading rotation is carried as a feature property and read on the native
  * side via `icon-rotate: ["get", "heading"]`, so the symbol layer itself is
  * static — no layout-spec churn per frame.
  */
 export const NavigationPuck = memo(function NavigationPuck() {
-  const { latitude, longitude, heading, course, speed } = useNavigation();
   const theme = useTheme();
+  // Render once; gate visibility on the first fix. GPS values are read
+  // imperatively in the effect below (not via useNavigation) so a 1–5 Hz feed
+  // doesn't re-render this component — and re-commit its theme-only layers —
+  // on every fix. Mirrors NavigationCamera's imperative subscription.
+  const [ready, setReady] = useState(
+    () => navigationState.latitude != null && navigationState.longitude != null,
+  );
 
   // --- Persistent animated nodes (created once, never replaced) ---
   // These hold native bindings through AnimatedGeoJSON's __attach, so they
@@ -58,8 +75,11 @@ export const NavigationPuck = memo(function NavigationPuck() {
 
   // Cumulative (unwrapped) heading so the arrow never spins the long way.
   const cumulativeHeadingRef = useRef(0);
-  // First fix snaps instantly instead of sweeping from [0,0].
-  const isFirstFixRef = useRef(true);
+  // Last position/COG-state we actually animated to. Idle-gating compares the
+  // incoming fix against these (not the previous reading) so sub-threshold
+  // jitter coalesces instead of restarting the animation every second.
+  const lastAnimatedRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const stateRef = useRef<NavigationState>(NavigationState.Moored);
 
   // --- AnimatedGeoJSON trees (built once) ---
 
@@ -104,71 +124,105 @@ export const NavigationPuck = memo(function NavigationPuck() {
     [extCoords],
   );
 
-  // --- Drive animations when GPS state changes ---
+  // --- Drive animations imperatively on every nav update ---
+  // Subscribe to navigationState directly (not via useNavigation) so the
+  // 1–5 Hz feed drives the animation pipeline without re-rendering this
+  // component or re-committing its layers each fix.
   useEffect(() => {
-    if (latitude == null || longitude == null) return;
+    const drive = () => {
+      const { latitude, longitude, heading, course, speed, state } = navigationState;
+      if (latitude == null || longitude == null) return;
+      setReady(true);
 
-    const duration = isFirstFixRef.current ? 0 : ANIMATION_DURATION;
-    isFirstFixRef.current = false;
+      const isUnderway = state === NavigationState.Underway;
+      const showCog = isUnderway && course != null && speed != null;
+      const headingTarget =
+        heading != null
+          ? shortestRotation(cumulativeHeadingRef.current, heading)
+          : cumulativeHeadingRef.current;
 
-    const animations: RNAnimated.CompositeAnimation[] = [];
+      // Idle-gate: while moored, skip re-animating on sub-threshold jitter so
+      // the in-flight animation settles and the map can idle. A moored/underway
+      // transition (state !== stateRef) or movement past the threshold is never
+      // gated; the first fix has distance === Infinity, so it always animates.
+      const last = lastAnimatedRef.current;
+      const distance = last
+        ? getDistance(last, { latitude, longitude })
+        : Infinity;
+      const headingDelta = Math.abs(headingTarget - cumulativeHeadingRef.current);
+      const gated =
+        !isUnderway &&
+        state === stateRef.current &&
+        distance < IDLE_POSITION_EPSILON_M &&
+        headingDelta < IDLE_HEADING_EPSILON_DEG;
+      if (gated) return;
 
-    // Puck position
-    puckPoint.stopAnimation();
-    animations.push(
-      puckPoint.timing({
-        toValue: { type: "Point", coordinates: [longitude, latitude] },
-        duration,
-        easing: EASING,
-      }),
-    );
+      // First fix (no prior animated position) snaps instantly rather than
+      // sweeping from [0,0].
+      const duration = last === null ? 0 : ANIMATION_DURATION;
+      lastAnimatedRef.current = { latitude, longitude };
+      stateRef.current = state;
+      cumulativeHeadingRef.current = headingTarget;
 
-    // Heading (shortest path against a cumulative/unwrapped target)
-    if (heading != null) {
-      const target = shortestRotation(cumulativeHeadingRef.current, heading);
-      cumulativeHeadingRef.current = target;
-      headingValue.stopAnimation();
+      const animations: RNAnimated.CompositeAnimation[] = [];
+
+      // Puck position
+      puckPoint.stopAnimation();
       animations.push(
-        RNAnimated.timing(headingValue, {
-          toValue: target,
+        puckPoint.timing({
+          toValue: { type: "Point", coordinates: [longitude, latitude] },
           duration,
           easing: EASING,
-          useNativeDriver: false,
         }),
       );
-    }
 
-    // COG line endpoints — projected (5 min) and extended (400 nm).
-    // When speed drops below threshold, collapse both segments onto the puck
-    // so the line visually disappears without a pop.
-    const showCog = course != null && (speed ?? 0) > MIN_SOG_FOR_COG_LINE;
-    const projectedEnd: [number, number] = showCog
-      ? projectPosition(latitude, longitude, course!, speed! * COG_PROJECTION_SECONDS)
-      : [longitude, latitude];
-    const extendedEnd: [number, number] = showCog
-      ? projectPosition(latitude, longitude, course!, EXTENDED_DISTANCE_METERS)
-      : [longitude, latitude];
+      // Heading (shortest path against a cumulative/unwrapped target)
+      if (heading != null) {
+        headingValue.stopAnimation();
+        animations.push(
+          RNAnimated.timing(headingValue, {
+            toValue: headingTarget,
+            duration,
+            easing: EASING,
+            useNativeDriver: false,
+          }),
+        );
+      }
 
-    // AnimatedCoordinatesArray auto-stops any in-flight animation when a new
-    // one starts (see AbstractAnimatedCoordinates.onAnimationStart), so no
-    // explicit stop is needed — and it doesn't expose one.
-    animations.push(
-      projCoords.timing({
-        toValue: [[longitude, latitude], projectedEnd],
-        duration,
-        easing: EASING,
-      }) as unknown as RNAnimated.CompositeAnimation,
-      extCoords.timing({
-        toValue: [projectedEnd, extendedEnd],
-        duration,
-        easing: EASING,
-      }) as unknown as RNAnimated.CompositeAnimation,
-    );
+      // COG line endpoints — projected (15 min) and extended (400 nm).
+      // When not underway (course/speed unavailable), collapse both segments
+      // onto the puck so the line visually disappears without a pop.
+      const projectedEnd: [number, number] = showCog
+        ? projectPosition(latitude, longitude, course!, speed! * COG_PROJECTION_SECONDS)
+        : [longitude, latitude];
+      const extendedEnd: [number, number] = showCog
+        ? projectPosition(latitude, longitude, course!, EXTENDED_DISTANCE_METERS)
+        : [longitude, latitude];
 
-    RNAnimated.parallel(animations).start();
-  }, [latitude, longitude, heading, course, speed, puckPoint, projCoords, extCoords, headingValue]);
+      // AnimatedCoordinatesArray auto-stops any in-flight animation when a new
+      // one starts (see AbstractAnimatedCoordinates.onAnimationStart), so no
+      // explicit stop is needed — and it doesn't expose one.
+      animations.push(
+        projCoords.timing({
+          toValue: [[longitude, latitude], projectedEnd],
+          duration,
+          easing: EASING,
+        }) as unknown as RNAnimated.CompositeAnimation,
+        extCoords.timing({
+          toValue: [projectedEnd, extendedEnd],
+          duration,
+          easing: EASING,
+        }) as unknown as RNAnimated.CompositeAnimation,
+      );
 
-  if (latitude == null || longitude == null) return null;
+      RNAnimated.parallel(animations).start();
+    };
+
+    drive(); // seed from current state
+    return subscribe(navigationState, drive);
+  }, [puckPoint, projCoords, extCoords, headingValue]);
+
+  if (!ready) return null;
 
   return (
     <>
