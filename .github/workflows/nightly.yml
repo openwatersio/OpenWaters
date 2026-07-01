@@ -18,7 +18,7 @@ jobs:
       APP_VARIANT: production
     steps:
       - name: 🏗 Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Need enough history for the "code changes in last 24h" check.
           fetch-depth: 50
