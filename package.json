@@ -28,7 +28,7 @@
   "dependencies": {
     "@expo/ui": "~56.0.15",
     "@expo/vector-icons": "^15.0.2",
-    "@maplibre/maplibre-react-native": "11.3.5",
+    "@maplibre/maplibre-react-native": "11.3.6",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@sentry/react-native": "~7.11.0",
     "coordinate-format": "^1.0.0",
