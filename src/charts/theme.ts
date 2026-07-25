@@ -1,7 +1,7 @@
 import type { Theme } from "@/charts/catalog/types";
 import { Coordinates } from "@/geo";
 import { persistProxy } from "@/persistProxy";
-import SunCalc from "suncalc";
+import { getTimes, getPosition } from "suncalc";
 import { proxy, useSnapshot } from "valtio";
 
 export type ThemePreference = Theme | "auto";
@@ -49,23 +49,28 @@ export function resolveTheme(
   if (!position) return "day";
 
   const now = new Date();
-  const times = SunCalc.getTimes(now, position.latitude, position.longitude);
+  const times = getTimes(now, position.latitude, position.longitude);
   const t = now.getTime();
-  const dawn = times.dawn.getTime();
-  const sunriseEnd = times.sunriseEnd.getTime();
-  const sunsetStart = times.sunsetStart.getTime();
-  const dusk = times.dusk.getTime();
+  // suncalc 2.x returns null (not an invalid Date) for times the sun never
+  // reaches on a given day; coerce to NaN so the fallback-by-altitude below
+  // still triggers.
+  const dawn = times.dawn?.getTime() ?? NaN;
+  const sunriseEnd = times.sunriseEnd?.getTime() ?? NaN;
+  const sunsetStart = times.sunsetStart?.getTime() ?? NaN;
+  const dusk = times.dusk?.getTime() ?? NaN;
 
   // Polar regions: any of these may be NaN if the sun doesn't cross the
   // relevant threshold on this day. Fall back by sun altitude.
   if (Number.isNaN(dawn) || Number.isNaN(dusk)) {
-    const { altitude } = SunCalc.getPosition(
+    const { altitude } = getPosition(
       now,
       position.latitude,
       position.longitude,
     );
-    if (altitude > 0.1) return "day";
-    if (altitude > -0.1) return "dusk";
+    // suncalc 2.0 returns altitude in degrees (it was radians in 1.x);
+    // 0.1 rad ≈ 5.7°.
+    if (altitude > 5.7) return "day";
+    if (altitude > -5.7) return "dusk";
     return "night";
   }
 
