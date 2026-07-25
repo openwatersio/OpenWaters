@@ -67,8 +67,10 @@ export function resolveTheme(
       position.latitude,
       position.longitude,
     );
-    if (altitude > 0.1) return "day";
-    if (altitude > -0.1) return "dusk";
+    // suncalc 2.0 returns altitude in degrees (it was radians in 1.x);
+    // 0.1 rad ≈ 5.7°.
+    if (altitude > 5.7) return "day";
+    if (altitude > -5.7) return "dusk";
     return "night";
   }
 
