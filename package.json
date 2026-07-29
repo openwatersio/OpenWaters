@@ -76,7 +76,7 @@
     "react-native-webview": "13.16.1",
     "react-native-worklets": "0.8.3",
     "react-native-zeroconf": "^0.14.0",
-    "suncalc": "^2.0.0",
+    "suncalc": "^2.0.1",
     "valtio": "^2.3.2"
   },
   "devDependencies": {
