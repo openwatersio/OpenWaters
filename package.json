@@ -80,20 +80,20 @@
     "valtio": "^2.3.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.28.4",
-    "@testing-library/react-native": "^13.3.3",
-    "@types/jest": "29.5.14",
+    "@babel/core": "^8.0.1",
+    "@testing-library/react-native": "^14.0.1",
+    "@types/jest": "30.0.0",
     "@types/react": "~19.2.10",
     "bitmap-sdf": "^1.0.4",
-    "eslint": "^9.39.4",
+    "eslint": "^10.9.1",
     "eslint-config-expo": "~56.0.4",
-    "jest": "^29.7.0",
+    "jest": "^30.5.0",
     "jest-expo": "~56.0.4",
     "patch-package": "^8.0.1",
     "pngjs": "^7.0.0",
     "react-native-svg-transformer": "^1.5.3",
     "react-test-renderer": "^19.2.0",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.2"
   },
   "private": true
 }
