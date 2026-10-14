@@ -25,8 +25,10 @@ This project is built with [Expo](https://expo.dev/), a framework and platform f
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22 (declared in `mise.toml`)
 - Xcode 16+
+
+CI uses `actions/setup-node` with `node-version-file: mise.toml`. Lockfile checks read `.github/mise.node24.toml` to preserve their separate Node 24 requirement.
 
 ### Setup
 
