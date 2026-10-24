@@ -13,7 +13,7 @@ concurrency:
 jobs:
   testflight:
     name: Build and submit to TestFlight
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       APP_VARIANT: production
     steps:
