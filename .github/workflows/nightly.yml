@@ -28,7 +28,7 @@ jobs:
         if: github.event_name == 'schedule'
         run: |
           changed=$(git log --since='24 hours ago' --name-only --format= | sort -u)
-          code_changed=$(echo "$changed" | grep -vE '^(docs/|.*\.md$|^$)' || true)
+          code_changed=$(echo "$changed" | grep -vE '^(docs/|.*\.md$|\.cla\.json$|^$)' || true)
           if [ -z "$code_changed" ]; then
             echo "No code changes in the last 24 hours; skipping nightly build."
             echo "skip=true" >> "$GITHUB_OUTPUT"

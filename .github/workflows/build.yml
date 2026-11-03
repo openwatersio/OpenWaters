@@ -7,6 +7,7 @@ on:
       - "**.md"
       - "LICENSE"
       - "docs/**"
+      - ".cla.json"
   pull_request:
     branches: [main]
   workflow_dispatch:
