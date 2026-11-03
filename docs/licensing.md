@@ -35,6 +35,14 @@ This is where the [Contributor License Agreement](../CLA.md) comes in. Modeled o
 
 Signal (AGPLv3) uses this exact approach to distribute on the iOS App Store. Their CLA grants Signal Messenger the same broad rights, enabling App Store distribution despite AGPL's even stricter network-use clause.
 
+## CLA automation
+
+The CLA workflow records signatures in `.cla.json` on `main` using the organization-owned Open Waters CLA App. The App has Single file write permission for `.cla.json` and Metadata read permission. It needs a bypass in any ruleset that would reject its signature commits; the ordinary GitHub Actions token does not need a bypass.
+
+Maintainers configure the organization variable `CLA_APP_CLIENT_ID` and encrypted Actions secret `CLA_APP_PRIVATE_KEY`, restricted to the participating repositories. The workflow creates a short-lived token scoped to this repository. Never check out or execute pull-request code in this privileged workflow. See the [shared setup guide](https://github.com/openwatersio/cla-github-action/blob/master/docs/open-waters.md).
+
+Human comments mentioning the CLA or `recheck` reach the action's signing-text validation. Dependabot-initiated runs are skipped because Actions secrets are unavailable; human updates and recheck comments still run. Claude co-author metadata is exempt, while human contributors must sign. If storage rejects a write, the check fails; comment `recheck` to retry. The workflow result and `.cla.json` are authoritative even if a bot comment has already acknowledged signing.
+
 ## References
 
 - [GNU GPL FAQ: Developer Violation](https://www.gnu.org/licenses/gpl-faq.html#DeveloperViolate)
