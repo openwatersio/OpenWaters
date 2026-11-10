@@ -1,0 +1,18 @@
+name: CLA trigger
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  # Its completion starts the CLA workflow, which checks the pull request with the signature App.
+  # Not named `cla`, since a check with that name would satisfy the required `cla` status, except
+  # on Dependabot's own runs: the CLA workflow skips those, and its PRs need no signature.
+  trigger:
+    name: ${{ github.actor == 'dependabot[bot]' && 'cla' || 'trigger' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - run: echo "The CLA workflow checks this pull request when this run completes."

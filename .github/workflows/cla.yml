@@ -1,28 +1,29 @@
 name: CLA
 
 on:
+  workflow_run:
+    workflows: [CLA trigger]
+    types: [completed]
   issue_comment:
     types: [created]
-  pull_request_target:
-    types: [opened, reopened, synchronize]
 
 permissions: {}
 
 jobs:
-  cla:
-    # Dependabot-triggered runs cannot access the App secret; human updates and rechecks still run.
+  # Reports a `cla` commit status on the pull request's head; this job's own check lands on main.
+  check:
     if: |
-      github.actor != 'dependabot[bot]' &&
-      (github.event_name == 'pull_request_target' ||
-       (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
-        github.event.comment.user.type != 'Bot' &&
-        (contains(github.event.comment.body, 'CLA') || contains(github.event.comment.body, 'recheck'))))
+      (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' &&
+       github.event.workflow_run.actor.login != 'dependabot[bot]') ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+       github.event.comment.user.type != 'Bot' &&
+       (contains(github.event.comment.body, 'CLA') || contains(github.event.comment.body, 'recheck')))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      actions: write
       contents: read
       pull-requests: write
+      statuses: write
     steps:
       # This privileged workflow must never check out or execute pull-request code.
       - name: Create signature writer token
@@ -34,11 +35,14 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-single-file: write
-      - uses: openwatersio/cla-github-action@599be7e585704b7eb53be7498aebefc0e7d8caac # Open Waters fork
+      - uses: openwatersio/cla-github-action@f07dfd38224fde9ace8e7b8437ba318e0db042ea # Open Waters fork
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PERSONAL_ACCESS_TOKEN: ${{ steps.cla-token.outputs.token }}
         with:
+          # The open pull request whose head is this commit is checked; nothing from the triggering run is trusted.
+          head-sha: ${{ github.event.workflow_run.head_sha }}
+          status-context: cla
           path-to-document: "https://github.com/${{ github.repository }}/blob/main/CLA.md"
           path-to-signatures: ".cla.json"
           branch: "main"
