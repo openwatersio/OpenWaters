@@ -35,7 +35,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-single-file: write
-      - uses: openwatersio/cla-github-action@82b776f1896ffd2631594b92ea124e173609e496 # Open Waters fork
+      - uses: openwatersio/cla-github-action@f07dfd38224fde9ace8e7b8437ba318e0db042ea # Open Waters fork
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PERSONAL_ACCESS_TOKEN: ${{ steps.cla-token.outputs.token }}
