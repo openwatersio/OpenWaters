@@ -30,6 +30,6 @@ Read the [contributing documentation](CONTRIBUTING.md) for guidelines on how to 
 
 ## License
 
-Open Waters is licensed under the [GNU General Public License v3.0](LICENSE).
+Open Waters is © Open Water Software, LLC and contributors, and licensed under the [GNU General Public License v3.0](LICENSE).
 
 All contributors must accept a [Contributor License Agreement](CLA.md), which grants Open Water Software, LLC the rights needed to distribute the app through the iOS App Store. Contributors retain full copyright ownership of their work.
