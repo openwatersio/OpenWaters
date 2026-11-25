@@ -2,6 +2,8 @@
 
 Open Waters is a modern, open source, mobile-first marine navigation app built with React Native and Expo. See [docs/](docs/README.md) for feature documentation, specs, and the project vision.
 
+Every change follows the org-wide [rigor rules](https://github.com/openwatersio/.github/blob/main/docs/agents/rigor.md). The first of them: when something fails or looks wrong, find the cause and fix it there instead of working around it.
+
 ## Project Status
 
 Open Waters is in **early alpha** with limited users. There are no external consumers of internal APIs, no install base to migrate, and no release compatibility commitments.
