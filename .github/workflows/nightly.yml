@@ -18,7 +18,7 @@ jobs:
       APP_VARIANT: production
     steps:
       - name: 🏗 Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           # Need enough history for the "code changes in last 24h" check.
           fetch-depth: 50
@@ -40,14 +40,14 @@ jobs:
 
       - name: 🏗 Setup Node.js
         if: steps.changes.outputs.skip != 'true'
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v7.1.0
         with:
           node-version-file: mise.toml
           cache: "npm"
 
       - name: 🏗 Setup EAS
         if: steps.changes.outputs.skip != 'true'
-        uses: expo/expo-github-action@v8
+        uses: expo/expo-github-action@8.2.1
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
