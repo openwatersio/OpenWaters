@@ -28,7 +28,7 @@ jobs:
       # This privileged workflow must never check out or execute pull-request code.
       - name: Create signature writer token
         id: cla-token
-        uses: actions/create-github-app-token@v3.3.0
+        uses: actions/create-github-app-token@v3.4.0
         with:
           client-id: ${{ vars.CLA_APP_CLIENT_ID }}
           private-key: ${{ secrets.CLA_APP_PRIVATE_KEY }}
