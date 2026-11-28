@@ -49,7 +49,7 @@ jobs:
           # Explicit repository inputs select the App token for signature storage only.
           remote-organization-name: ${{ github.repository_owner }}
           remote-repository-name: ${{ github.event.repository.name }}
-          allowlist: "*[bot],noreply@anthropic.com"
+          allowlist: ${{ vars.CLA_BOT_ALLOWLIST }}
           lock-pullrequest-aftermerge: "false"
           custom-notsigned-prcomment: |
             Thank you for this pull request! Before we can accept your contribution, you need to sign our [Contributor License Agreement](https://github.com/${{ github.repository }}/blob/main/CLA.md). [Read more about why this is necessary.](https://github.com/${{ github.repository }}/blob/main/docs/licensing.md)
